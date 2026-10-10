@@ -26,6 +26,8 @@ For what every button does, see the [user guide](user-guide.md).
 
 The app keeps its library in `~/.local/share/cp2077-modmanager/`, so you can
 replace the AppImage with a newer one at any time without losing anything.
+When a newer release is out, a notice at the top of the window links to it
+(Settings → *CPMX2077 updates* turns the startup check off).
 
 **On Windows (preview)**: download `CPMX2077_<version>_x64-setup.exe` and run
 it. It installs for your user only, without admin rights. It isn't code-signed

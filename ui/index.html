@@ -37,6 +37,17 @@
        title="Drag to resize the menu. Double-click to reset."></div>
 
   <main>
+    <section id="app-update" class="card hidden" aria-live="polite">
+      <div class="row">
+        <b id="app-update-title"></b>
+        <span id="app-update-meta" class="muted"></span>
+        <span class="spacer"></span>
+        <button id="app-update-notes-toggle" class="link">Show release notes</button>
+        <button id="app-update-open" class="primary">Open release page</button>
+        <button id="app-update-dismiss" title="Hide this notice until a newer release is out">Dismiss</button>
+      </div>
+      <pre id="app-update-notes" class="hidden"></pre>
+    </section>
     <section id="queue" class="card hidden" aria-live="polite">
       <div class="row">
         <b id="queue-title"></b>
@@ -426,6 +437,16 @@
     <section id="tab-settings" class="tab">
       <header><h2>Settings</h2></header>
       <div class="card">
+        <h3>CPMX2077 updates</h3>
+        <p>Compares this build <span id="app-version" class="mono"></span> with the newest release on GitHub, pre-releases
+           included. Notify only: nothing is downloaded or replaced. Get the new AppImage or installer from the release page.</p>
+        <label class="check"><input type="checkbox" id="app-update-startup"> Check on startup</label>
+        <div class="row">
+          <button id="app-update-check">Check now</button>
+          <span id="app-update-status" class="muted"></span>
+        </div>
+      </div>
+      <div class="card">
         <h3>Download location</h3>
         <p>Downloaded archives are kept here, one folder per mod with every version you downloaded inside, so you can
            reinstall or switch versions without downloading again.</p>
@@ -535,5 +556,6 @@
   <script src="netrunner.js"></script>
   <script src="ultraplus.js"></script>
   <script src="reshade.js"></script>
+  <script src="app_update.js"></script>
 </body>
 </html>

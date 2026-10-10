@@ -450,3 +450,6 @@ div.mod-card:hover, div.mod-card:focus-visible { border-color: var(--cyan); outl
 button.link.author { padding: 0; margin: 0; font-size: inherit; }
 #author-head { align-items: baseline; }
 #author-head h3 { margin: 0; }
+#app-update { border-left: 3px solid var(--green); }
+#app-update-meta { overflow-wrap: anywhere; }
+#app-update-notes { margin: 10px 0 0; max-height: 260px; overflow-y: auto; }

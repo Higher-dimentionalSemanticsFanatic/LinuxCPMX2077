@@ -227,6 +227,10 @@ Screenshots show sample data, with file locations blurred.
   your machine (downloads, checksum checks, extractions, files copied,
   backed up, moved or deleted, Linux setup fixes), with filters, Copy and
   Save…. API keys and signed download links are never shown.
+- **App update notice**: on startup (and from Settings → *Check now*) the
+  app compares its version with the newest CPMX2077 release on GitHub,
+  pre-releases included, and shows a notice with the release notes and a
+  link to the release page. Notify only: nothing is downloaded or replaced.
 
 ### Windows (preview)
 

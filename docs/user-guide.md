@@ -552,6 +552,17 @@ Every archive you downloaded, grouped by mod with each version under it.
 
 ## Settings
 
+- **CPMX2077 updates**: compares this build's version with the newest
+  CPMX2077 release on GitHub, pre-releases included. *Check on startup* (on
+  by default) runs the check each time the app starts; **Check now** runs it
+  at once and shows the result next to the button. When a newer release is
+  out, a notice appears above the current tab with **Show release notes**,
+  **Open release page** (opens it in your browser) and **Dismiss** (hides
+  the notice for that release; a newer release shows it again). Nothing is
+  downloaded or replaced: get the new AppImage or Windows installer from
+  the release page. The check is one request to GitHub's API with no
+  account; if GitHub can't be reached or its hourly limit is used up, the
+  result line says so and nothing else happens.
 - **Download location**: where archives are kept, one folder per mod.
   **Change…** offers to move existing downloads; **Use the default folder**
   goes back; **Sort into mod folders** tidies loose files.
