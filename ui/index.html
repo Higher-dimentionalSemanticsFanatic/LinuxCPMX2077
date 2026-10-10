@@ -37,6 +37,17 @@
        title="Drag to resize the menu. Double-click to reset."></div>
 
   <main>
+    <section id="app-update" class="card hidden" aria-live="polite">
+      <div class="row">
+        <b id="app-update-title"></b>
+        <span id="app-update-meta" class="muted"></span>
+        <span class="spacer"></span>
+        <button id="app-update-notes-toggle" class="link">Show release notes</button>
+        <button id="app-update-open" class="primary">Open release page</button>
+        <button id="app-update-dismiss" title="Hide this notice until a newer release is out">Dismiss</button>
+      </div>
+      <pre id="app-update-notes" class="hidden"></pre>
+    </section>
     <section id="queue" class="card hidden" aria-live="polite">
       <div class="row">
         <b id="queue-title"></b>
@@ -74,9 +85,17 @@
         <button id="deps-get-missing" class="hidden" title="Queue every missing requirement: core frameworks from GitHub, the rest from Nexus">Get missing</button>
         <span id="updates-note" class="muted small"></span>
       </div>
+      <div id="mods-bulk" class="bulk-bar hidden">
+        <span id="mods-bulk-count"></span>
+        <button id="mods-bulk-enable" title="Put the selected mods' files back into the game">Enable</button>
+        <button id="mods-bulk-disable" title="Take the selected mods' files out of the game; their stored copies are kept">Disable</button>
+        <button id="mods-bulk-uninstall" class="danger" title="Remove the selected mods and their stored copies">Uninstall</button>
+        <button id="mods-bulk-clear" class="link">Clear selection</button>
+      </div>
       <table>
         <thead><tr>
-          <th title="Turn a mod off without uninstalling it">On</th>
+          <th class="pick-col"><input type="checkbox" id="mods-select-all" class="pick" aria-label="Select all shown mods" title="Select all shown mods"></th>
+          <th title="Enabled: files are in the game. Disabled: files are taken out, the mod stays installed">On</th>
           <th class="sortable" data-sort="name">Name</th>
           <th class="sortable" data-sort="category" title="Your tags, with the Nexus category under them">Tags &amp; category</th>
           <th class="sortable" data-sort="version">Mod version</th>
@@ -225,7 +244,7 @@
             <button id="graph-zoom-in" title="Zoom in">+</button>
             <button id="graph-fit" title="Fit the whole graph in view">Fit</button>
           </div>
-          <aside id="graph-info" class="muted">Drag to pan, scroll to zoom, drag a node to move it, click a node for details.</aside>
+          <aside id="graph-info" class="muted">Drag to pan, scroll to zoom, drag a node to move it, click a node for details, click a type in the legend to hide or show it.</aside>
           <div id="graph-legend"></div>
         </div>
       </section>
@@ -416,8 +435,13 @@
       <p class="muted small">Saved in <span id="downloads-where" class="mono"></span>, one folder per mod.
         <button class="link inline" data-goto="settings">Change</button></p>
       <div id="progress" class="progress hidden"><div class="progress-bar"></div><span class="progress-text"></span></div>
+      <div id="downloads-bulk" class="bulk-bar hidden">
+        <span id="downloads-bulk-count"></span>
+        <button id="downloads-bulk-delete" class="danger" title="Delete the selected archives; installed mods stay installed">Delete</button>
+        <button id="downloads-bulk-clear" class="link">Clear selection</button>
+      </div>
       <table class="tree">
-        <thead><tr><th>Mod</th><th>Version</th><th>Game version</th><th>Source</th><th>Size</th><th>Verified</th><th></th></tr></thead>
+        <thead><tr><th class="pick-col"><input type="checkbox" id="downloads-select-all" class="pick" aria-label="Select all shown downloads" title="Select all shown downloads"></th><th>Mod</th><th>Version</th><th>Game version</th><th>Source</th><th>Size</th><th>Verified</th><th></th></tr></thead>
         <tbody id="downloads-body"></tbody>
       </table>
       <p id="downloads-empty" class="muted">Nothing downloaded yet.</p>
@@ -425,6 +449,16 @@
 
     <section id="tab-settings" class="tab">
       <header><h2>Settings</h2></header>
+      <div class="card">
+        <h3>CPMX2077 updates</h3>
+        <p>Compares this build <span id="app-version" class="mono"></span> with the newest release on GitHub, pre-releases
+           included. Notify only: nothing is downloaded or replaced. Get the new AppImage or installer from the release page.</p>
+        <label class="check"><input type="checkbox" id="app-update-startup"> Check on startup</label>
+        <div class="row">
+          <button id="app-update-check">Check now</button>
+          <span id="app-update-status" class="muted"></span>
+        </div>
+      </div>
       <div class="card">
         <h3>Download location</h3>
         <p>Downloaded archives are kept here, one folder per mod with every version you downloaded inside, so you can
@@ -535,5 +569,6 @@
   <script src="netrunner.js"></script>
   <script src="ultraplus.js"></script>
   <script src="reshade.js"></script>
+  <script src="app_update.js"></script>
 </body>
 </html>
