@@ -24,6 +24,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_deep_link::DeepLinkExt;
 
+mod app_update_cmd;
 mod modpacks_cmd;
 mod reshade_cmd;
 mod ultraplus_cmd;
@@ -1596,6 +1597,10 @@ fn main() {
             modpacks_cmd::requirement_states,
             ultraplus_cmd::ultraplus_report,
             ultraplus_cmd::ultraplus_refresh,
+            app_update_cmd::app_update_prefs,
+            app_update_cmd::set_app_update_on_startup,
+            app_update_cmd::app_update_dismiss,
+            app_update_cmd::app_update_check,
             reshade_cmd::reshade_status,
             reshade_cmd::reshade_latest,
             reshade_cmd::reshade_launch,

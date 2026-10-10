@@ -8,3 +8,6 @@
   [`docs/getting-started.md`](docs/getting-started.md) when first-run steps
   change, in the same PR. Use the exact button labels from `ui/`. See
   [`CLAUDE.md`](CLAUDE.md) for the full rule.
+- **Install logic changes update the code map** in
+  [`docs/architecture/`](docs/architecture/Home.md) (an Obsidian vault),
+  including [`Known gaps.md`](docs/architecture/Known%20gaps.md).
