@@ -270,6 +270,7 @@ async function loadMods() {
   renderMods();
   showLoadout().catch(() => {});
   loadUltraPlus().catch(() => {});
+  loadPatchNotes().catch(() => {});
   loadReShade().catch(() => {});
   refreshGame().catch(() => {});
 }
@@ -331,7 +332,8 @@ function modRow(m) {
     el("td", {}, el("span", { class: "badge" }, sourceLabel(m))),
     el("td", {}, m.file_count),
     el("td", {}, m.game_version || "—",
-      stale ? el("div", { class: "badge bad", title: `Current game build is ${currentGame.install.build_id}` }, "game updated since") : null),
+      stale ? el("div", { class: "badge bad", title: `Current game build is ${currentGame.install.build_id}` }, "game updated since") : null,
+      patchBadge(m)),
     el("td", { class: "actions" },
       up ? el("button", {
         class: "update",

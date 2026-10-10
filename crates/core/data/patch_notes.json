@@ -1,0 +1,557 @@
+{
+  "_about": "Cyberpunk 2077 PC patches and the base-game features they added that mods used to provide, from the official patch notes on cyberpunk.net (each entry links its page). Versions are as the game exe reports them; dates are PC release dates. 'rework' marks a patch that reworked the systems mods build on. 'words' are matched as whole words in a mod's name and Nexus summary; 'nexus_mods' lists known mods by id. Edit this file to add entries; no code change is needed.",
+  "checked": "2026-10-10",
+  "patches": [
+    {
+      "version": "1.04",
+      "date": "2020-12-11",
+      "title": "Hotfix 1.04",
+      "link": "https://www.cyberpunk.net/en/news/37043/hotfix-1-04"
+    },
+    {
+      "version": "1.05",
+      "date": "2020-12-19",
+      "title": "Hotfix 1.05",
+      "link": "https://www.cyberpunk.net/en/news/37166/hotfix-1-05"
+    },
+    {
+      "version": "1.06",
+      "date": "2020-12-23",
+      "title": "Hotfix 1.06",
+      "link": "https://www.cyberpunk.net/en/news/37214/hotfix-1-06",
+      "features": [
+        {
+          "id": "save-size-limit",
+          "text": "Removed the 8 MB save file size limit on PC.",
+          "words": [
+            "save size limit",
+            "save file size limit",
+            "8mb save",
+            "8 mb save",
+            "save bloat"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.1",
+      "date": "2021-01-22",
+      "title": "Patch 1.1",
+      "link": "https://www.cyberpunk.net/en/news/37373/patch-1-1"
+    },
+    {
+      "version": "1.11",
+      "date": "2021-01-28",
+      "title": "Hotfix 1.11",
+      "link": "https://www.cyberpunk.net/en/news/37406/hotfix-1-11"
+    },
+    {
+      "version": "1.12",
+      "date": "2021-02-05",
+      "title": "Hotfix 1.12",
+      "link": "https://www.cyberpunk.net/en/news/37439/hotfix-1-12"
+    },
+    {
+      "version": "1.2",
+      "date": "2021-03-29",
+      "title": "Patch 1.2",
+      "link": "https://www.cyberpunk.net/en/news/37801/patch-1-2-list-of-changes",
+      "features": [
+        {
+          "id": "steering-sensitivity",
+          "text": "Added a vehicle steering sensitivity slider.",
+          "words": [
+            "steering sensitivity"
+          ]
+        },
+        {
+          "id": "dodge-rebind",
+          "text": "The dodge key can be unbound and rebound.",
+          "words": [
+            "rebind dodge",
+            "dodge rebind",
+            "disable double tap dodge",
+            "disable dodge on double tap"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.21",
+      "date": "2021-04-14",
+      "title": "Hotfix 1.21",
+      "link": "https://www.cyberpunk.net/en/news/37984/hotfix-1-21"
+    },
+    {
+      "version": "1.22",
+      "date": "2021-04-28",
+      "title": "Hotfix 1.22",
+      "link": "https://www.cyberpunk.net/en/news/38047/hotfix-1-22"
+    },
+    {
+      "version": "1.23",
+      "date": "2021-06-17",
+      "title": "Patch 1.23",
+      "link": "https://www.cyberpunk.net/en/news/38612/patch-1-23"
+    },
+    {
+      "version": "1.3",
+      "date": "2021-08-18",
+      "title": "Patch 1.3",
+      "link": "https://www.cyberpunk.net/en/news/39092/patch-1-3-list-of-changes",
+      "features": [
+        {
+          "id": "perk-respec",
+          "text": "Perk points can be reallocated (respec).",
+          "words": [
+            "respec",
+            "perk reset",
+            "reset perks",
+            "reset perk points"
+          ]
+        },
+        {
+          "id": "minimap-zoom",
+          "text": "The minimap zooms out further while driving.",
+          "words": [
+            "minimap zoom",
+            "zoomed out minimap",
+            "minimap zoom out"
+          ]
+        },
+        {
+          "id": "save-slots",
+          "text": "Autosave slots raised from 10 to 20, quicksave slots from 3 to 10.",
+          "words": [
+            "more autosaves",
+            "autosave slots",
+            "more quicksaves",
+            "quicksave slots"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.31",
+      "date": "2021-09-14",
+      "title": "Patch 1.31",
+      "link": "https://www.cyberpunk.net/en/news/39334/patch-1-31"
+    },
+    {
+      "version": "1.5",
+      "date": "2022-02-15",
+      "title": "Patch 1.5",
+      "link": "https://www.cyberpunk.net/en/news/41435/patch-1-5-next-generation-update-list-of-changes",
+      "features": [
+        {
+          "id": "mirror-appearance",
+          "text": "V's appearance can be changed at mirrors in apartments.",
+          "words": [
+            "appearance change unlocker",
+            "character recustomization",
+            "character re customization",
+            "change v s appearance",
+            "re edit character"
+          ]
+        },
+        {
+          "id": "buy-apartments",
+          "text": "Apartments can be bought through EZEstates.",
+          "words": [
+            "purchasable apartment",
+            "purchasable apartments",
+            "buy apartment",
+            "buy apartments",
+            "buyable apartment",
+            "buyable apartments",
+            "apartment purchase"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.52",
+      "date": "2022-03-22",
+      "title": "Patch 1.52",
+      "link": "https://www.cyberpunk.net/en/news/42203/patch-1-52"
+    },
+    {
+      "version": "1.6",
+      "date": "2022-09-06",
+      "title": "Patch 1.6",
+      "link": "https://www.cyberpunk.net/en/news/45280/edgerunners-update-patch-1-6-list-of-changes",
+      "features": [
+        {
+          "id": "wardrobe",
+          "text": "Wardrobe: up to 6 outfits that don't change armor stats (transmog).",
+          "words": [
+            "transmog",
+            "outfit system"
+          ]
+        },
+        {
+          "id": "item-preview",
+          "text": "Items can be previewed on V before buying.",
+          "words": [
+            "preview items",
+            "item preview",
+            "try on clothes",
+            "try before you buy"
+          ]
+        },
+        {
+          "id": "sleep-duration",
+          "text": "Sleeping in a bed for a chosen duration.",
+          "words": [
+            "sleep duration",
+            "choose how long to sleep"
+          ]
+        },
+        {
+          "id": "radio-subtitles",
+          "text": "Option to turn off radio subtitles.",
+          "words": [
+            "radio subtitles"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.61",
+      "date": "2022-11-08",
+      "title": "Patch 1.61",
+      "link": "https://www.cyberpunk.net/en/news/46420/patch-1-61-list-of-changes",
+      "features": [
+        {
+          "id": "fsr2",
+          "text": "AMD FSR 2.1 upscaling.",
+          "words": [
+            "fsr2",
+            "fsr 2"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.62",
+      "date": "2023-04-11",
+      "title": "Patch 1.62",
+      "link": "https://www.cyberpunk.net/en/news/47875/patch-1-62-ray-tracing-overdrive-mode",
+      "features": [
+        {
+          "id": "dlaa",
+          "text": "NVIDIA DLAA.",
+          "words": [
+            "dlaa"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.63",
+      "date": "2023-06-20",
+      "title": "Patch 1.63",
+      "link": "https://www.cyberpunk.net/en/news/48364/patch-1-63-list-of-changes"
+    },
+    {
+      "version": "2.0",
+      "date": "2023-09-21",
+      "title": "Update 2.0",
+      "link": "https://www.cyberpunk.net/en/news/49060/update-2-0",
+      "rework": true,
+      "changes": [
+        "perk trees",
+        "cyberware (capacity system, armor from cyberware)",
+        "NCPD (patrols, pursuits, MaxTac)",
+        "vehicle combat",
+        "enemy level scaling"
+      ],
+      "features": [
+        {
+          "id": "ray-reconstruction",
+          "text": "DLSS 3.5 Ray Reconstruction.",
+          "words": [
+            "ray reconstruction"
+          ]
+        },
+        {
+          "id": "police-chases",
+          "text": "New NCPD system with patrols, pursuits and roadblocks.",
+          "words": [
+            "police chase",
+            "police chases",
+            "police pursuit",
+            "police pursuits",
+            "ncpd pursuit",
+            "ncpd chases"
+          ]
+        },
+        {
+          "id": "vehicle-combat",
+          "text": "Vehicle combat: shooting and quickhacking from vehicles, vehicle weapons.",
+          "words": [
+            "vehicle combat",
+            "shoot from car",
+            "shoot from vehicle",
+            "shooting from vehicles",
+            "drive by shooting",
+            "driveby"
+          ],
+          "nexus_mods": [
+            3815
+          ]
+        },
+        {
+          "id": "cyberware-capacity",
+          "text": "Cyberware Capacity system.",
+          "words": [
+            "cyberware capacity"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "2.01",
+      "date": "2023-10-05",
+      "title": "Patch 2.01",
+      "link": "https://www.cyberpunk.net/en/news/49231/patch-2-01"
+    },
+    {
+      "version": "2.02",
+      "date": "2023-10-26",
+      "title": "Patch 2.02",
+      "link": "https://www.cyberpunk.net/en/news/49378/patch-2-02"
+    },
+    {
+      "version": "2.1",
+      "date": "2023-12-05",
+      "title": "Update 2.1",
+      "link": "https://www.cyberpunk.net/en/news/49597/update-2-1-patch-notes",
+      "features": [
+        {
+          "id": "ncart-metro",
+          "text": "Rideable NCART metro: 19 stations on 5 lines.",
+          "words": [
+            "ncart",
+            "metro",
+            "subway",
+            "ride the train"
+          ],
+          "nexus_mods": [
+            3560
+          ]
+        },
+        {
+          "id": "radioport",
+          "text": "Radioport: radio on foot.",
+          "words": [
+            "radioport",
+            "portable radio",
+            "pocket radio",
+            "radio on foot",
+            "radio while walking"
+          ],
+          "nexus_mods": [
+            2925
+          ]
+        },
+        {
+          "id": "replay-races",
+          "text": "Car races can be replayed.",
+          "words": [
+            "replay races",
+            "replayable races",
+            "repeatable races",
+            "race again"
+          ]
+        },
+        {
+          "id": "romance-hangouts",
+          "text": "Hangouts with the romance partner at V's apartments.",
+          "words": [
+            "romance hangout",
+            "romance hangouts",
+            "romance dates",
+            "date night"
+          ]
+        },
+        {
+          "id": "binoculars",
+          "text": "Sightseeing binoculars.",
+          "words": [
+            "binoculars"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "2.11",
+      "date": "2024-01-31",
+      "title": "Patch 2.11",
+      "link": "https://www.cyberpunk.net/en/news/49831/patch-2-11",
+      "features": [
+        {
+          "id": "hybrid-cpu",
+          "text": "Hybrid CPU Utilization setting for Intel P-core/E-core CPUs.",
+          "words": [
+            "hybrid cpu",
+            "e cores",
+            "e core",
+            "p cores",
+            "p core"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "2.12",
+      "date": "2024-02-29",
+      "title": "Patch 2.12",
+      "link": "https://www.cyberpunk.net/en/news/49912/patch-2-12"
+    },
+    {
+      "version": "2.13",
+      "date": "2024-09-12",
+      "title": "Patch 2.13",
+      "link": "https://www.cyberpunk.net/en/news/50818/patch-2-13",
+      "features": [
+        {
+          "id": "fsr3-fg",
+          "text": "AMD FSR 3 Frame Generation.",
+          "words": [
+            "fsr3",
+            "fsr 3",
+            "dlssg to fsr3",
+            "fsr frame generation"
+          ]
+        },
+        {
+          "id": "xess-1-3",
+          "text": "Intel XeSS 1.3 upscaling.",
+          "words": [
+            "xess 1 3"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "2.2",
+      "date": "2024-12-10",
+      "title": "Update 2.2",
+      "link": "https://www.cyberpunk.net/en/news/51028/update-2-2-is-live",
+      "features": [
+        {
+          "id": "crystalcoat",
+          "text": "CrystalCoat on more vehicle makes and TwinTone color copying.",
+          "words": [
+            "crystalcoat",
+            "crystal coat",
+            "twintone",
+            "car paint changer",
+            "vehicle paint changer",
+            "change car color",
+            "change vehicle color"
+          ]
+        },
+        {
+          "id": "cc-randomizer",
+          "text": "Character creator: 100+ new options and a randomizer.",
+          "words": [
+            "character randomizer",
+            "character creator randomizer",
+            "randomize character"
+          ]
+        },
+        {
+          "id": "photo-mode-npcs",
+          "text": "Photo Mode can spawn and pose NPCs.",
+          "words": [
+            "photo mode npc",
+            "photo mode npcs",
+            "photomode npc",
+            "photomode npcs",
+            "npcs in photo mode"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "2.21",
+      "date": "2025-01-23",
+      "title": "Patch 2.21",
+      "link": "https://www.cyberpunk.net/en/news/51296/patch-2-21",
+      "features": [
+        {
+          "id": "dlss4",
+          "text": "DLSS 4 Multi Frame Generation and the Transformer model.",
+          "words": [
+            "dlss 4",
+            "dlss4",
+            "multi frame generation",
+            "transformer model"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "2.3",
+      "date": "2025-07-17",
+      "title": "Update 2.3",
+      "link": "https://www.cyberpunk.net/en/news/51674/update-2-3-patch-notes",
+      "features": [
+        {
+          "id": "autodrive",
+          "text": "AutoDrive: vehicles drive themselves to a destination.",
+          "words": [
+            "autodrive",
+            "auto drive",
+            "autopilot",
+            "self driving",
+            "self drive",
+            "drive to waypoint"
+          ]
+        },
+        {
+          "id": "delamain-cabs",
+          "text": "Self-driving Delamain cab service.",
+          "words": [
+            "taxi service",
+            "call a taxi",
+            "call a cab",
+            "delamain cab",
+            "delamain cabs",
+            "cab service"
+          ]
+        },
+        {
+          "id": "fsr31-xess2",
+          "text": "AMD FSR 3.1 Frame Generation and Intel XeSS 2.0.",
+          "words": [
+            "fsr 3 1",
+            "fsr3 1",
+            "xess 2"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "2.31",
+      "date": "2025-09-11",
+      "title": "Patch 2.31",
+      "link": "https://www.cyberpunk.net/en/news/51794/patch-2-31",
+      "features": [
+        {
+          "id": "vignette",
+          "text": "Setting to turn off the vignette.",
+          "words": [
+            "disable vignette",
+            "no vignette",
+            "remove vignette",
+            "removes vignette",
+            "vignette off"
+          ]
+        }
+      ]
+    }
+  ]
+}

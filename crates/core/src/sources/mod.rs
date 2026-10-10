@@ -149,6 +149,23 @@ pub trait ModSource: Send + Sync {
     /// as the source allows. Must refuse anything not served by the source.
     fn download(&self, id: &str, file_id: &str, dest_dir: &Path, progress: Progress) -> Result<Downloaded>;
     fn check_update(&self, installed: &InstalledRef) -> Result<Option<UpdateOffer>>;
+    /// When the installed file and the newest release were published, for
+    /// the patch-note check. `None` when the source has no dates.
+    fn release_dates(&self, _installed: &InstalledRef) -> Result<Option<ReleaseDates>> {
+        Ok(None)
+    }
+}
+
+/// Publication dates (Unix seconds) of an installed file and of the newest
+/// release on its source.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+pub struct ReleaseDates {
+    pub file: Option<i64>,
+    /// `file` is an upper bound: the installed file is older than every
+    /// release the source listed, and this is the oldest listed one's date.
+    #[serde(default)]
+    pub file_before: bool,
+    pub latest: Option<i64>,
 }
 
 pub struct Registry {

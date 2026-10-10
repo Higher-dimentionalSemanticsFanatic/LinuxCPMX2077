@@ -124,7 +124,7 @@ The list of mods CPMX2077 installed in the selected game.
 |---|---|
 | **On** switch | Turns a mod off without uninstalling it: its files leave the game, whatever they replaced comes back, and a checked copy is kept. Turning it on puts them back without a download. Files the mod changed after install (its own settings) are kept. Disabled mods are left out of compatibility and crash checks. |
 | **Name / Tags & category / Mod version / Source** | Click a heading to sort (*Tags & category* sorts by a mod's first tag, then its Nexus category). **Mod version** is the mod's own version (the game version is under **Installed on game**). A mod's tags show as chips: **+ Tag** (or **+** once it has one) adds one of your tags (see [Modpacks](#modpacks)), **×** on a chip takes it off. A mod can have any number of tags. The Nexus category is shown under them. |
-| **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since, so check the mod still works. |
+| **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since, so check the mod still works. A second badge comes from the [patch-note check](#patch-note-check): *predates game 2.31* (a core framework older than a game patch), *before game 2.0* (released before a patch that reworked the systems mods build on), *in base game 2.1?* (a patch added what the mod does), *unlisted on Nexus*. Hover it for the details. |
 | **Update to …** | Appears when a newer file is available. *Switch to stable …* appears when you run a pre-release and a stable release is out. |
 | **Mod page** | Opens the mod's page in **Get mods** (description, files, requirements), for mods from Nexus or GitHub. From there **Open on nexusmods.com** opens the website. Not shown for mods installed from an archive on disk. |
 | **Verify** | Re-hashes the mod's files and reports missing, edited or overridden ones. |
@@ -194,6 +194,40 @@ requirement); click it to fold the card away.
 can't be told apart by name. Installed conflicts and the setting notes also
 show under **Known problems** in Netrunner's
 [Crashes & logs](#crashes--logs).
+
+### Patch-note check
+
+![The Patch-note check card with two warnings and five hints](images/patch-note-check.png)
+
+The **Patch-note check** card compares each turned-on mod's dates with the
+game's official patch notes (cyberpunk.net), from Hotfix 1.04 to Patch
+2.31. The list is built into the app; the line under the heading says when
+it was last compared with the official notes. The heading line counts
+warnings and hints and shows the game version used (from the game's exe;
+when it can't be read, every listed patch counts). Click it to unfold the
+card. Nothing is changed or turned off: these are hints.
+
+Dates used:
+
+- **File date**: Nexus puts the upload time in every file name, so mods
+  installed from Nexus are dated without asking Nexus anything.
+- **Read release dates** asks Nexus (one request per 50 mods) for each mod
+  page's last update, summary and page status, and GitHub for release dates,
+  and keeps them in the library database. Without a Nexus API key only
+  GitHub is read. Mods that couldn't be read are listed under the buttons.
+
+What it reports, warnings first:
+
+| Finding | When |
+|---|---|
+| **… file predates game X** (warning) | A core framework (Cyber Engine Tweaks, RED4ext, redscript, ArchiveXL, TweakXL, Codeware) installed from a file older than a game patch you have, while a newer release exists. The modding wiki's rule: after a game update every core framework needs a release from after that update. Shown as a hint until **Read release dates** confirms the newer release; not shown when the source has nothing newer. |
+| **Released before game 2.0** | The mod's last update (or, before reading dates, its file) is older than Update 2.0, which reworked perk trees, cyberware, the NCPD, vehicle combat and enemy scaling. A warning for mods with scripts, CET, plugins or TweakXL files; a hint for mods with only archives. **Installed file predates game 2.0** means a newer release exists. |
+| **Possibly covered by game X** | The mod's name or Nexus summary matches a feature that patch added (NCART metro, Radioport, wardrobe/transmog, AutoDrive, the vignette toggle, FSR 3 frame generation, …) and the mod wasn't updated after that patch. Some mods are matched by their Nexus id. |
+| **Nexus page status: …** | The Nexus page is hidden, removed or otherwise no longer published (known after **Read release dates**). |
+
+Each row links the patch notes or the modding wiki page it is based on.
+Mods without any date (installed from an archive on disk, or from a source
+without dates) are listed at the bottom as *Not checked*.
 
 ### ReShade
 
@@ -686,6 +720,7 @@ logs are only readable from a fixed list of known locations.
 | ReShade setups from reshade.me | `~/.local/share/cp2077-modmanager/reshade/` |
 | Saved Nexus pages | `~/.cache/cp2077-modmanager/nexus/` |
 | Refreshed Ultra+ recommendations | In the library database (settings) |
+| Release dates for the patch-note check | In the library database (`release_dates`) |
 | Nexus API key | System keyring (Secret Service) only |
 
 On Windows the library folders are under `%APPDATA%\cp2077-modmanager\`,

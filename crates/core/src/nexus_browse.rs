@@ -518,6 +518,39 @@ fn batch_requirements_from_graphql(data: &Value) -> Vec<(i64, Vec<ListedRequirem
         .collect()
 }
 
+const RELEASE_INFO_QUERY: &str = "query ReleaseInfo($ids: [CompositeDomainWithIdInput!]!, $count: Int) {
+  legacyModsByDomain(ids: $ids, count: $count) {
+    nodes { modId summary updatedAt status }
+  }
+}";
+
+/// A Nexus mod's last update, summary and page status, for the patch-note
+/// check (see `patch_notes`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ReleaseInfo {
+    pub mod_id: i64,
+    pub summary: Option<String>,
+    /// Unix seconds.
+    pub updated: Option<i64>,
+    /// `published`, `hidden`, `removed`, `wastebinned`, ...
+    pub status: Option<String>,
+}
+
+fn release_info_from_graphql(data: &Value) -> Vec<ReleaseInfo> {
+    let nodes = data.pointer("/legacyModsByDomain/nodes").and_then(Value::as_array).cloned().unwrap_or_default();
+    nodes
+        .iter()
+        .filter_map(|n| {
+            Some(ReleaseInfo {
+                mod_id: n.get("modId").and_then(as_id)?,
+                summary: clean_line(n.get("summary").and_then(Value::as_str), 500),
+                updated: n.get("updatedAt").and_then(Value::as_str).and_then(parse_time),
+                status: clean_line(n.get("status").and_then(Value::as_str), 40).map(|s| s.to_lowercase()),
+            })
+        })
+        .collect()
+}
+
 /// GraphQL ids come back as numbers or strings depending on the field.
 fn as_id(v: &Value) -> Option<i64> {
     v.as_i64().or_else(|| v.as_str()?.parse().ok()).filter(|i| *i > 0)
@@ -893,6 +926,21 @@ impl Client {
             let list: Vec<Value> = chunk.iter().map(|i| json!({ "gameDomain": NEXUS_GAME_DOMAIN, "modId": i })).collect();
             let data = self.graphql(REQUIREMENTS_QUERY, json!({ "ids": list, "count": chunk.len() }), false)?.value;
             out.extend(batch_requirements_from_graphql(&data));
+        }
+        Ok(out)
+    }
+
+    /// Last update, summary and page status of `mod_ids`, in batches. Mods
+    /// Nexus doesn't know are left out.
+    pub fn release_info(&self, mod_ids: &[i64]) -> Result<Vec<ReleaseInfo>> {
+        let mut ids: Vec<i64> = mod_ids.iter().copied().filter(|i| *i > 0).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        let mut out = Vec::new();
+        for chunk in ids.chunks(REQUIREMENTS_BATCH) {
+            let list: Vec<Value> = chunk.iter().map(|i| json!({ "gameDomain": NEXUS_GAME_DOMAIN, "modId": i })).collect();
+            let data = self.graphql(RELEASE_INFO_QUERY, json!({ "ids": list, "count": chunk.len() }), false)?.value;
+            out.extend(release_info_from_graphql(&data));
         }
         Ok(out)
     }
@@ -1622,5 +1670,23 @@ mod tests {
         assert_eq!(first["variables"]["ids"].as_array().unwrap().len(), 50);
         assert_eq!(first["variables"]["count"], 50);
         assert_eq!(first["variables"]["ids"][0]["gameDomain"], "cyberpunk2077");
+    }
+
+    #[test]
+    fn reads_release_info() {
+        // Shape as returned live by legacyModsByDomain (2026-10-10).
+        let data: Value = serde_json::from_str(
+            r#"{"legacyModsByDomain":{"nodes":[
+                {"modId":107,"summary":"Scripting framework for modders and quality of life fixes.","updatedAt":"2025-09-30T00:55:08Z","status":"published"},
+                {"modId":"9","summary":"","updatedAt":null,"status":"Removed"},
+                {"summary":"no id"}]}}"#,
+        )
+        .unwrap();
+        let v = release_info_from_graphql(&data);
+        assert_eq!(v.len(), 2);
+        assert_eq!(v[0].mod_id, 107);
+        assert_eq!(v[0].updated, Some(1_759_193_708));
+        assert_eq!(v[0].status.as_deref(), Some("published"));
+        assert_eq!((v[1].mod_id, v[1].summary.as_deref(), v[1].updated, v[1].status.as_deref()), (9, None, None, Some("removed")));
     }
 }

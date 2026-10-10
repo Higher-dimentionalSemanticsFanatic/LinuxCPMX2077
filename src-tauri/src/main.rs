@@ -25,6 +25,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 mod modpacks_cmd;
+mod patch_notes_cmd;
 mod reshade_cmd;
 mod ultraplus_cmd;
 
@@ -1595,6 +1596,8 @@ fn main() {
             modpacks_cmd::requirement_states,
             ultraplus_cmd::ultraplus_report,
             ultraplus_cmd::ultraplus_refresh,
+            patch_notes_cmd::patch_notes_report,
+            patch_notes_cmd::patch_notes_read_dates,
             reshade_cmd::reshade_status,
             reshade_cmd::reshade_latest,
             reshade_cmd::reshade_launch,

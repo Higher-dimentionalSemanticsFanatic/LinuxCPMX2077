@@ -598,7 +598,7 @@ pub fn pack_mod(db: &Db, game_id: i64, pack: &Pack) -> Result<Option<ModRow>> {
 }
 
 /// Unix time as `YYYY-MM-DD` (UTC).
-fn ymd(unix: i64) -> String {
+pub(crate) fn ymd(unix: i64) -> String {
     // Days to civil date (Howard Hinnant's algorithm).
     let z = unix.div_euclid(86_400) + 719_468;
     let era = z.div_euclid(146_097);

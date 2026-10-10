@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{Details, InstalledRef, Listing, ListingPage, ModSource, Progress, SourceFile, SourceInfo, SourceQuery, UpdateOffer};
+use super::{Details, InstalledRef, Listing, ListingPage, ModSource, Progress, ReleaseDates, SourceFile, SourceInfo, SourceQuery, UpdateOffer};
 use crate::activity::{self, Kind};
 use crate::nexus::{parse_time, safe_file_name};
 use crate::{APP_NAME, APP_VERSION, Error, Result, hash};
@@ -785,6 +785,24 @@ impl ModSource for GitHubSource {
         let to_stable = !latest.prerelease
             && releases.iter().any(|r| r.prerelease && installed.version.as_deref() == Some(r.tag.as_str()));
         Ok(Some(UpdateOffer { version: latest.tag.clone(), file, to_stable }))
+    }
+
+    fn release_dates(&self, installed: &InstalledRef) -> Result<Option<ReleaseDates>> {
+        let (owner, repo) = split_ref(&installed.source_ref)?;
+        let releases = self.client.releases(&owner, &repo)?;
+        let latest = releases.iter().filter(|r| !r.prerelease).filter_map(|r| r.published).max();
+        let found = releases.iter().find(|r| {
+            installed.file_id.as_deref().is_some_and(|f| r.assets.iter().any(|a| a.id.to_string() == f))
+                || installed.version.as_deref() == Some(r.tag.as_str())
+        });
+        let (file, file_before) = match found {
+            Some(r) => (r.published, false),
+            // A recorded file that isn't in the list is older than every
+            // listed release.
+            None if installed.file_id.is_some() => (releases.iter().filter_map(|r| r.published).min(), true),
+            None => (None, false),
+        };
+        Ok(Some(ReleaseDates { file, file_before: file_before && file.is_some(), latest }))
     }
 }
 

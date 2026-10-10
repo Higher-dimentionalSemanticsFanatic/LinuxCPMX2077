@@ -143,6 +143,13 @@ CREATE TABLE IF NOT EXISTS nexus_requirements (
     requirements TEXT NOT NULL,
     fetched_at   INTEGER NOT NULL           -- unix seconds
 );
+-- Release dates and Nexus page facts per source mod (modpacks::mod_key), for
+-- the patch-note check (see patch_notes.rs). `info` is JSON.
+CREATE TABLE IF NOT EXISTS release_dates (
+    mod_key    TEXT PRIMARY KEY,
+    info       TEXT NOT NULL,
+    fetched_at INTEGER NOT NULL             -- unix seconds
+);
 -- Every game version the manager has seen, oldest first. A new row is added
 -- when the game updates.
 CREATE TABLE IF NOT EXISTS game_versions (

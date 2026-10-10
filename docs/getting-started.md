@@ -162,6 +162,10 @@ sidebar. **Pop out** moves it to its own window.
   uninstalling them.
 - Click **Check for updates** in **Installed mods** now and then (it also
   runs at start-up).
+- After a game update, open the **Patch-note check** card in **Installed
+  mods** and click **Read release dates**: it lists frameworks that need a
+  newer release and mods older than the patches you have (see
+  [Patch-note check](user-guide.md#patch-note-check)).
 - Using Ultra+ for path tracing? Once it's installed, the **Ultra+
   recommendations** card in **Installed mods** shows what its authors
   recommend with it and what conflicts with it.
