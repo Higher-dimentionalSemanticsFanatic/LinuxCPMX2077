@@ -352,6 +352,9 @@ pub struct Status {
     /// Requirements outside the launch options that are not met.
     pub missing: Vec<String>,
     pub plan: Option<Plan>,
+    /// The desktop reports HDR off on every display: the game runs in SDR
+    /// by the user's choice, so nothing is lost.
+    pub sdr: bool,
 }
 
 /// `None` when no connected display reports HDR in its EDID.
@@ -437,7 +440,7 @@ pub fn status(p: &Probe, runner: Option<&Runner>, steam: bool) -> Option<Status>
             None
         }
     };
-    Some(Status { found, missing, plan })
+    Some(Status { found, missing, plan, sdr: p.wayland && p.desktop_hdr == Some(false) })
 }
 
 // ---- Launch options ----------------------------------------------------------------
@@ -600,7 +603,10 @@ mod tests {
         assert_eq!(s.plan.unwrap().line(), "PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1");
 
         let s = status(&Probe { wayland: false, desktop_hdr: Some(false), ..probe() }, Some(&ge), true).unwrap();
-        assert!(s.missing[0].starts_with("X11 has no HDR output"));
+        assert!(s.missing[0].starts_with("X11 has no HDR output") && !s.sdr);
+        let s = status(&Probe { desktop_hdr: Some(false), ..probe() }, Some(&ge), true).unwrap();
+        assert!(s.sdr && s.missing[0].starts_with("Desktop HDR disabled"));
+        assert!(!status(&Probe { desktop_hdr: None, ..probe() }, Some(&ge), true).unwrap().sdr, "not checked counts as HDR");
 
         let old = Probe { gpu: Some(Gpu::Nvidia("570.153.02".into())), ..probe() };
         let s = status(&old, Some(&ge), true).unwrap();

@@ -133,6 +133,10 @@ it), the left and right arrow keys also resize it.
     Heroic, **Copy** copies the variables for Heroic › game settings ›
     Advanced › Environment variables. Once set, pick *HDR10 PQ* in the game's
     Settings › Video › HDR Mode.
+    The item stays a problem while the desktop runs the display in HDR and
+    the game can't use it (the game then renders SDR inside an HDR signal).
+    When the desktop reports HDR disabled on every display, it shows as
+    *✓ HDR (desktop in SDR mode)*; desktops that aren't checked count as HDR.
 - **Frameworks**: CET, RED4ext, redscript, ArchiveXL, TweakXL, Codeware and
   REDmod, highlighted when present in the game folder.
 

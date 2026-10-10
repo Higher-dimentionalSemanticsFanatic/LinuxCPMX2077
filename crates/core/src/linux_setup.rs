@@ -851,7 +851,9 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
             env.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(" ")
         };
         let set = st.plan.as_ref().is_some_and(|p| hdr::has_plan(&cur, p));
-        let ok = set && st.missing.is_empty();
+        // A display in HDR mode running the game in SDR loses quality; one
+        // the user keeps in SDR is fine.
+        let ok = (set && st.missing.is_empty()) || st.sdr;
         let mut detail = format!("{}.", st.found.join("; "));
         if !st.missing.is_empty() {
             detail.push_str(&format!(" Missing: {}.", st.missing.join("; ")));
@@ -872,7 +874,7 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
         let no_config = localconfigs(ctx.home).is_empty().then_some("Steam has no settings for this game yet. Start it once from Steam, then try again.");
         out.push(Check {
             id: FIX_HDR.into(),
-            title: "HDR".into(),
+            title: if st.sdr && !set { "HDR (desktop in SDR mode)".into() } else { "HDR".into() },
             state: if ok { State::Ok } else { State::Problem },
             detail,
             fix: match &want {
