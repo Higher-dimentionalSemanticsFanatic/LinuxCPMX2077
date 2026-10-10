@@ -2,3 +2,6 @@
 **/target
 /dist
 *.AppImage
+
+# Obsidian workspace settings when docs/architecture is opened as a vault
+docs/architecture/.obsidian/

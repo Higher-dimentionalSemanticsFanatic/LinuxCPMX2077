@@ -51,6 +51,59 @@ async function busy(button, fn) {
   finally { if (button) button.disabled = false; }
 }
 
+// Row selection for a table, separate from per-row actions. Each row box
+// carries the ids it stands for (a folder row stands for all its versions);
+// shift-click sets every box between the last one clicked and this one; the
+// header box covers every shown row. Hidden rows drop out of the selection.
+function rowSelection(body, head, onChange) {
+  const sel = { ids: new Set(), shown: [] };
+  let last = null;
+  const idsOf = (b) => b.dataset.ids.split(",").map(Number);
+  const boxes = () => [...body.querySelectorAll("input.pick")];
+  sel.sync = () => {
+    for (const b of boxes()) {
+      const n = idsOf(b).filter((x) => sel.ids.has(x)).length;
+      b.checked = n > 0 && n === idsOf(b).length;
+      b.indeterminate = n > 0 && !b.checked;
+    }
+    head.checked = sel.shown.length > 0 && sel.ids.size === sel.shown.length;
+    head.indeterminate = sel.ids.size > 0 && !head.checked;
+    onChange();
+  };
+  sel.box = (ids, label) => {
+    const b = el("input", { type: "checkbox", class: "pick", "data-ids": ids.join(","), "aria-label": `Select ${label}` });
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const all = boxes();
+      const [i, j] = [all.indexOf(last), all.indexOf(b)];
+      const span = e.shiftKey && i >= 0 ? all.slice(Math.min(i, j), Math.max(i, j) + 1) : [b];
+      for (const x of span.flatMap(idsOf)) if (b.checked) sel.ids.add(x); else sel.ids.delete(x);
+      last = b;
+      sel.sync();
+    });
+    return b;
+  };
+  // Call after each render with the ids of every shown row.
+  sel.render = (ids) => {
+    sel.shown = ids;
+    const keep = new Set(ids);
+    for (const x of [...sel.ids]) if (!keep.has(x)) sel.ids.delete(x);
+    last = null;
+    sel.sync();
+  };
+  sel.clear = () => { sel.ids.clear(); sel.sync(); };
+  head.addEventListener("change", () => {
+    sel.ids = new Set(head.checked ? sel.shown : []);
+    sel.sync();
+  });
+  return sel;
+}
+
+// "a, b, c and 4 more" for confirmations.
+function nameList(names, max = 12) {
+  return names.length > max ? `${names.slice(0, max).join("\n")}\n… and ${names.length - max} more` : names.join("\n");
+}
+
 // Per-viewer conveniences (sort order, last source). Storage may be missing.
 function loadPref(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
@@ -298,6 +351,7 @@ function renderMods() {
   });
   $("#mods-empty").classList.toggle("hidden", mods.length > 0);
   $("#mods-body").replaceChildren(...shown.flatMap((m) => [modRow(m), ...dependencyRows(m)]));
+  modSel.render(shown.map((m) => m.id));
 }
 
 // The mod's page in Get mods (Nexus or another source); none for manual installs.
@@ -323,6 +377,7 @@ function modRow(m) {
   sw.checked = on;
   sw.addEventListener("change", () => busy(sw, () => setEnabled(m, sw.checked)).finally(loadMods));
   return el("tr", { class: on ? "" : "off" },
+    el("td", {}, modSel.box([m.id], m.name)),
     el("td", {}, sw),
     el("td", {}, el("b", {}, m.name), on ? null : el("span", { class: "badge" }, "disabled"),
       el("div", { class: "muted mono" }, m.archive_name)),
@@ -350,6 +405,72 @@ document.querySelectorAll("#tab-mods th.sortable").forEach((th) => th.addEventLi
   renderMods();
 }));
 $("#mods-category").addEventListener("change", renderMods);
+
+// ---- selection and bulk actions --------------------------------------------
+const modSel = rowSelection($("#mods-body"), $("#mods-select-all"), () => {
+  const n = modSel.ids.size;
+  $("#mods-bulk").classList.toggle("hidden", !n);
+  $("#mods-bulk-count").textContent = `${n} selected`;
+});
+const selectedMods = () => mods.filter((m) => modSel.ids.has(m.id));
+
+// Runs `fn` on each mod in turn; returns the failures as "name: error".
+async function eachMod(list, fn) {
+  const failed = [];
+  for (const m of list) {
+    try { await fn(m); } catch (e) { failed.push(`${m.name}: ${e}`); }
+  }
+  return failed;
+}
+
+function bulkReport(done, failed, extra = []) {
+  toast([done, ...extra, ...(failed.length ? [`Failed (${failed.length}):`, ...failed.slice(0, 8)] : [])].join("\n"), failed.length > 0);
+}
+
+$("#mods-bulk-disable").addEventListener("click", (e) => busy(e.target, async () => {
+  const list = selectedMods().filter((m) => m.status === "installed");
+  if (!list.length) throw "All selected mods are already disabled";
+  const kept = [];
+  const failed = await eachMod(list, async (m) => {
+    const k = await invoke("disable_mod", { modId: m.id });
+    if (k.length) kept.push(`${m.name}: ${k.join(", ")}`);
+  });
+  bulkReport(`Disabled ${list.length - failed.length} of ${list.length}`, failed,
+    kept.length ? ["Left in place because they changed after install:", ...kept.slice(0, 8)] : []);
+}).finally(loadMods));
+
+$("#mods-bulk-enable").addEventListener("click", (e) => busy(e.target, async () => {
+  const list = selectedMods().filter((m) => m.status !== "installed");
+  if (!list.length) throw "All selected mods are already enabled";
+  const conflicts = [];
+  let deployed = 0;
+  const failed = await eachMod(list, async (m) => {
+    try {
+      deployed += (await invoke("enable_mod", { modId: m.id, overwrite: false })).files_deployed;
+    } catch (err) {
+      // Choosing which mod wins a file is a per-mod decision: leave it off.
+      if (!String(err).startsWith("file conflict:")) throw err;
+      conflicts.push(m.name);
+    }
+  });
+  const ok = list.length - failed.length - conflicts.length;
+  bulkReport(`Enabled ${ok} of ${list.length}: ${deployed} file${deployed === 1 ? "" : "s"} put back`, failed,
+    conflicts.length ? [`Not enabled, files conflict with enabled mods (enable one at a time to choose): ${conflicts.join(", ")}`] : []);
+}).finally(loadMods));
+
+$("#mods-bulk-uninstall").addEventListener("click", (e) => busy(e.target, async () => {
+  const list = sortMods(selectedMods());
+  if (!list.length) return;
+  const ok = await dialog.ask(`Uninstall ${list.length} mod${list.length === 1 ? "" : "s"}?\n\n${nameList(list.map((m) => m.name))}\n\n`
+    + "Their files are removed and game files they replaced are restored. Files changed after install (settings) stay in the game.",
+  { title: "Uninstall mods", kind: "warning", okLabel: "Uninstall", cancelLabel: "Cancel" });
+  if (!ok) return;
+  // Newest install first, so files one mod overrode go back in order.
+  const failed = await eachMod([...list].sort((a, b) => b.id - a.id), (m) => invoke("uninstall_mod", { modId: m.id }));
+  bulkReport(`Uninstalled ${list.length - failed.length} of ${list.length}`, failed);
+}).finally(loadMods));
+
+$("#mods-bulk-clear").addEventListener("click", () => modSel.clear());
 
 // ---- updates ------------------------------------------------------------
 async function checkUpdates(quiet = false) {
@@ -458,7 +579,7 @@ async function verify(m) {
 }
 
 async function uninstall(m) {
-  const ok = await dialog.ask(`Uninstall “${m.name}”? Its files are removed and any game files it replaced are restored.`,
+  const ok = await dialog.ask(`Uninstall “${m.name}”? Its files are removed and any game files it replaced are restored. Files changed after install (settings) stay in the game.`,
     { title: "Uninstall mod", kind: "warning" });
   if (!ok) return;
   await invoke("uninstall_mod", { modId: m.id });
@@ -2342,11 +2463,13 @@ async function loadDownloads() {
 
 function renderDownloads() {
   const rows = [];
+  const shownIds = [];
   let shownAny = false;
   for (const g of downloadGroups) {
     const entries = g.entries.filter((e) => channelShown(e.channel));
     if (!entries.length) continue;
     shownAny = true;
+    shownIds.push(...entries.map((e) => e.id));
     if (entries.length === 1) {
       rows.push(downloadRow(entries[0], 0));
       continue;
@@ -2361,6 +2484,7 @@ function renderDownloads() {
     };
     const channels = ["stable", "beta", "nightly"].filter((c) => entries.some((e) => e.channel === c));
     rows.push(el("tr", { class: "folder", onclick: (e) => { if (e.target.tagName !== "BUTTON" || e.target.classList.contains("twisty")) toggle(); } },
+      el("td", {}, dlSel.box(entries.map((e) => e.id), `all ${entries.length} versions of ${g.name}`)),
       el("td", {},
         el("button", { class: "twisty", "aria-expanded": String(open), title: open ? "Hide versions" : "Show versions" }, open ? "▾" : "▸"),
         el("span", { class: "folder-icon", "aria-hidden": "true" }, "📁"),
@@ -2379,6 +2503,7 @@ function renderDownloads() {
   $("#downloads-empty").textContent = downloadGroups.length ? "Nothing matches this filter." : "Nothing downloaded yet.";
   $("#downloads-empty").classList.toggle("hidden", shownAny);
   $("#downloads-body").replaceChildren(...rows);
+  dlSel.render(shownIds);
 }
 
 function installedFor(d) {
@@ -2390,6 +2515,7 @@ function downloadRow(d, depth) {
   const up = m && updatesByMod.get(m.id);
   const checked = d.checked || (d.verified ? "MD5 matches Nexus" : "unverified");
   return el("tr", { class: depth ? "child" : "" },
+    el("td", {}, dlSel.box([d.id], d.file_name)),
     el("td", {}, el("div", { class: depth ? "indent" : "" },
       depth ? null : el("b", {}, d.mod_name || d.file_name),
       m ? el("span", { class: "badge ok" }, m.status === "installed" ? "installed" : "installed, off") : null,
@@ -2441,6 +2567,32 @@ function sameMod(m, d) {
   if (d.source_ref) return m.source === d.source && m.source_ref === d.source_ref;
   return false;
 }
+
+const dlSel = rowSelection($("#downloads-body"), $("#downloads-select-all"), () => {
+  const list = selectedDownloads();
+  $("#downloads-bulk").classList.toggle("hidden", !list.length);
+  $("#downloads-bulk-count").textContent = `${list.length} selected · ${fmtSize(list.reduce((n, d) => n + d.size, 0))}`;
+});
+const selectedDownloads = () => downloadGroups.flatMap((g) => g.entries).filter((d) => dlSel.ids.has(d.id));
+
+$("#downloads-bulk-delete").addEventListener("click", (e) => busy(e.target, async () => {
+  const list = selectedDownloads();
+  if (!list.length) return;
+  const installed = list.filter((d) => installedFor(d)).length;
+  const ok = await dialog.ask(`Delete ${list.length} download${list.length === 1 ? "" : "s"} (${fmtSize(list.reduce((n, d) => n + d.size, 0))})?\n\n`
+    + `${nameList(list.map((d) => `${d.file_name}${d.version ? ` (${d.version})` : ""}`))}`
+    + (installed ? `\n\n${installed} of them installed: those mods stay installed; only the archives are deleted.` : ""),
+  { title: "Delete downloads", kind: "warning", okLabel: "Delete", cancelLabel: "Cancel" });
+  if (!ok) return;
+  // Entries sharing one file go together on the first delete.
+  const byPath = [...new Map(list.map((d) => [d.path, d])).values()];
+  const failed = [];
+  for (const d of byPath) {
+    try { await invoke("delete_download", { downloadId: d.id }); } catch (err) { failed.push(`${d.file_name}: ${err}`); }
+  }
+  bulkReport(`Deleted ${byPath.length - failed.length} of ${byPath.length}`, failed);
+}).finally(() => loadDownloads().catch(() => {})));
+$("#downloads-bulk-clear").addEventListener("click", () => dlSel.clear());
 
 $("#downloads-channel").value = loadPref("downloadsChannel", "");
 $("#downloads-channel").addEventListener("change", () => {

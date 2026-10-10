@@ -136,6 +136,9 @@ Screenshots show sample data, with file locations blurred.
   after install, such as its own settings, stay in place and are kept when it
   comes back. Disabled mods are left out of the compatibility check and crash
   analysis.
+- **Multi-select**: select several installed mods to enable, disable or
+  uninstall them together, or several downloads to delete them, with one
+  confirmation listing what is removed.
 - **Netrunner tab** (formerly Diagnostics): one place for overview and
   diagnosis. It opens with a summary of what needs attention (game setup
   warnings, recent crashes, mods named in log errors, compatibility
@@ -171,7 +174,7 @@ Screenshots show sample data, with file locations blurred.
 - **Graph view**: mods, the frameworks they need, the game classes, tweak
   records and resources they touch, with clashes highlighted. "Group by"
   rings or heads the nodes by node type, mod type, tag, Nexus category or
-  source.
+  source; clicking a type in the legend hides or shows it.
 - **Verify**: re-hashes a mod's files and reports missing, edited or
   overridden ones.
 - **Nexus Mods sign-in**: “Sign in with Nexus Mods” uses Nexus SSO, so you
@@ -231,6 +234,10 @@ Screenshots show sample data, with file locations blurred.
   your machine (downloads, checksum checks, extractions, files copied,
   backed up, moved or deleted, Linux setup fixes), with filters, Copy and
   Save…. API keys and signed download links are never shown.
+- **App update notice**: on startup (and from Settings → *Check now*) the
+  app compares its version with the newest CPMX2077 release on GitHub,
+  pre-releases included, and shows a notice with the release notes and a
+  link to the release page. Notify only: nothing is downloaded or replaced.
 
 ### Windows (preview)
 

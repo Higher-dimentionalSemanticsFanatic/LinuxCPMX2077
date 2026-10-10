@@ -4,6 +4,7 @@
 
 pub mod activity;
 pub mod analysis;
+pub mod app_update;
 pub mod archive;
 pub mod crash;
 pub mod db;
