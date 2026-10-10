@@ -2664,6 +2664,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("#show-adult").checked = await invoke("nexus_show_adult");
   await busy(null, refreshLocation);
   $("#mcp-cmd").textContent = await invoke("mcp_command");
+  firstRunTour();
   const links = await invoke("startup_links");
   for (const l of links) await busy(null, () => handleNxm(l));
   // Quietly, so a slow or rate-limited source doesn't hold up the window.

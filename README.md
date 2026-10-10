@@ -22,6 +22,8 @@ check the download against. A Windows installer
 
 - **New here?** Follow [Getting started](docs/getting-started.md): install,
   connect Nexus, set up the frameworks and Proton, and install your first mod.
+  The app also opens a short introduction tour on first start (Settings →
+  Start tour shows it again).
 - **Reference:** the [user guide](docs/user-guide.md) explains how the app
   works and what every tab and button does, plus troubleshooting.
 

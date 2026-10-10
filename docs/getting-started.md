@@ -27,6 +27,13 @@ For what every button does, see the [user guide](user-guide.md).
 The app keeps its library in `~/.local/share/cp2077-modmanager/`, so you can
 replace the AppImage with a newer one at any time without losing anything.
 
+On the first start an **introduction tour** opens: a few steps that outline
+the Game panel, the tabs, the Nexus account box, **Install missing
+frameworks** and (on Linux) the setup fixes. **Next** and **Back** step
+through it (or the arrow keys); **Skip tour** or Esc closes it. It opens
+once; **Settings → Introduction tour → Start tour** shows it again. This
+guide covers the same steps in more detail.
+
 **On Windows (preview)**: download `CPMX2077_<version>_x64-setup.exe` and run
 it. It installs for your user only, without admin rights. It isn't code-signed
 yet, so SmartScreen asks once: choose *More info*, then *Run anyway*. Steam,

@@ -66,7 +66,7 @@ h1::after {
     linear-gradient(var(--line), var(--line)) 146px 0 / calc(100% - 146px) 1px no-repeat;
 }
 h2 { font-weight: 600; font-size: 14px; letter-spacing: 2.5px; color: var(--cyan); }
-main h2, .wiz-panel h2 {
+main h2, .wiz-panel h2, #tour-card h2 {
   font-size: 26px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--yellow);
   line-height: 1.1; text-shadow: 0 0 18px rgba(246, 207, 60, .18);
 }
@@ -85,7 +85,7 @@ main .tab > header::after {
    Top-right and bottom-left corners are cut; the two diagonal edges are drawn
    with gradients so the thin frame line stays unbroken. Each element sets
    --fill (background), --frame (line color) and --cut (corner size).        */
-button, .card, .mod-card, .quick-menu, .wiz-panel, #toast, #graph-info, #graph-message, input:not([type=checkbox]):not([type=radio]):not([type=color]), select {
+button, .card, .mod-card, .quick-menu, .wiz-panel, #tour-card, #toast, #graph-info, #graph-message, input:not([type=checkbox]):not([type=radio]):not([type=color]), select {
   --fill: var(--panel);
   --frame: var(--border);
   border-radius: 0;
@@ -178,6 +178,7 @@ pre, .description, .bbcode, .requirements { border-radius: 0; background: rgba(1
 #log-viewer, #wizard { background: rgba(8, 6, 8, .78); }
 #log-text { border-radius: 0; background: var(--bg); }
 .wiz-panel { --fill: #16181c; border-top: 3px solid var(--yellow); }
+#tour-card { --fill: #16181c; --frame: var(--line); --cut: 14px; border-top: 3px solid var(--yellow); }
 #wiz-steps span { border-radius: 0; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
 #wiz-steps span.active { background: var(--yellow); }
 #wiz-image img, .mod-head .hero, .bbcode .desc-img { border-radius: 0; }

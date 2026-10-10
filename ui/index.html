@@ -485,6 +485,11 @@
         <h3>Nexus account</h3>
         <button id="clear-key">Forget API key</button>
       </div>
+      <div class="card">
+        <h3>Introduction tour</h3>
+        <p>Walkthrough of the window, the core frameworks from GitHub and the Nexus account. Shown once on first start.</p>
+        <button id="tour-start">Start tour</button>
+      </div>
     </section>
   </main>
 
@@ -528,6 +533,23 @@
     </div>
   </div>
 
+  <div id="tour" class="hidden">
+    <div class="tour-shade top"></div><div class="tour-shade right"></div>
+    <div class="tour-shade bottom"></div><div class="tour-shade left"></div>
+    <div id="tour-spot" class="hidden"></div>
+    <div id="tour-card" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+      <div class="row"><span id="tour-count" class="muted small"></span></div>
+      <h2 id="tour-title"></h2>
+      <div id="tour-body"></div>
+      <footer class="row">
+        <button id="tour-skip" class="link">Skip tour</button>
+        <span class="spacer"></span>
+        <button id="tour-back">Back</button>
+        <button id="tour-next" class="primary">Next</button>
+      </footer>
+    </div>
+  </div>
+
   <div id="toast" class="hidden"></div>
   <script src="app.js"></script>
   <script src="modpacks.js"></script>
@@ -535,5 +557,6 @@
   <script src="netrunner.js"></script>
   <script src="ultraplus.js"></script>
   <script src="reshade.js"></script>
+  <script src="tour.js"></script>
 </body>
 </html>

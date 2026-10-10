@@ -570,6 +570,15 @@ Every archive you downloaded, grouped by mod with each version under it.
   searches are saved for a week; lists count as fresh for 5 minutes and mod
   pages for 10.
 - **Nexus account**: **Forget API key** removes it from the keyring.
+- **Introduction tour**: **Start tour** reopens the walkthrough shown on
+  first start. Each step switches to its tab and outlines one element:
+  the Game panel, the tabs, the Nexus account box (API key, Free vs Premium
+  downloads), **Install missing frameworks** in Get mods › GitHub, the Linux
+  setup items (not on Windows), Installed mods and Netrunner. The outlined
+  element stays clickable; everything else is dimmed. **Next** / **Back**
+  or the arrow keys step through, **Skip tour** or Esc closes it, and the
+  last step has **Open getting started guide**. Closing it returns to the
+  tab you were on.
 
 ### Debug terminal
 
