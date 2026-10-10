@@ -111,6 +111,28 @@ it), the left and right arrow keys also resize it.
     native-then-builtin in the prefix.
   - *Folder names* → **Merge folders** joins mod folders that exist under two
     spellings.
+  - *HDR* (only when a connected display lists HDR10/PQ in its EDID) →
+    **Set HDR launch options**. Lists what was checked: the display, the
+    session (Wayland or X11), the desktop and whether its HDR is enabled
+    (read from `kscreen-doctor` on KDE; *not checked* elsewhere), the GPU
+    driver (`/proc/driver/nvidia/version` or `vulkaninfo`) and the Proton
+    build that last ran the prefix. Requirements:
+    - Wayland session with HDR enabled in the desktop's display settings
+      (KDE Plasma 6: System Settings › Display & Monitor › Enable HDR;
+      GNOME 48 or newer: Settings › Displays). X11 has no HDR output.
+    - Mesa 25.1 or newer, or NVIDIA 595 or newer. Older drivers work only
+      with `vk_hdr_layer` installed; the app then adds `ENABLE_HDR_WSI=1`.
+    - GE-Proton 10 or newer, or proton-cachyos: the button adds
+      `PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1`. Valve's Proton has no Wine
+      Wayland driver; with `gamescope` installed the button adds
+      `DXVK_HDR=1 gamescope -W <width> -H <height> -f --hdr-enabled -- `
+      before `%command%` instead (size from the display's preferred mode).
+      Without either: select GE-Proton in Steam › Properties › Compatibility.
+    Other launch options are kept; **Undo** removes only the HDR variables
+    and the HDR `gamescope` wrapper. Only works while Steam is closed. With
+    Heroic, **Copy** copies the variables for Heroic › game settings ›
+    Advanced › Environment variables. Once set, pick *HDR10 PQ* in the game's
+    Settings › Video › HDR Mode.
 - **Frameworks**: CET, RED4ext, redscript, ArchiveXL, TweakXL, Codeware and
   REDmod, highlighted when present in the game folder.
 
@@ -122,13 +144,35 @@ The list of mods CPMX2077 installed in the selected game.
 
 | Column / control | What it does |
 |---|---|
-| **On** switch | Turns a mod off without uninstalling it: its files leave the game, whatever they replaced comes back, and a checked copy is kept. Turning it on puts them back without a download. Files the mod changed after install (its own settings) are kept. Disabled mods are left out of compatibility and crash checks. |
+| Selection box (first column) | Selects the mod for the actions in the selection bar. It changes nothing on its own; see *Selecting several mods* below. |
+| **On** switch | The slider. Turns a mod off without uninstalling it: its files leave the game, whatever they replaced comes back, and a checked copy is kept. Turning it on puts them back without a download. Files the mod changed after install (its own settings) are kept. Disabled mods are left out of compatibility and crash checks. |
 | **Name / Tags & category / Mod version / Source** | Click a heading to sort (*Tags & category* sorts by a mod's first tag, then its Nexus category). **Mod version** is the mod's own version (the game version is under **Installed on game**). A mod's tags show as chips: **+ Tag** (or **+** once it has one) adds one of your tags (see [Modpacks](#modpacks)), **×** on a chip takes it off. A mod can have any number of tags. The Nexus category is shown under them. |
 | **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since, so check the mod still works. |
 | **Update to …** | Appears when a newer file is available. *Switch to stable …* appears when you run a pre-release and a stable release is out. |
 | **Mod page** | Opens the mod's page in **Get mods** (description, files, requirements), for mods from Nexus or GitHub. From there **Open on nexusmods.com** opens the website. Not shown for mods installed from an archive on disk. |
 | **Verify** | Re-hashes the mod's files and reports missing, edited or overridden ones. |
-| **Uninstall** | Removes the mod and restores what it replaced. |
+| **Uninstall** | Removes the mod and its stored copy and restores what it replaced. Files changed after install (the mod's own settings) stay in the game and are no longer tracked. |
+
+**On** vs **Uninstall**: switching a mod off keeps it in the list with a
+stored copy, so it can come back without a download. **Uninstall** deletes
+the stored copy and removes the mod from the list.
+
+### Selecting several mods
+
+- Tick the box in the first column of each mod. **Shift**-click a second box
+  to select every mod between the two. The box in the header selects every
+  mod the current tag/category filter and game-version ribbon show.
+- With at least one mod selected, a bar above the list shows the count and:
+  - **Enable**: switches the selected disabled mods on. A mod whose files
+    conflict with an enabled mod is left off and named in the report; switch
+    it on with its own **On** switch to choose which mod's files win.
+  - **Disable**: switches the selected enabled mods off.
+  - **Uninstall**: one confirmation lists every selected mod, then uninstalls
+    them, newest install first, so files one mod replaced are put back in
+    order.
+  - **Clear selection**.
+- Changing the filter drops hidden mods from the selection, so an action only
+  touches mods on screen.
 
 Above the list:
 
@@ -144,9 +188,11 @@ Above the list:
   off, removed, added).
 - **Tag and category filter**: one of your tags (or *No tags*), or a Nexus
   category.
-- **Show dependencies** lists what each mod needs, indented under it: its
-  Nexus page's requirements and the frameworks its files use (redscript for
-  `.reds`, ArchiveXL for `.xl`, …). Each is marked installed, turned off,
+- **Mods only / Dependencies / Recommendations** picks the rows shown under
+  each mod. **Mods only** shows the plain list.
+- **Dependencies** (teal rows) lists what each mod needs, indented under it:
+  its Nexus page's requirements and the frameworks its files use (redscript
+  for `.reds`, ArchiveXL for `.xl`, …). Each is marked installed, turned off,
   already in the game folder, or missing, with a button to get it (**Turn
   on**, **Install** from GitHub, **Get from Nexus**, or **Open link** for
   off-site requirements). The requirements come from each mod's Nexus page,
@@ -155,9 +201,22 @@ Above the list:
   can't be checked is marked **not verified**. A mod with nothing found in
   either source shows "No requirements listed on its Nexus page; no
   framework use found in its files" (or "No Nexus page to read requirements
-  from" for mods not installed from Nexus). The line next to the checkbox counts what is missing
-  for your turned-on mods, and **Get missing (N)** queues all of it at once:
-  core frameworks from GitHub, everything else from Nexus.
+  from" for mods not installed from Nexus). Under a mod that others need, a
+  "Needed by" line names them.
+- **Recommendations** (amber rows) lists the Nexus requirements whose
+  author's note marks them optional: notes such as "optional",
+  "recommended", "only if you want …" or "not required". A requirement the
+  mod's files use is always a dependency, whatever its note says. Under a mod
+  that others recommend, a "Recommended by" line names them.
+- **Missing on top** (on by default) puts a block above the mods with each
+  missing dependency (or recommendation) once, the number of turned-on mods
+  that list it in front, most first, and the mods that list it. Mods with
+  something missing sort above the rest, keeping the column sort within each
+  part.
+- The line next to the buttons counts what is missing for your turned-on
+  mods, and **Get missing (N)** queues all of it at once (dependencies or
+  recommendations, per the selected view): core frameworks from GitHub,
+  everything else from Nexus.
 
 ### Ultra+ recommendations
 
@@ -375,6 +434,11 @@ red.
   Clicking a mod shows its tags in the details panel.
 - **Hide harmless hooks** hides hooks that several mods share without
   conflict.
+- **Legend**: click a node type (*Mod*, *Framework*, *Game class*, …) to
+  hide it in both layouts, together with every line to it; click it again to
+  show it. Hidden types are struck through and stay hidden the next time you
+  open the app. Parts a hidden mod touches stay visible. **Show in graph**
+  turns *Mod* back on if it is hidden.
 - Drag to pan, scroll or use the zoom bar (− / 100% / + / **Fit**), drag a
   node to move it, click a node for its details. **Re-layout** starts over.
 - Large libraries (several thousand nodes) stay responsive: zooming and
@@ -476,8 +540,10 @@ Browse and download mods. The switch at the top right picks the source:
   as on the website (old versions folded away). Mods you have are marked
   installed. Each Nexus requirement has a **You have** column (installed,
   turned off, in the game folder, or missing) with a button to get or turn
-  on what you lack, and a line saying how many you're missing; **Get
-  missing** queues them all. This works before you install the mod, so you
+  on what you lack, and a line saying how many required ones are missing;
+  **Get missing** queues them all. Requirements whose author's note marks
+  them optional get an amber **recommended** badge and are counted
+  separately, not queued by **Get missing**. This works before you install the mod, so you
   can see what it will need. **Refresh** asks Nexus again instead of using the saved copy.
 - **Downloading a file**:
   - *Premium*: **Download & install** downloads through the API and
@@ -545,13 +611,30 @@ Every archive you downloaded, grouped by mod with each version under it.
   nightly only. The channel comes from the version and file name and from
   GitHub's pre-release flag.
 - **Install** or **Switch to this** installs that file, replacing the version
-  you have. **Delete** removes the file from disk.
+  you have. **Delete** removes the file from disk. An installed mod stays
+  installed; only the archive goes.
+- **Deleting several**: tick the box in the first column of each download.
+  A folder's box selects all its versions, **Shift**-click selects a range and
+  the header box selects everything the channel filter shows. The bar above
+  the list shows the count and total size; **Delete** lists the files in one
+  confirmation and deletes them.
 - Each file is kept once: downloading the same file again uses this copy
   (see *No duplicate downloads* under Get mods).
 - **Open all folders** expands every mod.
 
 ## Settings
 
+- **CPMX2077 updates**: compares this build's version with the newest
+  CPMX2077 release on GitHub, pre-releases included. *Check on startup* (on
+  by default) runs the check each time the app starts; **Check now** runs it
+  at once and shows the result next to the button. When a newer release is
+  out, a notice appears above the current tab with **Show release notes**,
+  **Open release page** (opens it in your browser) and **Dismiss** (hides
+  the notice for that release; a newer release shows it again). Nothing is
+  downloaded or replaced: get the new AppImage or Windows installer from
+  the release page. The check is one request to GitHub's API with no
+  account; if GitHub can't be reached or its hourly limit is used up, the
+  result line says so and nothing else happens.
 - **Download location**: where archives are kept, one folder per mod.
   **Change…** offers to move existing downloads; **Use the default folder**
   goes back; **Sort into mod folders** tidies loose files.
@@ -722,6 +805,11 @@ options are set (Steam must be closed while the app sets them).
 **Launch options** row says *set*; Steam must be closed while the app writes
 them. If the overlay opens but effects fail to compile, use **Install
 d3dcompiler_47** in the Game panel.
+
+**The game's HDR Mode is greyed out.** Check the *HDR* item in the Game
+panel: it names what is missing (Wayland session, desktop HDR, driver
+version, a Proton build with the Wine Wayland driver, or the launch
+options). No *HDR* item means no connected display lists HDR10 in its EDID.
 
 **Set launch options says Steam is running.** Steam overwrites its settings
 while it runs. Quit Steam completely and click the button again.

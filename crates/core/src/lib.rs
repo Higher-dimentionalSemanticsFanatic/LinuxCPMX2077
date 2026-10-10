@@ -4,6 +4,7 @@
 
 pub mod activity;
 pub mod analysis;
+pub mod app_update;
 pub mod archive;
 pub mod crash;
 pub mod db;
@@ -16,6 +17,7 @@ pub mod fomod;
 pub mod game;
 pub mod game_versions;
 pub mod hash;
+pub mod hdr;
 pub mod install;
 pub mod known_issues;
 pub mod linux_setup;

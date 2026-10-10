@@ -26,6 +26,8 @@ For what every button does, see the [user guide](user-guide.md).
 
 The app keeps its library in `~/.local/share/cp2077-modmanager/`, so you can
 replace the AppImage with a newer one at any time without losing anything.
+When a newer release is out, a notice at the top of the window links to it
+(Settings → *CPMX2077 updates* turns the startup check off).
 
 On the first start an **introduction tour** opens: a few steps that outline
 the Game panel, the tabs, the Nexus account box, **Install missing
@@ -102,6 +104,7 @@ each with a button that fixes it and, once fixed, an **Undo** button:
 | **Shader compiler for ReShade** (*Install d3dcompiler_47*) | Only listed once ReShade is installed. Installs Microsoft's shader compiler into the prefix, which many ReShade effects need to compile. |
 | **DLL overrides**, Heroic only (*Set overrides*) | Sets the same `winmm` and `version` overrides in the Heroic prefix. |
 | **Folder names** (*Merge folders*) | Merges mod folders that exist under two spellings, such as `Mods` and `mods`. |
+| **HDR** (*Set HDR launch options*) | Only listed when a connected display supports HDR10. Lists what HDR needs (Wayland session, desktop HDR enabled, Mesa 25.1+ or NVIDIA 595+, GE-Proton 10+ or gamescope) and adds `PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1` (or a `gamescope --hdr-enabled` wrapper) to the launch options. Optional; leave it if you play in SDR. **Close Steam first**. |
 
 Accept the fixes. If Steam is open, the launch options fix waits; close
 Steam, then click **Set launch options** in the Game panel. **Copy** next to
