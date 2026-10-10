@@ -289,15 +289,15 @@ function renderMods() {
   sel.value = [...sel.options].some((o) => o.value === keep) ? keep : "";
   const f = sel.value;
   const tagsOf = (m) => modTags.mods[m.id] || [];
-  const shown = sortMods(mods.filter((m) => (!f
+  const shown = missingFirst(sortMods(mods.filter((m) => (!f
     || (f.startsWith("tag:") ? (f === `tag:${NO_CATEGORY}` ? !tagsOf(m).length : tagsOf(m).includes(f.slice(4)))
-      : f === NO_CATEGORY ? !m.category : m.category === f)) && ribbonFilter(m)));
+      : f === NO_CATEGORY ? !m.category : m.category === f)) && ribbonFilter(m))));
   document.querySelectorAll("#tab-mods th.sortable").forEach((th) => {
     th.classList.toggle("asc", th.dataset.sort === modSort.key && modSort.dir > 0);
     th.classList.toggle("desc", th.dataset.sort === modSort.key && modSort.dir < 0);
   });
   $("#mods-empty").classList.toggle("hidden", mods.length > 0);
-  $("#mods-body").replaceChildren(...shown.flatMap((m) => [modRow(m), ...dependencyRows(m)]));
+  $("#mods-body").replaceChildren(...deficitRows(), ...shown.flatMap((m) => [modRow(m), ...dependencyRows(m)]));
 }
 
 // The mod's page in Get mods (Nexus or another source); none for manual installs.
@@ -1538,10 +1538,11 @@ function requirementsSection(modId, r) {
   const reqRow = (q, nexus) => {
     const cells = [el("td", { class: "req-state" }), el("td", { class: "actions" })];
     if (nexus && q.mod_id) statusCells.set(q.mod_id, cells);
-    return el("tr", {},
+    return el("tr", { class: q.optional ? "rec" : "" },
       el("td", {}, nexus && q.mod_id
         ? el("a", { href: "#", onclick: (e) => { e.preventDefault(); busy(null, () => showMod(q.mod_id)); } }, q.name)
-        : q.url ? docLink(q.url, [q.name]) : q.name),
+        : q.url ? docLink(q.url, [q.name]) : q.name,
+        q.optional ? el("span", { class: "badge rec-badge", title: "The author's note marks it optional or recommended" }, "recommended") : null),
       el("td", { class: "muted" }, q.notes || ""),
       ...(nexus ? cells : []));
   };
@@ -1568,9 +1569,14 @@ function requirementsSection(modId, r) {
         state.replaceChildren(el("span", { class: `badge ${cls}` }, label));
         action.replaceChildren(dependencyAction(d, () => loadMods().then(() => showMod(modId))) || "");
       }
-      const missing = deps.filter((d) => d.state === "missing");
-      summary.textContent = missing.length
-        ? `You're missing ${missing.length} of ${deps.length}.` : deps.length ? "You have all of them." : "";
+      const optional = new Set(r.nexus.filter((q) => q.optional).map((q) => q.mod_id));
+      const required = deps.filter((d) => !optional.has(d.nexus_mod_id));
+      const missing = required.filter((d) => d.state === "missing");
+      const recMissing = deps.filter((d) => optional.has(d.nexus_mod_id) && d.state === "missing").length;
+      summary.textContent = [
+        missing.length ? `Missing ${missing.length} of ${required.length} required.` : required.length ? "All required present." : "",
+        recMissing ? `${recMissing} recommended not installed.` : "",
+      ].filter(Boolean).join(" ");
       if (missing.length > 1) {
         getMissing.classList.remove("hidden");
         getMissing.onclick = (e) => busy(e.target, () => getMissingDeps(missing));

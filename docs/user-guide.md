@@ -144,9 +144,11 @@ Above the list:
   off, removed, added).
 - **Tag and category filter**: one of your tags (or *No tags*), or a Nexus
   category.
-- **Show dependencies** lists what each mod needs, indented under it: its
-  Nexus page's requirements and the frameworks its files use (redscript for
-  `.reds`, ArchiveXL for `.xl`, …). Each is marked installed, turned off,
+- **Mods only / Dependencies / Recommendations** picks the rows shown under
+  each mod. **Mods only** shows the plain list.
+- **Dependencies** (teal rows) lists what each mod needs, indented under it:
+  its Nexus page's requirements and the frameworks its files use (redscript
+  for `.reds`, ArchiveXL for `.xl`, …). Each is marked installed, turned off,
   already in the game folder, or missing, with a button to get it (**Turn
   on**, **Install** from GitHub, **Get from Nexus**, or **Open link** for
   off-site requirements). The requirements come from each mod's Nexus page,
@@ -155,9 +157,22 @@ Above the list:
   can't be checked is marked **not verified**. A mod with nothing found in
   either source shows "No requirements listed on its Nexus page; no
   framework use found in its files" (or "No Nexus page to read requirements
-  from" for mods not installed from Nexus). The line next to the checkbox counts what is missing
-  for your turned-on mods, and **Get missing (N)** queues all of it at once:
-  core frameworks from GitHub, everything else from Nexus.
+  from" for mods not installed from Nexus). Under a mod that others need, a
+  "Needed by" line names them.
+- **Recommendations** (amber rows) lists the Nexus requirements whose
+  author's note marks them optional: notes such as "optional",
+  "recommended", "only if you want …" or "not required". A requirement the
+  mod's files use is always a dependency, whatever its note says. Under a mod
+  that others recommend, a "Recommended by" line names them.
+- **Missing on top** (on by default) puts a block above the mods with each
+  missing dependency (or recommendation) once, the number of turned-on mods
+  that list it in front, most first, and the mods that list it. Mods with
+  something missing sort above the rest, keeping the column sort within each
+  part.
+- The line next to the buttons counts what is missing for your turned-on
+  mods, and **Get missing (N)** queues all of it at once (dependencies or
+  recommendations, per the selected view): core frameworks from GitHub,
+  everything else from Nexus.
 
 ### Ultra+ recommendations
 
@@ -476,8 +491,10 @@ Browse and download mods. The switch at the top right picks the source:
   as on the website (old versions folded away). Mods you have are marked
   installed. Each Nexus requirement has a **You have** column (installed,
   turned off, in the game folder, or missing) with a button to get or turn
-  on what you lack, and a line saying how many you're missing; **Get
-  missing** queues them all. This works before you install the mod, so you
+  on what you lack, and a line saying how many required ones are missing;
+  **Get missing** queues them all. Requirements whose author's note marks
+  them optional get an amber **recommended** badge and are counted
+  separately, not queued by **Get missing**. This works before you install the mod, so you
   can see what it will need. **Refresh** asks Nexus again instead of using the saved copy.
 - **Downloading a file**:
   - *Premium*: **Download & install** downloads through the API and
