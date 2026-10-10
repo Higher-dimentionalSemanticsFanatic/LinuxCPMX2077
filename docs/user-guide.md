@@ -192,8 +192,10 @@ Above the list:
   off, removed, added).
 - **Tag and category filter**: one of your tags (or *No tags*), or a Nexus
   category.
-- **Mods only / Dependencies / Recommendations** picks the rows shown under
-  each mod. **Mods only** shows the plain list.
+- **Dependencies** and **Recommendations** are two checkboxes that add rows
+  under each mod; turn on either, both, or neither (plain list). With both
+  on, each mod's dependencies come first, then its recommendations, each row
+  in its own colour.
 - **Dependencies** (teal rows) lists what each mod needs, indented under it:
   its Nexus page's requirements and the frameworks its files use (redscript
   for `.reds`, ArchiveXL for `.xl`, …). Each is marked installed, turned off,
@@ -213,13 +215,13 @@ Above the list:
   mod's files use is always a dependency, whatever its note says. Under a mod
   that others recommend, a "Recommended by" line names them.
 - **Missing on top** (on by default) puts a block above the mods with each
-  missing dependency (or recommendation) once, the number of turned-on mods
+  missing dependency once (and, below it, each missing recommendation), the number of turned-on mods
   that list it in front, most first, and the mods that list it. Mods with
   something missing sort above the rest, keeping the column sort within each
   part.
 - The line next to the buttons counts what is missing for your turned-on
-  mods, and **Get missing (N)** queues all of it at once (dependencies or
-  recommendations, per the selected view): core frameworks from GitHub,
+  mods, and **Get missing (N)** queues all of it at once (whatever the
+  checked boxes show): core frameworks from GitHub,
   everything else from Nexus.
 
 ### Ultra+ recommendations

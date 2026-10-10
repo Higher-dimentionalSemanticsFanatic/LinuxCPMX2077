@@ -287,9 +287,8 @@ tr.dep button, tr.rec button { padding: 2px 10px; font-size: 12px; margin: 0; }
 #mods-body tr.deficit td:nth-child(2) { padding-left: 10px; }
 #mods-body tr.deficit + tr:not(.deficit) td { border-top: 1px solid var(--border); }
 .deficit-count { text-align: center; font-weight: 700; color: var(--red); }
-.radio-group { display: inline-flex; gap: 10px; align-items: center; }
-.radio-group .dep-key { border-bottom: 2px solid var(--cyan); }
-.radio-group .rec-key { border-bottom: 2px solid var(--amber); }
+.check.dep-key { border-bottom: 2px solid var(--cyan); }
+.check.rec-key { border-bottom: 2px solid var(--amber); }
 .badge.rec-badge { color: var(--amber); margin-left: 6px; }
 
 /* Get Mods: paging, freshness, debug view */

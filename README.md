@@ -115,7 +115,7 @@ Screenshots show sample data, with file locations blurred.
   …), marked installed, turned off, already in the game folder or missing,
   with a button to get what's missing (or "Get missing" for all of them),
   plus which mods need it. "Recommendations" lists requirements the author's
-  note marks optional, in a different row colour. "Missing on top" lists
+  note marks optional, in a different row colour; both can be on together. "Missing on top" lists
   each missing item once, ranked by how many installed mods list it. A mod's
   page in Get mods marks its requirements the same way.
 - **Mod page** button in Installed mods opens a mod's Nexus or GitHub page

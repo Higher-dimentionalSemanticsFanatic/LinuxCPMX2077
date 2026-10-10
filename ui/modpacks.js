@@ -4,20 +4,24 @@
 // As there, nothing from Nexus or an imported file is inserted as HTML.
 
 // ---- dependencies in Installed mods -------------------------------------
-// Rows under each mod: "off", "deps" (what it needs) or "recs" (what its
-// author marked optional or recommended). Missing on top lists each missing
-// item once above the mods, counted across the installed mods.
+// Rows under each mod, each switch on its own: Dependencies (what it needs)
+// and Recommendations (what its author marked optional or recommended).
+// Missing on top lists each missing item once above the mods, counted
+// across the installed mods.
 let depsByMod = null; // installed mod id -> { deps, required_by, recommended_by } while shown
-let depsView = loadPref("depsView", loadPref("showDeps", false) ? "deps" : "off");
-if (!["off", "deps", "recs"].includes(depsView)) depsView = "off";
+const oldView = loadPref("depsView", loadPref("showDeps", false) ? "deps" : "off");
+const depsOn = { deps: loadPref("depsShowDeps", oldView === "deps"), recs: loadPref("depsShowRecs", oldView === "recs") };
 let depsTop = loadPref("depsTop", true);
-for (const r of document.querySelectorAll('input[name="deps-view"]')) r.checked = r.value === depsView;
+$("#show-deps").checked = depsOn.deps;
+$("#show-recs").checked = depsOn.recs;
 $("#deps-top").checked = depsTop;
-$("#deps-top-wrap").classList.toggle("hidden", depsView === "off");
+const depsAny = () => depsOn.deps || depsOn.recs;
+$("#deps-top-wrap").classList.toggle("hidden", !depsAny());
 
-// The requirements the current view shows: dependencies or recommendations.
-const inView = (dep) => (depsView === "recs") === !!dep.optional;
-const viewWord = () => (depsView === "recs" ? ["recommendation", "recommendations"] : ["requirement", "requirements"]);
+// Whether a requirement's kind is switched on.
+const inView = (dep) => (dep.optional ? depsOn.recs : depsOn.deps);
+// The kinds switched on, as `optional` values: false = dependencies, true = recommendations.
+const kinds = () => [...(depsOn.deps ? [false] : []), ...(depsOn.recs ? [true] : [])];
 
 // Tags and dependencies for the mod list; called by loadMods.
 async function loadModExtras(refreshDeps = false) {
@@ -25,27 +29,27 @@ async function loadModExtras(refreshDeps = false) {
   const gameId = currentGame.id;
   const [tags, deps] = await Promise.all([
     invoke("mod_tags", { gameId }),
-    depsView !== "off" ? invoke("mod_dependencies", { gameId, refresh: refreshDeps }) : null,
+    depsAny() ? invoke("mod_dependencies", { gameId, refresh: refreshDeps }) : null,
   ]);
   if (currentGame?.id !== gameId) return;
   modTags = tags;
   depsByMod = deps ? new Map(deps.mods.map((d) => [d.mod_id, d])) : null;
-  const deficits = deps ? missingByCount() : [];
-  const missing = missingDeps(deficits.map((x) => x.dep));
-  const needing = new Set(deficits.flatMap((x) => x.by)).size;
-  const [one, many] = viewWord();
-  $("#deps-note").textContent = [
-    deps && (needing
-      ? `${deficits.length} missing ${deficits.length === 1 ? one : many} for ${needing} mod${needing === 1 ? "" : "s"}`
-      : depsView === "recs" ? "No missing recommendations" : "Nothing missing"),
-    deps?.note,
-  ].filter(Boolean).join(" · ");
+  const parts = [];
+  let all = [];
+  for (const optional of deps ? kinds() : []) {
+    const list = missingByCount(optional);
+    all = all.concat(list);
+    const needing = new Set(list.flatMap((x) => x.by)).size;
+    parts.push(list.length
+      ? `${list.length} missing ${optional ? "recommendation" : "requirement"}${list.length === 1 ? "" : "s"} for ${plural(needing, "mod")}`
+      : optional ? "No missing recommendations" : "No missing requirements");
+  }
+  const missing = missingDeps(all.map((x) => x.dep));
+  $("#deps-note").textContent = [...parts, deps?.note].filter(Boolean).join(" · ");
   const btn = $("#deps-get-missing");
   btn.classList.toggle("hidden", !missing.length);
   btn.textContent = `Get missing (${missing.length})`;
-  btn.title = depsView === "recs"
-    ? "Queue every missing recommendation: core frameworks from GitHub, the rest from Nexus"
-    : "Queue every missing requirement: core frameworks from GitHub, the rest from Nexus";
+  btn.title = `Queue every missing ${[depsOn.deps && "requirement", depsOn.recs && "recommendation"].filter(Boolean).join(" and ")} shown: core frameworks from GitHub, the rest from Nexus`;
   btn.onclick = (e) => busy(e.target, () => getMissingDeps(missing));
 }
 
@@ -56,15 +60,15 @@ function depKey(d) {
   return `${d.dlc ? "dlc" : "name"}:${d.name.toLowerCase()}`;
 }
 
-// Missing items of the current view, once each, with the enabled mods that
-// list them: most-listed first, then by name.
-function missingByCount() {
+// Missing dependencies (or, with `optional`, recommendations), once each,
+// with the enabled mods that list them: most-listed first, then by name.
+function missingByCount(optional) {
   if (!depsByMod) return [];
   const byKey = new Map();
   for (const m of mods) {
     if (m.status !== "installed") continue;
     for (const dep of depsByMod.get(m.id)?.deps || []) {
-      if (dep.state !== "missing" || !inView(dep)) continue;
+      if (dep.state !== "missing" || !!dep.optional !== optional) continue;
       const k = depKey(dep);
       if (!byKey.has(k)) byKey.set(k, { dep, by: [] });
       const e = byKey.get(k);
@@ -97,17 +101,13 @@ async function getMissingDeps(deps) {
   if (nexus.length) enqueue(nexus.map((d) => ({ kind: "nexus", name: d.name, modId: d.nexus_mod_id })));
 }
 
-function setDepsView(view) {
-  depsView = view;
-  savePref("depsView", depsView);
-  $("#deps-top-wrap").classList.toggle("hidden", depsView === "off");
-  $("#deps-note").textContent = depsView === "off" ? "" : "Reading Nexus requirements and scanning mod files for framework use…";
-  if (depsView === "off") $("#deps-get-missing").classList.add("hidden");
-}
-
-for (const r of document.querySelectorAll('input[name="deps-view"]')) {
-  r.addEventListener("change", (e) => e.target.checked && busy(e.target, async () => {
-    setDepsView(e.target.value);
+for (const [id, key, pref] of [["#show-deps", "deps", "depsShowDeps"], ["#show-recs", "recs", "depsShowRecs"]]) {
+  $(id).addEventListener("change", (e) => busy(e.target, async () => {
+    depsOn[key] = e.target.checked;
+    savePref(pref, depsOn[key]);
+    $("#deps-top-wrap").classList.toggle("hidden", !depsAny());
+    $("#deps-note").textContent = depsAny() ? "Reading Nexus requirements and scanning mod files for framework use…" : "";
+    if (!depsAny()) $("#deps-get-missing").classList.add("hidden");
     await loadModExtras();
     renderMods();
   }));
@@ -127,27 +127,29 @@ function missingFirst(list) {
   return [...list.filter(lacks), ...list.filter((m) => !lacks(m))];
 }
 
-// The Missing on top block: one row per missing item, how many installed
-// mods list it and which, and how to get it.
+// The Missing on top blocks, dependencies then recommendations: one row
+// per missing item, how many installed mods list it and which, and how to
+// get it.
 function deficitRows() {
   if (!depsByMod || !depsTop) return [];
-  const list = missingByCount();
-  if (!list.length) return [];
-  const recs = depsView === "recs";
-  const cls = `deficit ${recs ? "rec" : "dep"}`;
   const names = (ids) => ids.map((id) => mods.find((x) => x.id === id)?.name).filter(Boolean);
-  return [
-    el("tr", { class: `${cls} deficit-head` }, el("td", { colspan: 2 }),
-      el("td", { colspan: 7 }, el("b", {}, recs ? `Missing recommendations (${list.length})` : `Missing dependencies (${list.length})`),
-        el("span", { class: "muted small" }, " · sorted by how many installed mods list each one"))),
-    ...list.map(({ dep, by }) => el("tr", { class: cls },
-      el("td", { colspan: 2, class: "deficit-count", title: `${by.length} installed mod${by.length === 1 ? "" : "s"}` }, String(by.length)),
-      el("td", { colspan: 6 },
-        el("span", { class: "dep-name" }, dep.dlc ? `${dep.name} (expansion)` : dep.name), " ",
-        el("span", { class: "badge bad" }, "missing"), " ",
-        el("span", { class: "muted small" }, `${recs ? "recommended" : "needed"} by ${names(by).join(", ")}`)),
-      el("td", { class: "actions" }, dependencyAction(dep)))),
-  ];
+  return kinds().flatMap((optional) => {
+    const list = missingByCount(optional);
+    if (!list.length) return [];
+    const cls = `deficit ${optional ? "rec" : "dep"}`;
+    return [
+      el("tr", { class: `${cls} deficit-head` }, el("td", { colspan: 2 }),
+        el("td", { colspan: 7 }, el("b", {}, `${optional ? "Missing recommendations" : "Missing dependencies"} (${list.length})`),
+          el("span", { class: "muted small" }, " · sorted by how many installed mods list each one"))),
+      ...list.map(({ dep, by }) => el("tr", { class: cls },
+        el("td", { colspan: 2, class: "deficit-count", title: plural(by.length, "installed mod") }, String(by.length)),
+        el("td", { colspan: 6 },
+          el("span", { class: "dep-name" }, dep.dlc ? `${dep.name} (expansion)` : dep.name), " ",
+          el("span", { class: "badge bad" }, "missing"), " ",
+          el("span", { class: "muted small" }, `${optional ? "recommended" : "needed"} by ${names(by).join(", ")}`)),
+        el("td", { class: "actions" }, dependencyAction(dep)))),
+    ];
+  });
 }
 
 const DEP_STATE = {
@@ -158,27 +160,30 @@ const DEP_STATE = {
   unknown: ["", "not verified"],
 };
 
-// Rows shown indented under an installed mod: who needs (or recommends) it,
-// then what it needs (or what its author recommends with it).
+// Rows shown indented under an installed mod: who needs or recommends it,
+// then what it needs and what its author recommends with it. Each row is
+// coloured by its kind.
 function dependencyRows(m) {
   const d = depsByMod?.get(m.id);
   if (!d) return [];
-  const recs = depsView === "recs";
-  const rowCls = `${recs ? "rec" : "dep"}${m.status === "installed" ? "" : " off"}`;
+  const off = m.status === "installed" ? "" : " off";
   const rows = [];
-  const by = recs ? d.recommended_by || [] : d.required_by;
-  if (by.length) {
-    const names = by.map((id) => mods.find((x) => x.id === id)?.name).filter(Boolean);
-    rows.push(el("tr", { class: rowCls }, el("td", { colspan: 2 }),
-      el("td", { colspan: 7, class: "muted small" }, `↰ ${recs ? "Recommended" : "Needed"} by ${names.join(", ")}`)));
-  }
-  const shown = d.deps.filter(inView);
+  const byLine = (ids, optional) => {
+    if (!ids.length) return;
+    const names = ids.map((id) => mods.find((x) => x.id === id)?.name).filter(Boolean);
+    rows.push(el("tr", { class: `${optional ? "rec" : "dep"}${off}` }, el("td", { colspan: 2 }),
+      el("td", { colspan: 7, class: "muted small" }, `↰ ${optional ? "Recommended" : "Needed"} by ${names.join(", ")}`)));
+  };
+  if (depsOn.deps) byLine(d.required_by, false);
+  if (depsOn.recs) byLine(d.recommended_by || [], true);
+  // Dependencies first, then recommendations.
+  const shown = d.deps.filter(inView).sort((a, b) => !!a.optional - !!b.optional);
   for (const dep of shown) {
     const [cls, label] = DEP_STATE[dep.state] || DEP_STATE.unknown;
-    const why = recs ? "marked optional in the author's note"
+    const why = dep.optional ? "recommended: marked optional in the author's note"
       : dep.listed && dep.detected ? "listed on its Nexus page and used by its files"
         : dep.listed ? "listed on its Nexus page" : "its files use it";
-    rows.push(el("tr", { class: rowCls },
+    rows.push(el("tr", { class: `${dep.optional ? "rec" : "dep"}${off}` },
       el("td", { colspan: 2 }),
       el("td", { colspan: 6 },
         el("span", { class: "dep-name" }, "↳ ", dep.dlc ? `${dep.name} (expansion)` : dep.name), " ",
@@ -187,8 +192,8 @@ function dependencyRows(m) {
         dep.notes ? el("div", { class: "muted small dep-note" }, `Author's note: ${dep.notes}`) : null),
       el("td", { class: "actions" }, dependencyAction(dep))));
   }
-  if (!shown.length && !by.length && !recs) {
-    rows.push(el("tr", { class: rowCls }, el("td", { colspan: 2 }), el("td", { colspan: 7, class: "muted small" }, m.nexus_mod_id
+  if (depsOn.deps && !d.deps.length && !d.required_by.length) {
+    rows.push(el("tr", { class: `dep${off}` }, el("td", { colspan: 2 }), el("td", { colspan: 7, class: "muted small" }, m.nexus_mod_id
       ? "↳ No requirements listed on its Nexus page; no framework use found in its files"
       : "↳ No Nexus page to read requirements from; no framework use found in its files")));
   }
