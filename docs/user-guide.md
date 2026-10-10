@@ -111,6 +111,28 @@ it), the left and right arrow keys also resize it.
     native-then-builtin in the prefix.
   - *Folder names* → **Merge folders** joins mod folders that exist under two
     spellings.
+  - *HDR* (only when a connected display lists HDR10/PQ in its EDID) →
+    **Set HDR launch options**. Lists what was checked: the display, the
+    session (Wayland or X11), the desktop and whether its HDR is enabled
+    (read from `kscreen-doctor` on KDE; *not checked* elsewhere), the GPU
+    driver (`/proc/driver/nvidia/version` or `vulkaninfo`) and the Proton
+    build that last ran the prefix. Requirements:
+    - Wayland session with HDR enabled in the desktop's display settings
+      (KDE Plasma 6: System Settings › Display & Monitor › Enable HDR;
+      GNOME 48 or newer: Settings › Displays). X11 has no HDR output.
+    - Mesa 25.1 or newer, or NVIDIA 595 or newer. Older drivers work only
+      with `vk_hdr_layer` installed; the app then adds `ENABLE_HDR_WSI=1`.
+    - GE-Proton 10 or newer, or proton-cachyos: the button adds
+      `PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1`. Valve's Proton has no Wine
+      Wayland driver; with `gamescope` installed the button adds
+      `DXVK_HDR=1 gamescope -W <width> -H <height> -f --hdr-enabled -- `
+      before `%command%` instead (size from the display's preferred mode).
+      Without either: select GE-Proton in Steam › Properties › Compatibility.
+    Other launch options are kept; **Undo** removes only the HDR variables
+    and the HDR `gamescope` wrapper. Only works while Steam is closed. With
+    Heroic, **Copy** copies the variables for Heroic › game settings ›
+    Advanced › Environment variables. Once set, pick *HDR10 PQ* in the game's
+    Settings › Video › HDR Mode.
 - **Frameworks**: CET, RED4ext, redscript, ArchiveXL, TweakXL, Codeware and
   REDmod, highlighted when present in the game folder.
 
@@ -713,6 +735,11 @@ options are set (Steam must be closed while the app sets them).
 **Launch options** row says *set*; Steam must be closed while the app writes
 them. If the overlay opens but effects fail to compile, use **Install
 d3dcompiler_47** in the Game panel.
+
+**The game's HDR Mode is greyed out.** Check the *HDR* item in the Game
+panel: it names what is missing (Wayland session, desktop HDR, driver
+version, a Proton build with the Wine Wayland driver, or the launch
+options). No *HDR* item means no connected display lists HDR10 in its EDID.
 
 **Set launch options says Steam is running.** Steam overwrites its settings
 while it runs. Quit Steam completely and click the button again.

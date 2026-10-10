@@ -64,6 +64,10 @@ Screenshots show sample data, with file locations blurred.
   options (`WINEDLLOVERRIDES="winmm,version=n,b" %command%`, plus `-modded`
   for REDmod; only while Steam is closed), sets the same DLL overrides in a
   Heroic prefix, and merges mod folders that exist under two spellings.
+  With an HDR10 display it checks what the game needs to offer HDR under
+  Proton (Wayland session, desktop HDR, driver version, a Proton build with
+  the Wine Wayland driver or gamescope) and adds the HDR variables to the
+  launch options.
   Installing a mod that needs one of these asks to set it up straight away.
 - **Tracks everything** in a SQLite library (`~/.local/share/cp2077-modmanager/`):
   each mod, its source, the game build it was installed on, the archive's
