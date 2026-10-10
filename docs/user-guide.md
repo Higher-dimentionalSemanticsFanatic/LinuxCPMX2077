@@ -190,6 +190,29 @@ Above the list:
   one to list the mods installed on it. For an older version, a summary shows
   what you had when the game updated and what changed since (updated, turned
   off, removed, added).
+- **Mod profiles** (card under the ribbon): named lists of enabled mods,
+  filed under the game version picked on the ribbon (the current version
+  when **All** is picked). Each chip shows the profile's name, its mod count
+  and what applying it would change; *active* (green dot) means the enabled
+  mods match it now.
+  - **Save N enabled mods as profile**: type a name in **Profile name** and
+    save the mods enabled now. Shown for the current game version only.
+    Names are up to 60 characters and unique per game version.
+  - Click a profile to select it, then:
+    - **Apply**: one confirmation lists the mods to enable, to disable and
+      the profile's mods that are no longer installed (skipped). Then it
+      enables the profile's mods and disables every other installed mod,
+      in the same game folder. A mod whose files conflict with an enabled
+      mod stays off and is named in the report. A profile saved under an
+      older game version can be applied too; the confirmation names both
+      versions, since mods may need updates.
+    - **Update from enabled mods**: replace the profile's list with the mods
+      enabled now.
+    - **Rename**, **Delete** (installed mods are not changed).
+  - Mods are matched by their Nexus mod, source listing or (manual installs)
+    name, so a mod updated after the profile was saved still counts. Where a
+    mod has several files installed (main plus optional file), only the
+    files in the profile are enabled.
 - **Tag and category filter**: one of your tags (or *No tags*), or a Nexus
   category.
 - **Dependencies** and **Recommendations** are two checkboxes that add rows

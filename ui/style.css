@@ -364,6 +364,11 @@ button.twisty { background: none; border: 0; padding: 0 6px 0 0; color: var(--mu
 .ribbon .chip.current b::after { content: " ●"; color: var(--green); font-size: 10px; }
 .ribbon .chip.active { border-color: var(--yellow); background: #2a2810; }
 #version-loadout details table { margin-top: 8px; }
+#version-profiles .profile-head { gap: 10px; align-items: baseline; margin-bottom: 6px; }
+#version-profiles .profile-chips { padding-bottom: 6px; margin-bottom: 0; }
+#version-profiles .chip.applied b::after { content: " ●"; color: var(--green); font-size: 10px; }
+#version-profiles .profile-actions, #version-profiles .profile-new { gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+#version-profiles .profile-new input { max-width: 260px; }
 table.tree td.actions { white-space: nowrap; }
 
 /* ---- Netrunner tab: cyberpunk styling, scoped to this tab only ---------- */

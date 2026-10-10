@@ -45,7 +45,7 @@ flowchart LR
 
 | Tab (button label) | UI file | Main commands | Core modules |
 |---|---|---|---|
-| Installed mods | `app.js`, `reshade.js`, `ultraplus.js` | `install_archive`, `finish_install`, `uninstall_mod`, `disable_mod`, `enable_mod`, `verify_mod`, `check_updates`, `game_version_history`, `reshade_*`, `ultraplus_*` | `install`, `updates`, `game_versions`, `reshade`, `ultraplus` |
+| Installed mods | `app.js`, `profiles.js`, `reshade.js`, `ultraplus.js` | `install_archive`, `finish_install`, `uninstall_mod`, `disable_mod`, `enable_mod`, `verify_mod`, `check_updates`, `game_version_history`, `*_profile(s)`, `reshade_*`, `ultraplus_*` | `install`, `updates`, `game_versions`, `profiles`, `reshade`, `ultraplus` |
 | Modpacks | `modpacks.js` | `nexus_collections`, `collection_view`, `track_collection`, tags, `export_modlist`, `import_modlist`, `mod_dependencies` | `modpacks`, `nexus_browse`, `dependencies` |
 | Netrunner | `netrunner.js`, `graph.js` | `analyze_game`, `mod_file_tree`, `crash_analysis`, `read_log` | `analysis`, `file_tree`, `crash`, `startup`, `known_issues` |
 | Get mods | `app.js` | `nexus_search`, `nexus_mod_details`, `nexus_download`, `nexus_open_in_app`, `source_search`, `source_download`, `framework_plan` | `nexus`, `nexus_browse`, `sources::github` |

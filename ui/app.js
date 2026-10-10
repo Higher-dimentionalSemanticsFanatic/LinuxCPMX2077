@@ -148,7 +148,7 @@ async function detect() {
 }
 
 function selectGame(id) {
-  if (currentGame?.id !== Number(id)) { ribbonPick = null; gameVersions = []; }
+  if (currentGame?.id !== Number(id)) { ribbonPick = null; gameVersions = []; profiles = []; profilePick = null; }
   currentGame = games.find((g) => g.id === Number(id)) || games[0];
   $("#game-select").value = currentGame.id;
   renderGame();
@@ -322,6 +322,7 @@ async function loadMods() {
   await loadVersionRibbon().catch(() => {});
   renderMods();
   showLoadout().catch(() => {});
+  loadProfiles().catch((e) => toast(String(e), true));
   loadUltraPlus().catch(() => {});
   loadReShade().catch(() => {});
   refreshGame().catch(() => {});
@@ -2686,7 +2687,7 @@ function renderVersionRibbon() {
   const dupe = (v) => gameVersions.filter((x) => x.version === v.version).length > 1;
   const chip = (label, sub, i, title, extra = "") => el("button", {
     class: `chip${ribbonPick === i ? " active" : ""}${extra}`, role: "tab", "aria-selected": String(ribbonPick === i), title,
-    onclick: () => { ribbonPick = i; renderVersionRibbon(); renderMods(); showLoadout().catch((e) => toast(String(e), true)); },
+    onclick: () => { ribbonPick = i; renderVersionRibbon(); renderMods(); renderProfiles(); showLoadout().catch((e) => toast(String(e), true)); },
   }, el("b", {}, label), el("span", { class: "muted small" }, sub));
   ribbon.replaceChildren(
     el("span", { class: "muted small ribbon-label" }, "Game version"),

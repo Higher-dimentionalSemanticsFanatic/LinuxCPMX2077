@@ -28,6 +28,7 @@ pub mod nexus_browse;
 pub mod nexus_cache;
 pub mod nexus_markup;
 pub mod paths;
+pub mod profiles;
 pub mod reshade;
 pub mod secrets;
 pub mod sources;

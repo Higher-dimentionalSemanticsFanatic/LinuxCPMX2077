@@ -166,6 +166,24 @@ CREATE TABLE IF NOT EXISTS game_version_mods (
     archive_name    TEXT NOT NULL,
     enabled         INTEGER NOT NULL
 );
+-- Named mod profiles, filed under a game version ('' when unknown). Each
+-- lists the mods that are enabled when it is applied (see profiles.rs).
+CREATE TABLE IF NOT EXISTS profiles (
+    id           INTEGER PRIMARY KEY,
+    game_id      INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    game_version TEXT NOT NULL DEFAULT '',
+    name         TEXT NOT NULL,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (game_id, game_version, name COLLATE NOCASE)
+);
+CREATE TABLE IF NOT EXISTS profile_mods (
+    profile_id   INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    mod_key      TEXT NOT NULL,          -- modpacks::mod_key
+    archive_name TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    PRIMARY KEY (profile_id, mod_key, archive_name)
+);
 "#;
 
 /// Columns added after v0.1, as (table, column, declaration). Applied to

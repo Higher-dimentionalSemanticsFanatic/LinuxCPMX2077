@@ -37,3 +37,11 @@ flowchart TD
 
 Uninstall leaves files that changed after install in the game folder and
 then forgets them, because the mod row is deleted. See [[Known gaps]].
+
+## Mod profiles
+
+`profiles::apply` (command `apply_profile`, card in `ui/profiles.js`) runs
+**Disable** on every enabled mod not in the profile, then **Enable** (no
+overwrite) on every disabled mod in it. Failures are collected per mod and
+the rest go ahead. Profiles live in `profiles` / `profile_mods`, keyed by
+game version string and `modpacks::mod_key` plus archive name.
