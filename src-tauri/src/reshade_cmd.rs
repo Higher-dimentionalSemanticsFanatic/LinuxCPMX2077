@@ -88,7 +88,7 @@ pub async fn reshade_install_file(app: AppHandle, game_id: i64, path: String, dl
     blocking(move || install_from(&app, game_id, Path::new(&path), dll)).await
 }
 
-fn github() -> Result<github::Client> {
+pub(crate) fn github() -> Result<github::Client> {
     match debug_override("CPMX_GITHUB_API") {
         Some(base) => github::Client::with_base(&base),
         None => github::Client::new(),

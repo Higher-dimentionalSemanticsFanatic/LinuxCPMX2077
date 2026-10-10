@@ -53,7 +53,9 @@ Things that span several files:
   `KNOWN_ROOTS`, optional FOMOD step (prepared install waits in
   `AppState.pending` for the user's choices), deploy with backups of
   overwritten game files, and record every file's hash in the db so mods can
-  be verified, disabled and uninstalled.
+  be verified, disabled and uninstalled. Mapped step by step, with known
+  failing archive shapes, in the Obsidian vault `docs/architecture/` (start
+  at `Home.md`, `Known gaps.md`, `Install flow.canvas`).
 - **Database** (`core::db`): SQLite at `paths::db_path()`. Schema is
   `CREATE TABLE IF NOT EXISTS` in `SCHEMA`; new columns go in the
   `MIGRATIONS` list (added via `ALTER TABLE` when missing), bigger reshapes
@@ -94,6 +96,15 @@ on Nexus.
 The manager must eventually run on Windows. Keep new code free of
 Linux-only assumptions, or put them behind `cfg` / platform checks (see
 `core::winsys`, `core::linux_setup`).
+
+### Keep the code map current
+
+`docs/architecture/` is an Obsidian vault mapping the app, mainly the install
+logic. A change to install behaviour (`install.rs`, `archive.rs`, `fomod.rs`,
+the install commands in `src-tauri/src/main.rs`, ReShade installs) must update
+the matching note and `Install flow.canvas` in the same commit. A fixed gap
+moves from "Open" to "Fixed" in `Known gaps.md`; a newly found one gets a row.
+Name functions, not line numbers.
 
 ### Keep the user docs current
 

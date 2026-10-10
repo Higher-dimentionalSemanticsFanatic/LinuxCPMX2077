@@ -48,6 +48,9 @@
   let userMoved = false, needsFit = false;
   let layout = loadPref("graphLayout", "force") === "flow" ? "flow" : "force";
   let groupBy = GROUP_BY[loadPref("graphGroup", "")] ? loadPref("graphGroup", "") : "";
+  // Node types switched off in the legend; their edges go with them.
+  const saved = loadPref("graphHidden", []);
+  const hidden = new Set(Array.isArray(saved) ? saved.filter((t) => t in NAMES) : []);
   // Group key -> { label, color, order, count, x, y }; flowchart headings.
   let groups = new Map(), headers = [];
   let hover = null, selected = null, drag = null, alpha = 0, raf = 0;
@@ -59,12 +62,33 @@
 
   layoutPick.value = layout;
   groupPick.value = groupBy;
+  // Each node type in the legend is a toggle: click to hide or show it.
+  const typeButtons = new Map();
   const legend = Object.entries(NAMES).map(([t, n]) => {
-    const s = document.createElement("span");
-    s.style.setProperty("--c", COLORS[t]);
-    s.textContent = n;
-    return s;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "node-type";
+    b.style.setProperty("--c", COLORS[t]);
+    b.textContent = n;
+    b.addEventListener("click", () => toggleType(t));
+    typeButtons.set(t, b);
+    return b;
   });
+  function paintTypes() {
+    for (const [t, b] of typeButtons) {
+      const off = hidden.has(t);
+      b.classList.toggle("off", off);
+      b.setAttribute("aria-pressed", String(!off));
+      b.title = `${off ? "Show" : "Hide"} ${NAMES[t].toLowerCase()} nodes`;
+    }
+  }
+  function toggleType(t, show = hidden.has(t)) {
+    if (show) hidden.delete(t); else hidden.add(t);
+    savePref("graphHidden", [...hidden]);
+    paintTypes();
+    if (lastReport) build(lastReport, true);
+  }
+  paintTypes();
   for (const [level, text] of [["error", "Has a problem"], ["warning", "Overlap to check"]]) {
     const s = document.createElement("span");
     s.className = "flag";
@@ -119,8 +143,11 @@
     const old = keepPositions ? new Map(nodes.map((n) => [n.id, n])) : new Map();
     const keep = report.graph.edges.filter((e) => !(hide && HARMLESS.has(e.label) && !e.conflict));
     const used = new Set(keep.flatMap((e) => [e.from, e.to]));
+    // A hidden type's nodes are dropped after `used` is worked out, so the
+    // parts of hidden mods still show; the edges filter below drops every
+    // edge with a hidden end.
     nodes = report.graph.nodes
-      .filter((n) => n.type === "mod" || used.has(n.id))
+      .filter((n) => (n.type === "mod" || used.has(n.id)) && !hidden.has(n.type))
       .map((n) => ({ ...n, degree: 0, x: 0, y: 0, vx: 0, vy: 0, fixed: false, problem: problems.get(n.mod_id) || null }));
     byId = new Map(nodes.map((n) => [n.id, n]));
     edges = keep.filter((e) => byId.has(e.from) && byId.has(e.to)).map((e) => ({ ...e, affected: e.affected || [], a: byId.get(e.from), b: byId.get(e.to) }));
@@ -146,7 +173,9 @@
       settle(reused === nodes.length ? 0 : 150);
     }
     if (!userMoved) fit();
-    setMessage(nodes.length ? "" : report.mods.length
+    setMessage(nodes.length ? "" : hidden.size && report.graph.nodes.length
+      ? "All node types in this graph are hidden. Select a type in the legend to show it."
+      : report.mods.length
       ? "Your mods don't touch anything the graph can show."
       : "No enabled mods to show. Install or enable a mod, then press Check again.");
     tick();
@@ -791,7 +820,7 @@
       return;
     }
     if (!n) {
-      info.replaceChildren("Drag to pan, scroll to zoom, drag a node to move it, click a node for details.");
+      info.replaceChildren("Drag to pan, scroll to zoom, drag a node to move it, click a node for details, click a type in the legend to hide or show it.");
       info.className = "muted";
       return;
     }
@@ -958,6 +987,8 @@
   }
 
   window.highlightGraph = (modIds, label) => {
+    // Lighting up mods needs them drawn.
+    if (hidden.has("mod")) toggleType("mod", true);
     lit = lightUp(modIds, label);
     selected = null;
     if (lit.mods.size) {
