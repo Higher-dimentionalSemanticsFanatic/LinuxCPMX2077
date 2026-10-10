@@ -66,6 +66,10 @@ pub struct Dependency {
     /// Seen in the mod's files.
     pub detected: bool,
     pub dlc: bool,
+    /// Listed on the Nexus page with an author's note marking it optional or
+    /// recommended, and not used by the mod's files: a recommendation, not a
+    /// dependency.
+    pub optional: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -74,6 +78,30 @@ pub struct ModDependencies {
     pub deps: Vec<Dependency>,
     /// Installed mods that need this one.
     pub required_by: Vec<i64>,
+    /// Installed mods that recommend this one (an optional requirement).
+    pub recommended_by: Vec<i64>,
+}
+
+/// Whether an author's note on a listed requirement marks it optional:
+/// "optional", "recommended", "only if you want …", "not required" and
+/// similar. A note that says "required" or "needed" without such a
+/// condition, or "not optional", keeps it a dependency.
+pub fn optional_note(notes: &str) -> bool {
+    let n = notes.to_lowercase();
+    if ["not optional", "non-optional", "mandatory"].iter().any(|s| n.contains(s)) {
+        return false;
+    }
+    let conditional = [
+        "not required", "not needed", "not necessary", "isn't required", "only if", "only needed", "only required",
+        "if you want", "if you'd like", "if you wish", "if you prefer",
+    ];
+    if conditional.iter().any(|s| n.contains(s)) {
+        return true;
+    }
+    if ["required", "requirement", "needed", "must"].iter().any(|s| n.contains(s)) {
+        return false;
+    }
+    ["optional", "recommend", "suggested"].iter().any(|s| n.contains(s))
 }
 
 /// What the game folder already has, outside the manager's own mods.
@@ -184,6 +212,7 @@ pub fn resolve(
                         listed: true,
                         detected: false,
                         dlc: true,
+                        optional: false,
                     });
                     continue;
                 }
@@ -202,6 +231,7 @@ pub fn resolve(
                     listed: true,
                     detected: false,
                     dlc: false,
+                    optional: r.notes.as_deref().is_some_and(optional_note),
                 });
             }
             let mut keys: BTreeSet<String> = detected.get(&m.id).cloned().unwrap_or_default();
@@ -216,7 +246,9 @@ pub fn resolve(
                     continue;
                 }
                 if let Some(d) = deps.iter_mut().find(|d| d.framework.as_deref() == Some(key)) {
+                    // Its files use it, whatever the note says.
                     d.detected = true;
+                    d.optional = false;
                     continue;
                 }
                 let (state, installed_id) = state_of(fw_mod(key), has.frameworks.contains(key));
@@ -231,22 +263,26 @@ pub fn resolve(
                     listed: false,
                     detected: true,
                     dlc: false,
+                    optional: false,
                 });
             }
-            ModDependencies { mod_id: m.id, deps, required_by: Vec::new() }
+            ModDependencies { mod_id: m.id, deps, required_by: Vec::new(), recommended_by: Vec::new() }
         })
         .collect();
 
     let mut needed_by: HashMap<i64, Vec<i64>> = HashMap::new();
+    let mut wanted_by: HashMap<i64, Vec<i64>> = HashMap::new();
     for md in &out {
         for d in &md.deps {
             if let Some(id) = d.installed_id {
-                needed_by.entry(id).or_default().push(md.mod_id);
+                let to = if d.optional { &mut wanted_by } else { &mut needed_by };
+                to.entry(id).or_default().push(md.mod_id);
             }
         }
     }
     for md in &mut out {
         md.required_by = needed_by.remove(&md.mod_id).unwrap_or_default();
+        md.recommended_by = wanted_by.remove(&md.mod_id).unwrap_or_default();
     }
     out
 }
@@ -386,6 +422,34 @@ mod tests {
         assert_eq!(r[2].required_by, [1]);
         let hand: Vec<(&str, DepState)> = r[3].deps.iter().map(|d| (d.name.as_str(), d.state)).collect();
         assert_eq!(hand, [("Cyber Engine Tweaks", DepState::Missing), ("REDmod", DepState::Present)]);
+    }
+
+    #[test]
+    fn optional_notes() {
+        for n in ["optional", "(Optional)To spawn the car earlier", "Highly recommended", "Only if you want to use the eyes I used!",
+            "optional if you don't wanna use the modded eyes", "Not required, adds icons", "Suggested for controller players"] {
+            assert!(optional_note(n), "{n}");
+        }
+        for n in ["REQUIRED", "Latest version", "Requires v0.1.11", "Recommended, but required for the menu", "Not optional",
+            "Always have this installed / updated!", "Obligatorio", "Requirement for Codeware"] {
+            assert!(!optional_note(n), "{n}");
+        }
+    }
+
+    #[test]
+    fn optional_requirements_are_recommendations() {
+        let mods = vec![row(1, "Outfit", Some(5000), None, true), row(2, "AMM", Some(790), None, true)];
+        let mut reqs = Requirements::new();
+        let note = |id, name: &str, n: &str| ListedRequirement { mod_id: Some(id), name: name.into(), notes: Some(n.into()), url: None, dlc: false };
+        reqs.insert(5000, vec![note(790, "AMM", "Optional, to spawn it"), note(4198, "ArchiveXL", "optional"), note(9000, "Lib", "Recommended")]);
+        let mut detected = HashMap::new();
+        detected.insert(1, BTreeSet::from(["archivexl".to_string()]));
+        let r = resolve(&mods, &reqs, &detected, &GameHas::default());
+        let got: Vec<(&str, bool)> = r[0].deps.iter().map(|d| (d.name.as_str(), d.optional)).collect();
+        // ArchiveXL is used by its files: a dependency whatever the note says.
+        assert_eq!(got, [("AMM", true), ("ArchiveXL", false), ("Lib", true), ("RED4ext", false)]);
+        assert_eq!(r[1].recommended_by, [1]);
+        assert!(r[1].required_by.is_empty());
     }
 
     #[test]

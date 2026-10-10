@@ -15,6 +15,7 @@ use cp2077mm_core::install::{EnableReport, FomodInfo, InstallOptions, InstallRep
 use cp2077mm_core::nexus::{self, NxmLink};
 use cp2077mm_core::nexus_browse::{self, Category, Collection, ModDetails, NexusRef, Page, Search};
 use cp2077mm_core::nexus_cache::RequestRecord;
+use cp2077mm_core::profiles;
 use cp2077mm_core::sources::{self, Details, ListingPage, SourceInfo, SourceQuery};
 use cp2077mm_core::linux_setup::{self, Check};
 use cp2077mm_core::downloads::{self as dl_store, DownloadGroup, FileKey, Location, MoveReport};
@@ -24,6 +25,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_deep_link::DeepLinkExt;
 
+mod app_update_cmd;
 mod modpacks_cmd;
 mod patch_notes_cmd;
 mod reshade_cmd;
@@ -320,6 +322,50 @@ fn game_version_history(state: State<'_, AppState>, game_id: i64) -> Result<Vec<
 #[tauri::command]
 fn game_version_loadout(state: State<'_, AppState>, game_id: i64, id: i64) -> Result<Loadout> {
     game_versions::loadout(&state.db.lock().unwrap(), game_id, id)
+}
+
+/// Mod profiles of a game, filed under game versions.
+#[tauri::command]
+fn list_profiles(state: State<'_, AppState>, game_id: i64) -> Result<Vec<profiles::Profile>> {
+    profiles::list(&state.db.lock().unwrap(), game_id)
+}
+
+/// Save the mods enabled now as a new profile.
+#[tauri::command]
+fn create_profile(state: State<'_, AppState>, game_id: i64, game_version: String, name: String) -> Result<i64> {
+    profiles::create(&state.db.lock().unwrap(), game_id, &game_version, &name)
+}
+
+/// Replace a profile's mod list with the mods enabled now.
+#[tauri::command]
+fn save_profile(state: State<'_, AppState>, id: i64) -> Result<()> {
+    profiles::save(&state.db.lock().unwrap(), id)
+}
+
+#[tauri::command]
+fn rename_profile(state: State<'_, AppState>, id: i64, name: String) -> Result<()> {
+    profiles::rename(&state.db.lock().unwrap(), id, &name)
+}
+
+#[tauri::command]
+fn delete_profile(state: State<'_, AppState>, id: i64) -> Result<()> {
+    profiles::delete(&state.db.lock().unwrap(), id)
+}
+
+#[tauri::command]
+fn profile_plan(state: State<'_, AppState>, id: i64) -> Result<profiles::Plan> {
+    profiles::plan(&state.db.lock().unwrap(), id)
+}
+
+/// Enable the profile's mods and disable the rest.
+#[tauri::command]
+async fn apply_profile(app: AppHandle, id: i64) -> Result<profiles::ApplyReport> {
+    blocking(move || {
+        let state = app.state::<AppState>();
+        let db = state.db.lock().unwrap();
+        with_installer(&db, |i| profiles::apply(i, id))
+    })
+    .await
 }
 
 #[tauri::command]
@@ -862,9 +908,10 @@ async fn save_debug_log(path: String, text: String) -> Result<()> {
 const DEBUG_WINDOW: &str = "debug";
 
 /// Open the debug terminal: a window of its own that streams Nexus API
-/// requests and file operations as they happen.
+/// requests and file operations as they happen. Async because building a
+/// window from a synchronous command deadlocks on Windows.
 #[tauri::command]
-fn open_debug_terminal(app: AppHandle) -> Result<()> {
+async fn open_debug_terminal(app: AppHandle) -> Result<()> {
     if let Some(w) = app.get_webview_window(DEBUG_WINDOW) {
         let _ = w.unminimize();
         let _ = w.show();
@@ -883,7 +930,7 @@ fn open_debug_terminal(app: AppHandle) -> Result<()> {
 
 /// Close the debug terminal window and show it in the main window's sidebar.
 #[tauri::command]
-fn dock_debug_terminal(app: AppHandle) {
+async fn dock_debug_terminal(app: AppHandle) {
     let _ = app.emit_to("main", "debug-dock", ());
     if let Some(w) = app.get_webview_window(DEBUG_WINDOW) {
         let _ = w.close();
@@ -1514,6 +1561,13 @@ fn main() {
             delete_download,
             game_version_history,
             game_version_loadout,
+            list_profiles,
+            create_profile,
+            save_profile,
+            rename_profile,
+            delete_profile,
+            profile_plan,
+            apply_profile,
             install_archive,
             install_download,
             fomod_evaluate,
@@ -1598,6 +1652,10 @@ fn main() {
             ultraplus_cmd::ultraplus_refresh,
             patch_notes_cmd::patch_notes_report,
             patch_notes_cmd::patch_notes_read_dates,
+            app_update_cmd::app_update_prefs,
+            app_update_cmd::set_app_update_on_startup,
+            app_update_cmd::app_update_dismiss,
+            app_update_cmd::app_update_check,
             reshade_cmd::reshade_status,
             reshade_cmd::reshade_latest,
             reshade_cmd::reshade_launch,

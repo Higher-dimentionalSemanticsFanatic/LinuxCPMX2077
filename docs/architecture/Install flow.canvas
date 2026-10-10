@@ -1,0 +1,338 @@
+{
+	"nodes": [
+		{
+			"id": "entry",
+			"type": "text",
+			"text": "## Entry points\n**Install from archive…**, Downloads **Install**, **Download & install**, **Get from Nexus** → queue, GitHub, Frameworks **Install**, Modpacks **Install all**, ReShade card\n\n[[Entry points]]",
+			"x": 0,
+			"y": 0,
+			"width": 440,
+			"height": 220,
+			"color": "5"
+		},
+		{
+			"id": "checks",
+			"type": "text",
+			"text": "### Download checks\nNexus: MD5 vs `md5_search`\nGitHub: SHA-256 vs published digest\nMismatch → file deleted\n\n[[Entry points#Before an archive reaches the installer]]",
+			"x": 0,
+			"y": 300,
+			"width": 440,
+			"height": 220
+		},
+		{
+			"id": "extract",
+			"type": "text",
+			"text": "### prepare: hash + extract\nformat by magic bytes · no `..`, absolute, `:` or symlinks · 100 000 entries / 32 GiB\n→ `staging/incoming-*/files`\n\n[[Archive extraction]]",
+			"x": 0,
+			"y": 600,
+			"width": 440,
+			"height": 220,
+			"color": "4"
+		},
+		{
+			"id": "q_fomod",
+			"type": "text",
+			"text": "**fomod/ModuleConfig.xml in the archive?**",
+			"x": 0,
+			"y": 900,
+			"width": 440,
+			"height": 80,
+			"color": "3"
+		},
+		{
+			"id": "fomod",
+			"type": "text",
+			"text": "### FOMOD wizard\nparse → defaults → UI wizard (`NeedsChoices`, waits in `AppState.pending`) → `resolve`: required + chosen + conditional files by priority\n\n[[FOMOD]]",
+			"x": -560,
+			"y": 860,
+			"width": 440,
+			"height": 240,
+			"color": "6"
+		},
+		{
+			"id": "q_var",
+			"type": "text",
+			"text": "**Loose files named like versions of one thing?**",
+			"x": 0,
+			"y": 1080,
+			"width": 440,
+			"height": 80,
+			"color": "3"
+		},
+		{
+			"id": "variants",
+			"type": "text",
+			"text": "### Versions step\napp-made one-step installer, all ticked; unticked files skipped *(not chosen)*\n\n[[FOMOD#Versions step]]",
+			"x": -560,
+			"y": 1160,
+			"width": 440,
+			"height": 200,
+			"color": "6"
+		},
+		{
+			"id": "plan",
+			"type": "text",
+			"text": "## Layout detection: `install::plan`\nFirst match decides the whole archive:\n1. known root folder → **game-root**\n2. `info.json` + `archives/`… → **redmod**\n3. `init.lua` → **cet-mod**\n4. `reshade-shaders/` → **reshade**\n(any `.exe` → refused)\n5. `.archive .xl .reds .yaml` → **loose**\n6. `.ini` only → **engine-config**\nAnything the rule doesn't place → *Skipped*\n\n[[Layout detection]]",
+			"x": 0,
+			"y": 1260,
+			"width": 440,
+			"height": 440,
+			"color": "4"
+		},
+		{
+			"id": "refused",
+			"type": "text",
+			"text": "### Refused\nstandalone program · script · only documents · unrecognised layout\n\n[[Layout detection#Refusal messages]]",
+			"x": 560,
+			"y": 1300,
+			"width": 440,
+			"height": 200,
+			"color": "1"
+		},
+		{
+			"id": "gaps",
+			"type": "text",
+			"text": "## Known gaps\nmultiple wrappers, mixed layouts, `tools/` helper, same-name loose files, bare RED4ext/ASI plugins, RAR on Windows, uninstall leftovers\n\n[[Known gaps]]",
+			"x": 560,
+			"y": 1560,
+			"width": 440,
+			"height": 240,
+			"color": "1"
+		},
+		{
+			"id": "prev",
+			"type": "text",
+			"text": "### Older version installed?\nsame repo, or shared files + same Nexus page / base name / mostly same files → disable old one first\n\n[[Versions and replacing]]",
+			"x": 0,
+			"y": 1800,
+			"width": 440,
+			"height": 220
+		},
+		{
+			"id": "q_conf",
+			"type": "text",
+			"text": "**Files owned by another enabled mod?**",
+			"x": 0,
+			"y": 2100,
+			"width": 440,
+			"height": 80,
+			"color": "3"
+		},
+		{
+			"id": "conflict",
+			"type": "text",
+			"text": "### Error::Conflict\nlisted per file; tick **Allow overwriting other mods** and retry (prepared files kept)",
+			"x": 560,
+			"y": 2060,
+			"width": 440,
+			"height": 160,
+			"color": "1"
+		},
+		{
+			"id": "deploy",
+			"type": "text",
+			"text": "## Deploy and record\n`staging/MOD_ID` · `resolve_ci` · inside game dir, no symlink · back up unowned originals to `backups/` · atomic copy · `mod_files` row with SHA-256\n\n[[Deploy and tracking]]",
+			"x": 0,
+			"y": 2260,
+			"width": 440,
+			"height": 260,
+			"color": "4"
+		},
+		{
+			"id": "rollback",
+			"type": "text",
+			"text": "### Rollback\nuninstall the half-installed mod; re-enable the old version when replacing",
+			"x": 560,
+			"y": 2300,
+			"width": 440,
+			"height": 160,
+			"color": "1"
+		},
+		{
+			"id": "after",
+			"type": "text",
+			"text": "### After install\n`analysis::index_mod` → Compatibility, Graph, dependencies, MCP · File map · Linux setup checks\n\n[[After install]]",
+			"x": 0,
+			"y": 2600,
+			"width": 440,
+			"height": 220,
+			"color": "5"
+		},
+		{
+			"id": "report",
+			"type": "text",
+			"text": "### Toast\n`Installed X: N files (layout)` · replaced · overrode · backed up · first 5 *Skipped*",
+			"x": 0,
+			"y": 2900,
+			"width": 440,
+			"height": 160
+		},
+		{
+			"id": "later",
+			"type": "text",
+			"text": "### Later\n**Disable** / **Enable** / **Uninstall** / **Verify**: undeploy restores the next owner's copy or the backup; changed files are left in place\n\n[[Disable, enable, uninstall, verify]]",
+			"x": -560,
+			"y": 2600,
+			"width": 440,
+			"height": 260,
+			"color": "6"
+		},
+		{
+			"id": "home",
+			"type": "text",
+			"text": "# CPMX2077 install flow\nEach box links to its note. Start at [[Home]].\nStructure of the whole app: [[App structure]].\nOne-chart version: [[Install pipeline]].",
+			"x": -560,
+			"y": 0,
+			"width": 440,
+			"height": 220,
+			"color": "2"
+		}
+	],
+	"edges": [
+		{
+			"id": "e-entry-checks",
+			"fromNode": "entry",
+			"fromSide": "bottom",
+			"toNode": "checks",
+			"toSide": "top"
+		},
+		{
+			"id": "e-checks-extract",
+			"fromNode": "checks",
+			"fromSide": "bottom",
+			"toNode": "extract",
+			"toSide": "top"
+		},
+		{
+			"id": "e-extract-q_fomod",
+			"fromNode": "extract",
+			"fromSide": "bottom",
+			"toNode": "q_fomod",
+			"toSide": "top"
+		},
+		{
+			"id": "e-q_fomod-fomod",
+			"fromNode": "q_fomod",
+			"fromSide": "left",
+			"toNode": "fomod",
+			"toSide": "right",
+			"label": "yes"
+		},
+		{
+			"id": "e-q_fomod-q_var",
+			"fromNode": "q_fomod",
+			"fromSide": "bottom",
+			"toNode": "q_var",
+			"toSide": "top",
+			"label": "no"
+		},
+		{
+			"id": "e-q_var-variants",
+			"fromNode": "q_var",
+			"fromSide": "left",
+			"toNode": "variants",
+			"toSide": "right",
+			"label": "yes"
+		},
+		{
+			"id": "e-q_var-plan",
+			"fromNode": "q_var",
+			"fromSide": "bottom",
+			"toNode": "plan",
+			"toSide": "top",
+			"label": "no"
+		},
+		{
+			"id": "e-variants-plan",
+			"fromNode": "variants",
+			"fromSide": "right",
+			"toNode": "plan",
+			"toSide": "left",
+			"label": "then"
+		},
+		{
+			"id": "e-fomod-prev",
+			"fromNode": "fomod",
+			"fromSide": "bottom",
+			"toNode": "prev",
+			"toSide": "left",
+			"label": "destinations from the installer"
+		},
+		{
+			"id": "e-plan-refused",
+			"fromNode": "plan",
+			"fromSide": "right",
+			"toNode": "refused",
+			"toSide": "left",
+			"label": "nothing placeable"
+		},
+		{
+			"id": "e-plan-gaps",
+			"fromNode": "plan",
+			"fromSide": "right",
+			"toNode": "gaps",
+			"toSide": "left",
+			"label": "most install failures"
+		},
+		{
+			"id": "e-plan-prev",
+			"fromNode": "plan",
+			"fromSide": "bottom",
+			"toNode": "prev",
+			"toSide": "top"
+		},
+		{
+			"id": "e-prev-q_conf",
+			"fromNode": "prev",
+			"fromSide": "bottom",
+			"toNode": "q_conf",
+			"toSide": "top"
+		},
+		{
+			"id": "e-q_conf-conflict",
+			"fromNode": "q_conf",
+			"fromSide": "right",
+			"toNode": "conflict",
+			"toSide": "left",
+			"label": "yes, overwrite off"
+		},
+		{
+			"id": "e-q_conf-deploy",
+			"fromNode": "q_conf",
+			"fromSide": "bottom",
+			"toNode": "deploy",
+			"toSide": "top",
+			"label": "no / overwrite on"
+		},
+		{
+			"id": "e-deploy-rollback",
+			"fromNode": "deploy",
+			"fromSide": "right",
+			"toNode": "rollback",
+			"toSide": "left",
+			"label": "error"
+		},
+		{
+			"id": "e-deploy-after",
+			"fromNode": "deploy",
+			"fromSide": "bottom",
+			"toNode": "after",
+			"toSide": "top",
+			"label": "ok"
+		},
+		{
+			"id": "e-after-report",
+			"fromNode": "after",
+			"fromSide": "bottom",
+			"toNode": "report",
+			"toSide": "top"
+		},
+		{
+			"id": "e-after-later",
+			"fromNode": "after",
+			"fromSide": "left",
+			"toNode": "later",
+			"toSide": "right"
+		}
+	]
+}

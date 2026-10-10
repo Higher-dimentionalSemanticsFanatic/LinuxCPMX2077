@@ -183,6 +183,9 @@ pub struct Requirement {
     pub notes: Option<String>,
     /// Only for off-site requirements; https/http only.
     pub url: Option<String>,
+    /// The author's note marks it optional or recommended
+    /// (`dependencies::optional_note`).
+    pub optional: bool,
 }
 
 /// Mod page on the website; `file_id` jumps to that file's entry on the
@@ -745,10 +748,12 @@ fn requirements_from_graphql(data: &Value) -> (Option<Requirements>, Vec<String>
     for n in r.pointer("/nexusRequirements/nodes").and_then(Value::as_array).into_iter().flatten().take(200) {
         let Some(name) = text(n.get("modName"), 200) else { continue };
         let external = n.get("externalRequirement").and_then(Value::as_bool).unwrap_or(false);
+        let notes = text(n.get("notes"), 500);
         let req = Requirement {
             mod_id: if external { None } else { n.get("modId").and_then(as_id) },
             name,
-            notes: text(n.get("notes"), 500),
+            optional: notes.as_deref().is_some_and(crate::dependencies::optional_note),
+            notes,
             url: text(n.get("url"), 500).filter(|u| nexus_markup::safe_link(u).is_some()),
         };
         if external { out.external.push(req) } else { out.nexus.push(req) }
@@ -1494,7 +1499,7 @@ mod tests {
         assert!(!doc.contains("<script") && !doc.contains("alert"), "{doc}");
 
         let r = d.requirements.as_ref().unwrap();
-        assert_eq!(r.nexus, vec![Requirement { mod_id: Some(2380), name: "RED4ext".into(), notes: None, url: None }]);
+        assert_eq!(r.nexus, vec![Requirement { mod_id: Some(2380), name: "RED4ext".into(), notes: None, url: None, optional: false }]);
         assert_eq!(r.external.len(), 1);
         assert_eq!(r.external[0].url.as_deref(), Some("https://aka.ms/vs/17/release/vc_redist.x64.exe"));
         assert_eq!(r.dlc, vec!["Phantom Liberty".to_string()]);

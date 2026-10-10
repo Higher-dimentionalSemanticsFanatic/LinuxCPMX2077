@@ -1100,7 +1100,9 @@ mod tests {
         assert_eq!(ra.backed_up_game_files, vec!["Engine/Config/base.ini".to_string()]);
         // Case-insensitive merge into the existing engine/config dir.
         assert_eq!(std::fs::read(game_dir.join("engine/config/base.ini")).unwrap(), b"mod-a-ini");
-        assert!(!game_dir.join("Engine").exists());
+        // No second `Engine` folder (checked by name: Windows ignores case).
+        let names: Vec<_> = std::fs::read_dir(&game_dir).unwrap().flatten().map(|e| e.file_name()).collect();
+        assert!(!names.iter().any(|n| n == "Engine"), "{names:?}");
         // The debug terminal saw the extraction, the backup and both copies.
         let mine: Vec<_> = activity::since(0)
             .into_iter()

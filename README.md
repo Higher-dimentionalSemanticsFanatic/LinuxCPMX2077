@@ -22,6 +22,8 @@ check the download against. A Windows installer
 
 - **New here?** Follow [Getting started](docs/getting-started.md): install,
   connect Nexus, set up the frameworks and Proton, and install your first mod.
+  The app also opens a short introduction tour on first start (Settings →
+  Start tour shows it again).
 - **Reference:** the [user guide](docs/user-guide.md) explains how the app
   works and what every tab and button does, plus troubleshooting.
 
@@ -64,6 +66,10 @@ Screenshots show sample data, with file locations blurred.
   options (`WINEDLLOVERRIDES="winmm,version=n,b" %command%`, plus `-modded`
   for REDmod; only while Steam is closed), sets the same DLL overrides in a
   Heroic prefix, and merges mod folders that exist under two spellings.
+  With an HDR10 display it checks what the game needs to offer HDR under
+  Proton (Wayland session, desktop HDR, driver version, a Proton build with
+  the Wine Wayland driver or gamescope) and adds the HDR variables to the
+  launch options.
   Installing a mod that needs one of these asks to set it up straight away.
 - **Tracks everything** in a SQLite library (`~/.local/share/cp2077-modmanager/`):
   each mod, its source, the game build it was installed on, the archive's
@@ -103,12 +109,15 @@ Screenshots show sample data, with file locations blurred.
   mod through updates. "Export mod list" saves your mods, tags and followed
   collections to a JSON file; "Import mod list" applies its tags and offers
   to get the mods you don't have.
-- **Dependencies**: "Show dependencies" in Installed mods lists what each mod
-  needs indented under it, from its Nexus page and from the frameworks its
-  files use (redscript for `.reds`, ArchiveXL for `.xl`, …), marked
-  installed, turned off, already in the game folder or missing, with a button
-  to get what's missing (or "Get missing" for all of them), plus which mods
-  need it. A mod's page in Get mods marks its requirements the same way.
+- **Dependencies and recommendations**: "Dependencies" in Installed mods
+  lists what each mod needs indented under it, from its Nexus page and from
+  the frameworks its files use (redscript for `.reds`, ArchiveXL for `.xl`,
+  …), marked installed, turned off, already in the game folder or missing,
+  with a button to get what's missing (or "Get missing" for all of them),
+  plus which mods need it. "Recommendations" lists requirements the author's
+  note marks optional, in a different row colour; both can be on together. "Missing on top" lists
+  each missing item once, ranked by how many installed mods list it. A mod's
+  page in Get mods marks its requirements the same way.
 - **Mod page** button in Installed mods opens a mod's Nexus or GitHub page
   in Get mods.
 - **Ultra+ recommendations**: with the Ultra+ path tracing mod installed, a
@@ -138,6 +147,12 @@ Screenshots show sample data, with file locations blurred.
   after install, such as its own settings, stay in place and are kept when it
   comes back. Disabled mods are left out of the compatibility check and crash
   analysis.
+- **Mod profiles**: named lists of enabled mods, filed under each game
+  version. Applying one enables its mods and disables every other installed
+  mod in the same game folder; mods updated since still match.
+- **Multi-select**: select several installed mods to enable, disable or
+  uninstall them together, or several downloads to delete them, with one
+  confirmation listing what is removed.
 - **Netrunner tab** (formerly Diagnostics): one place for overview and
   diagnosis. It opens with a summary of what needs attention (game setup
   warnings, recent crashes, mods named in log errors, compatibility
@@ -173,7 +188,7 @@ Screenshots show sample data, with file locations blurred.
 - **Graph view**: mods, the frameworks they need, the game classes, tweak
   records and resources they touch, with clashes highlighted. "Group by"
   rings or heads the nodes by node type, mod type, tag, Nexus category or
-  source.
+  source; clicking a type in the legend hides or shows it.
 - **Verify**: re-hashes a mod's files and reports missing, edited or
   overridden ones.
 - **Nexus Mods sign-in**: “Sign in with Nexus Mods” uses Nexus SSO, so you
@@ -233,6 +248,10 @@ Screenshots show sample data, with file locations blurred.
   your machine (downloads, checksum checks, extractions, files copied,
   backed up, moved or deleted, Linux setup fixes), with filters, Copy and
   Save…. API keys and signed download links are never shown.
+- **App update notice**: on startup (and from Settings → *Check now*) the
+  app compares its version with the newest CPMX2077 release on GitHub,
+  pre-releases included, and shows a notice with the release notes and a
+  link to the release page. Notify only: nothing is downloaded or replaced.
 
 ### Windows (preview)
 
@@ -255,8 +274,8 @@ so SmartScreen asks once: More info, Run anyway. What differs from Linux:
 - **`.rar` archives** use the `tar.exe` that ships with Windows 10 and 11.
 - The library lives in `%APPDATA%\cp2077-modmanager\`.
 
-Not yet tested on a real Windows machine: CI builds and lints the Windows
-code, but the unit tests run on Linux only.
+Not yet tested on a real Windows machine: CI builds, lints and unit-tests
+the Windows code on Windows.
 
 ### Nexus SSO slug
 

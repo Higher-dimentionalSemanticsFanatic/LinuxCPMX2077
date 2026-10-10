@@ -154,7 +154,11 @@ details.affected .affected-title { margin-top: 6px; color: var(--text); font-siz
 details.affected ul.affected-items { margin: 2px 0 0; padding-left: 16px; max-height: 220px; overflow-y: auto; color: var(--text); }
 details.affected ul.affected-items li { word-break: break-all; }
 details.affected p { margin: 4px 0; font-size: 12px; }
-#graph-legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; background: var(--c); vertical-align: -1px; }
+#graph-legend button.node-type { clip-path: none; background: none; border: 0; padding: 0; margin: 0; color: var(--muted); font: inherit; text-transform: none; letter-spacing: 0; cursor: pointer; }
+#graph-legend button.node-type:hover { color: var(--text); }
+#graph-legend button.node-type.off { opacity: .5; text-decoration: line-through; }
+#graph-legend button.node-type.off::before { background: none; box-shadow: inset 0 0 0 2px var(--c); }
+#graph-legend span::before, #graph-legend button.node-type::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; background: var(--c); vertical-align: -1px; }
 
 /* Nexus browsing */
 select.inline { width: auto; margin: 0; }
@@ -203,7 +207,26 @@ details.card[open] summary { margin-bottom: 10px; }
 tr.off td { color: var(--muted); }
 tr.off b { font-weight: normal; }
 tr.off .badge { margin-left: 6px; }
-input.switch { width: 16px; height: 16px; accent-color: var(--yellow); cursor: pointer; }
+/* On/off toggle: a slider, so it doesn't read like the row selection box. */
+input.switch {
+  appearance: none; -webkit-appearance: none; position: relative; width: 30px; height: 16px; margin: 0;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; vertical-align: middle;
+}
+input.switch::before {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--muted); transition: transform .12s;
+}
+input.switch:checked { border-color: var(--yellow); background: rgba(246, 207, 60, .18); }
+input.switch:checked::before { transform: translateX(14px); background: var(--yellow); }
+input.switch:disabled { opacity: .5; cursor: progress; }
+input.switch:focus-visible { outline: 1px solid var(--yellow); outline-offset: 2px; }
+th.pick-col { width: 1%; }
+input.pick { cursor: pointer; }
+.bulk-bar {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 6px 0; padding: 6px 10px; background: var(--panel-solid); border: 1px solid var(--yellow);
+}
+.bulk-bar > span { color: var(--yellow); font-weight: 600; margin-right: 6px; }
 
 /* Source picker on the Get mods page. */
 .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
@@ -250,14 +273,27 @@ input[type=color] { flex: 0 0 auto !important; width: 32px; height: 28px; paddin
 .tag-chip .tag-remove { background: none; border: 0; padding: 0 4px; min-width: 0; color: var(--muted); font-size: 13px; line-height: 1; cursor: pointer; }
 .tag-chip .tag-remove:hover { color: var(--red); }
 select.tag-add { width: auto; max-width: 120px; margin: 0; padding: 1px 4px; font-size: 12px; }
-tr.dep td { border-bottom: 0; padding-top: 1px; padding-bottom: 1px; }
-tr.dep td:nth-child(2) { padding-left: 26px; }
-tr.dep + tr:not(.dep) td { border-top: 1px solid var(--border); }
-tr.dep .badge { margin: 0 4px; }
+tr.dep td, tr.rec td { border-bottom: 0; padding-top: 1px; padding-bottom: 1px; }
+tr.dep td:nth-child(2), tr.rec td:nth-child(2) { padding-left: 26px; }
+tr.dep + tr:not(.dep):not(.rec) td, tr.rec + tr:not(.dep):not(.rec) td { border-top: 1px solid var(--border); }
+tr.dep .badge, tr.rec .badge { margin: 0 4px; }
 .dep-name { font-size: 13px; }
 .dep-note { padding-left: 16px; }
 .removed { margin-right: 10px; white-space: nowrap; }
-tr.dep button { padding: 2px 10px; font-size: 12px; margin: 0; }
+tr.dep button, tr.rec button { padding: 2px 10px; font-size: 12px; margin: 0; }
+/* Dependency rows teal, recommendation rows amber, in the list and its key. */
+#mods-body tr.dep td, #mods-body tr.dep:hover td { background: rgba(79, 227, 208, .07); }
+#mods-body tr.dep td:first-child { box-shadow: inset 3px 0 var(--cyan); }
+#mods-body tr.rec td, #mods-body tr.rec:hover td, .req-table tr.rec td { background: rgba(219, 161, 58, .09); }
+#mods-body tr.rec td:first-child { box-shadow: inset 3px 0 var(--amber); }
+#mods-body tr.deficit td:first-child { box-shadow: inset 3px 0 var(--red); }
+#mods-body tr.deficit-head td { padding-top: 6px; }
+#mods-body tr.deficit td:nth-child(2) { padding-left: 10px; }
+#mods-body tr.deficit + tr:not(.deficit) td { border-top: 1px solid var(--border); }
+.deficit-count { text-align: center; font-weight: 700; color: var(--red); }
+.check.dep-key { border-bottom: 2px solid var(--cyan); }
+.check.rec-key { border-bottom: 2px solid var(--amber); }
+.badge.rec-badge { color: var(--amber); margin-left: 6px; }
 
 /* Get Mods: paging, freshness, debug view */
 #nexus-pager .page-input { width: 72px; flex: 0 0 72px; text-align: center; }
@@ -332,6 +368,11 @@ button.twisty { background: none; border: 0; padding: 0 6px 0 0; color: var(--mu
 .ribbon .chip.current b::after { content: " ●"; color: var(--green); font-size: 10px; }
 .ribbon .chip.active { border-color: var(--yellow); background: #2a2810; }
 #version-loadout details table { margin-top: 8px; }
+#version-profiles .profile-head { gap: 10px; align-items: baseline; margin-bottom: 6px; }
+#version-profiles .profile-chips { padding-bottom: 6px; margin-bottom: 0; }
+#version-profiles .chip.applied b::after { content: " ●"; color: var(--green); font-size: 10px; }
+#version-profiles .profile-actions, #version-profiles .profile-new { gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+#version-profiles .profile-new input { max-width: 260px; }
 table.tree td.actions { white-space: nowrap; }
 
 /* ---- Netrunner tab: cyberpunk styling, scoped to this tab only ---------- */
@@ -454,3 +495,18 @@ div.mod-card:hover, div.mod-card:focus-visible { border-color: var(--cyan); outl
 button.link.author { padding: 0; margin: 0; font-size: inherit; }
 #author-head { align-items: baseline; }
 #author-head h3 { margin: 0; }
+#app-update { border-left: 3px solid var(--green); }
+#app-update-meta { overflow-wrap: anywhere; }
+#app-update-notes { margin: 10px 0 0; max-height: 260px; overflow-y: auto; }
+
+/* ---- Introduction tour (tour.js) ---------------------------------------- */
+#tour { position: fixed; inset: 0; z-index: 30; }
+.tour-shade { position: fixed; background: rgba(5, 5, 10, .72); }
+#tour-spot { position: fixed; pointer-events: none; border: 2px solid var(--yellow); box-shadow: 0 0 18px rgba(246, 207, 60, .35); }
+#tour-card { position: fixed; width: min(400px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
+  background: var(--panel-solid); border: 1px solid var(--line); border-top: 3px solid var(--yellow); padding: 14px 18px; }
+#tour-card h2 { margin: 2px 0 10px; font-size: 22px; }
+#tour-card p { margin: 0 0 8px; }
+#tour-card ul { margin: 0 0 8px; padding-left: 18px; }
+#tour-card li { margin-bottom: 4px; }
+#tour-card footer { margin-top: 12px; }
