@@ -74,9 +74,17 @@
         <button id="deps-get-missing" class="hidden" title="Queue every missing requirement: core frameworks from GitHub, the rest from Nexus">Get missing</button>
         <span id="updates-note" class="muted small"></span>
       </div>
+      <div id="mods-bulk" class="bulk-bar hidden">
+        <span id="mods-bulk-count"></span>
+        <button id="mods-bulk-enable" title="Put the selected mods' files back into the game">Enable</button>
+        <button id="mods-bulk-disable" title="Take the selected mods' files out of the game; their stored copies are kept">Disable</button>
+        <button id="mods-bulk-uninstall" class="danger" title="Remove the selected mods and their stored copies">Uninstall</button>
+        <button id="mods-bulk-clear" class="link">Clear selection</button>
+      </div>
       <table>
         <thead><tr>
-          <th title="Turn a mod off without uninstalling it">On</th>
+          <th class="pick-col"><input type="checkbox" id="mods-select-all" class="pick" aria-label="Select all shown mods" title="Select all shown mods"></th>
+          <th title="Enabled: files are in the game. Disabled: files are taken out, the mod stays installed">On</th>
           <th class="sortable" data-sort="name">Name</th>
           <th class="sortable" data-sort="category" title="Your tags, with the Nexus category under them">Tags &amp; category</th>
           <th class="sortable" data-sort="version">Mod version</th>
@@ -416,8 +424,13 @@
       <p class="muted small">Saved in <span id="downloads-where" class="mono"></span>, one folder per mod.
         <button class="link inline" data-goto="settings">Change</button></p>
       <div id="progress" class="progress hidden"><div class="progress-bar"></div><span class="progress-text"></span></div>
+      <div id="downloads-bulk" class="bulk-bar hidden">
+        <span id="downloads-bulk-count"></span>
+        <button id="downloads-bulk-delete" class="danger" title="Delete the selected archives; installed mods stay installed">Delete</button>
+        <button id="downloads-bulk-clear" class="link">Clear selection</button>
+      </div>
       <table class="tree">
-        <thead><tr><th>Mod</th><th>Version</th><th>Game version</th><th>Source</th><th>Size</th><th>Verified</th><th></th></tr></thead>
+        <thead><tr><th class="pick-col"><input type="checkbox" id="downloads-select-all" class="pick" aria-label="Select all shown downloads" title="Select all shown downloads"></th><th>Mod</th><th>Version</th><th>Game version</th><th>Source</th><th>Size</th><th>Verified</th><th></th></tr></thead>
         <tbody id="downloads-body"></tbody>
       </table>
       <p id="downloads-empty" class="muted">Nothing downloaded yet.</p>

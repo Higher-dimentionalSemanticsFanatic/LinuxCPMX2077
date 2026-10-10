@@ -132,6 +132,9 @@ Screenshots show sample data, with file locations blurred.
   after install, such as its own settings, stay in place and are kept when it
   comes back. Disabled mods are left out of the compatibility check and crash
   analysis.
+- **Multi-select**: select several installed mods to enable, disable or
+  uninstall them together, or several downloads to delete them, with one
+  confirmation listing what is removed.
 - **Netrunner tab** (formerly Diagnostics): one place for overview and
   diagnosis. It opens with a summary of what needs attention (game setup
   warnings, recent crashes, mods named in log errors, compatibility
