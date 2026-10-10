@@ -177,6 +177,8 @@ pub struct HeroicGame {
     pub prefix: Option<PathBuf>,
     /// A `wine` binary that runs in that prefix.
     pub wine: Option<PathBuf>,
+    /// Environment variables set in Heroic's game settings.
+    pub env: Vec<(String, String)>,
 }
 
 fn heroic_installs(home: &Path) -> Vec<(PathBuf, HeroicGame)> {
@@ -215,7 +217,14 @@ fn heroic_game_config(dir: &Path, app_name: &str) -> Option<HeroicGame> {
     let bin = wv.and_then(|w| w.get("bin")).and_then(|v| v.as_str()).map(PathBuf::from);
     let kind = wv.and_then(|w| w.get("type")).and_then(|v| v.as_str()).unwrap_or("wine");
     let wine = bin.and_then(|b| if kind == "proton" { proton_wine(b.parent()?) } else { Some(b) });
-    Some(HeroicGame { app_name: app_name.to_string(), prefix, wine })
+    // Heroic spells the key "enviromentOptions".
+    let env = ["enviromentOptions", "environmentOptions"]
+        .iter()
+        .filter_map(|k| cfg.get(*k).and_then(|v| v.as_array()))
+        .flatten()
+        .filter_map(|e| Some((e.get("key")?.as_str()?.to_string(), e.get("value")?.as_str()?.to_string())))
+        .collect();
+    Some(HeroicGame { app_name: app_name.to_string(), prefix, wine, env })
 }
 
 /// Heroic's view of the GOG install at `game`, if Heroic manages it.
