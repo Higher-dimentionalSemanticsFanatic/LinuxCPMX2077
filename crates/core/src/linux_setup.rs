@@ -1172,6 +1172,7 @@ mod tests {
         std::fs::write(p, content).unwrap();
     }
 
+    #[cfg_attr(windows, allow(dead_code))]
     fn install(dir: &Path, store: Store, prefix: Option<PathBuf>, launch: Option<&str>) -> GameInstall {
         touch(&dir.join(GAME_EXE), b"x");
         GameInstall {
@@ -1188,6 +1189,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(windows))] // the checks are Linux-only
     fn reshade_needs_its_override_and_the_shader_compiler() {
         let gdir = tempfile::tempdir().unwrap();
         let pfx = tempfile::tempdir().unwrap();
@@ -1287,6 +1289,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(windows))] // the checks are Linux-only
     fn steam_launch_options_fix_and_undo() {
         let home = tempfile::tempdir().unwrap();
         let root = home.path().join(".local/share/Steam");
@@ -1320,6 +1323,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(windows))] // the checks are Linux-only
     fn heroic_prefix_gets_registry_overrides() {
         let home = tempfile::tempdir().unwrap();
         let gdir = tempfile::tempdir().unwrap();
@@ -1339,6 +1343,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(windows))] // the checks are Linux-only
     fn merges_case_duplicate_folders_and_moves_back() {
         let home = tempfile::tempdir().unwrap();
         let gdir = tempfile::tempdir().unwrap();

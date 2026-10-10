@@ -387,8 +387,9 @@ mod tests {
             root.join("steamapps/libraryfolders.vdf"),
             format!(
                 "\"libraryfolders\" {{ \"0\" {{ \"path\" \"{}\" }} \"1\" {{ \"path\" \"{}\" }} }}",
-                root.display(),
-                lib2.path().display()
+                // Escaped as Steam writes Windows paths.
+                root.display().to_string().replace('\\', "\\\\"),
+                lib2.path().display().to_string().replace('\\', "\\\\")
             ),
         )
         .unwrap();
