@@ -265,8 +265,8 @@ so SmartScreen asks once: More info, Run anyway. What differs from Linux:
 - **`.rar` archives** use the `tar.exe` that ships with Windows 10 and 11.
 - The library lives in `%APPDATA%\cp2077-modmanager\`.
 
-Not yet tested on a real Windows machine: CI builds and lints the Windows
-code, but the unit tests run on Linux only.
+Not yet tested on a real Windows machine: CI builds, lints and unit-tests
+the Windows code on Windows.
 
 ### Nexus SSO slug
 

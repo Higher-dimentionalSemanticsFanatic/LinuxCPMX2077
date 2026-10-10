@@ -862,9 +862,10 @@ async fn save_debug_log(path: String, text: String) -> Result<()> {
 const DEBUG_WINDOW: &str = "debug";
 
 /// Open the debug terminal: a window of its own that streams Nexus API
-/// requests and file operations as they happen.
+/// requests and file operations as they happen. Async because building a
+/// window from a synchronous command deadlocks on Windows.
 #[tauri::command]
-fn open_debug_terminal(app: AppHandle) -> Result<()> {
+async fn open_debug_terminal(app: AppHandle) -> Result<()> {
     if let Some(w) = app.get_webview_window(DEBUG_WINDOW) {
         let _ = w.unminimize();
         let _ = w.show();
@@ -883,7 +884,7 @@ fn open_debug_terminal(app: AppHandle) -> Result<()> {
 
 /// Close the debug terminal window and show it in the main window's sidebar.
 #[tauri::command]
-fn dock_debug_terminal(app: AppHandle) {
+async fn dock_debug_terminal(app: AppHandle) {
     let _ = app.emit_to("main", "debug-dock", ());
     if let Some(w) = app.get_webview_window(DEBUG_WINDOW) {
         let _ = w.close();
