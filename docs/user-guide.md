@@ -375,6 +375,11 @@ red.
   Clicking a mod shows its tags in the details panel.
 - **Hide harmless hooks** hides hooks that several mods share without
   conflict.
+- **Legend**: click a node type (*Mod*, *Framework*, *Game class*, …) to
+  hide it in both layouts, together with every line to it; click it again to
+  show it. Hidden types are struck through and stay hidden the next time you
+  open the app. Parts a hidden mod touches stay visible. **Show in graph**
+  turns *Mod* back on if it is hidden.
 - Drag to pan, scroll or use the zoom bar (− / 100% / + / **Fit**), drag a
   node to move it, click a node for its details. **Re-layout** starts over.
 - Large libraries (several thousand nodes) stay responsive: zooming and
