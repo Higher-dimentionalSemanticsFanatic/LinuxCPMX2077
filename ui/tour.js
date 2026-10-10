@@ -79,7 +79,7 @@ function tourSteps() {
     tab: "mods",
     target: () => document.querySelector("#game-warnings li") ? "#game-warnings" : "#game-panel",
     body: [
-      "Frameworks under Proton need the Visual C++ runtime (vcrun2022) in the game prefix and DLL overrides in the Steam launch options. Missing items are listed in the Game panel, each with a fix button and, once fixed, Undo.",
+      "Frameworks under Proton need the Visual C++ runtime (vcrun2022) in the game prefix and DLL overrides in the Steam launch options. Missing items (also HDR and folder name spellings) are listed in the Game panel, each with a fix button and, once fixed, Undo.",
       "After a framework install the fixes are offered in one dialog. Close Steam before Set launch options: Steam overwrites the setting while it runs.",
     ],
   });
@@ -90,7 +90,8 @@ function tourSteps() {
       target: () => "#tab-mods > header",
       body: [
         "Install from archive… installs a .zip, .7z or .rar from disk. Mods from Get mods are installed on download.",
-        "Per mod: On switch disables it without uninstalling (files leave the game, a checked copy is kept). Uninstall removes its files and restores what it replaced.",
+        "On switch: disables a mod without uninstalling it (files leave the game, a checked copy is kept). Uninstall: removes its files and restores what they replaced.",
+        "Tick the first column to Enable, Disable or Uninstall several mods at once.",
       ],
     },
     {
