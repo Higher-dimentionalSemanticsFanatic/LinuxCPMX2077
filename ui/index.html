@@ -79,8 +79,13 @@
       <div id="ultraplus" class="card hidden"></div>
       <div class="row filters">
         <select id="mods-category" class="inline" aria-label="Tag or category"><option value="">All tags and categories</option></select>
-        <label class="check small" title="List what each mod needs under it: from its Nexus page and from the frameworks its files use">
-          <input type="checkbox" id="show-deps"> Show dependencies</label>
+        <span id="deps-view" class="radio-group small" role="radiogroup" aria-label="Rows under each mod">
+          <label class="check" title="Only the mods"><input type="radio" name="deps-view" value="off"> Mods only</label>
+          <label class="check dep-key" title="Under each mod: what it needs, from its Nexus page and from the frameworks its files use"><input type="radio" name="deps-view" value="deps"> Dependencies</label>
+          <label class="check rec-key" title="Under each mod: requirements its author marked optional or recommended on its Nexus page"><input type="radio" name="deps-view" value="recs"> Recommendations</label>
+        </span>
+        <label id="deps-top-wrap" class="check small hidden" title="List each missing item once at the top, with how many installed mods list it, most first; mods with missing items sort first">
+          <input type="checkbox" id="deps-top"> Missing on top</label>
         <span id="deps-note" class="muted small"></span>
         <button id="deps-get-missing" class="hidden" title="Queue every missing requirement: core frameworks from GitHub, the rest from Nexus">Get missing</button>
         <span id="updates-note" class="muted small"></span>

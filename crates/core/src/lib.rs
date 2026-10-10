@@ -17,6 +17,7 @@ pub mod fomod;
 pub mod game;
 pub mod game_versions;
 pub mod hash;
+pub mod hdr;
 pub mod install;
 pub mod known_issues;
 pub mod linux_setup;

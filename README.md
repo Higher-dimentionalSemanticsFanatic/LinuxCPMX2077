@@ -64,6 +64,10 @@ Screenshots show sample data, with file locations blurred.
   options (`WINEDLLOVERRIDES="winmm,version=n,b" %command%`, plus `-modded`
   for REDmod; only while Steam is closed), sets the same DLL overrides in a
   Heroic prefix, and merges mod folders that exist under two spellings.
+  With an HDR10 display it checks what the game needs to offer HDR under
+  Proton (Wayland session, desktop HDR, driver version, a Proton build with
+  the Wine Wayland driver or gamescope) and adds the HDR variables to the
+  launch options.
   Installing a mod that needs one of these asks to set it up straight away.
 - **Tracks everything** in a SQLite library (`~/.local/share/cp2077-modmanager/`):
   each mod, its source, the game build it was installed on, the archive's
@@ -103,12 +107,15 @@ Screenshots show sample data, with file locations blurred.
   mod through updates. "Export mod list" saves your mods, tags and followed
   collections to a JSON file; "Import mod list" applies its tags and offers
   to get the mods you don't have.
-- **Dependencies**: "Show dependencies" in Installed mods lists what each mod
-  needs indented under it, from its Nexus page and from the frameworks its
-  files use (redscript for `.reds`, ArchiveXL for `.xl`, …), marked
-  installed, turned off, already in the game folder or missing, with a button
-  to get what's missing (or "Get missing" for all of them), plus which mods
-  need it. A mod's page in Get mods marks its requirements the same way.
+- **Dependencies and recommendations**: "Dependencies" in Installed mods
+  lists what each mod needs indented under it, from its Nexus page and from
+  the frameworks its files use (redscript for `.reds`, ArchiveXL for `.xl`,
+  …), marked installed, turned off, already in the game folder or missing,
+  with a button to get what's missing (or "Get missing" for all of them),
+  plus which mods need it. "Recommendations" lists requirements the author's
+  note marks optional, in a different row colour. "Missing on top" lists
+  each missing item once, ranked by how many installed mods list it. A mod's
+  page in Get mods marks its requirements the same way.
 - **Mod page** button in Installed mods opens a mod's Nexus or GitHub page
   in Get mods.
 - **Ultra+ recommendations**: with the Ultra+ path tracing mod installed, a

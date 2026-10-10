@@ -1,8 +1,9 @@
 //! What the game needs on Linux before mods load, checked and fixed in
 //! place: the Visual C++ runtime in the Wine/Proton prefix, the `winmm` and
 //! `version` DLL overrides that let CET and RED4ext load, ReShade's DLL
-//! override and Microsoft's shader compiler, `-modded` for REDmod, and mod
-//! folders that exist twice with different capitalisation.
+//! override and Microsoft's shader compiler, `-modded` for REDmod, mod
+//! folders that exist twice with different capitalisation, and what HDR
+//! needs (see [`crate::hdr`]).
 //!
 //! Every fix is offered, never applied on its own: the user confirms it, a
 //! record of what changed is kept under the app's data dir, and Undo puts
@@ -19,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use crate::activity::{self, Kind};
 use crate::desktop::user_command;
 use crate::game::{self, GameInstall, Store};
+use crate::hdr;
 use crate::install::{KNOWN_ROOTS, resolve_ci};
 use crate::{Error, Result, STEAM_APP_ID, vdf};
 
@@ -38,6 +40,7 @@ pub const FIX_D3DCOMPILER: &str = "d3dcompiler";
 pub const FIX_LAUNCH: &str = "launch-options";
 pub const FIX_OVERRIDES: &str = "dll-overrides";
 pub const FIX_CASE: &str = "case-folders";
+pub const FIX_HDR: &str = "hdr";
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -84,6 +87,7 @@ pub struct Probe {
     pub protontricks: Option<Tricks>,
     pub winetricks: Option<PathBuf>,
     pub cabextract: bool,
+    pub hdr: hdr::Probe,
 }
 
 impl Probe {
@@ -104,6 +108,7 @@ impl Probe {
             protontricks,
             winetricks: which("winetricks"),
             cabextract: which("cabextract").is_some(),
+            hdr: hdr::Probe::system(),
         }
     }
 }
@@ -119,6 +124,10 @@ fn processes() -> Vec<(String, String)> {
             Some((comm.trim().to_string(), String::from_utf8_lossy(&cmd).replace('\0', " ")))
         })
         .collect()
+}
+
+pub(crate) fn on_path(name: &str) -> bool {
+    which(name).is_some()
 }
 
 fn which(name: &str) -> Option<PathBuf> {
@@ -619,11 +628,25 @@ fn vc_installer(ctx: &Ctx) -> std::result::Result<(Tricks, Option<PathBuf>), Str
 }
 
 /// The Proton build that last ran this prefix (`config_info` names its fonts dir).
-fn steam_proton_wine(prefix: &Path) -> Option<PathBuf> {
+fn steam_proton_dir(prefix: &Path) -> Option<PathBuf> {
     let info = std::fs::read_to_string(prefix.parent()?.join("config_info")).ok()?;
     let fonts = info.lines().nth(1)?;
     let dir = ["/files/", "/dist/"].iter().find_map(|m| fonts.find(m).map(|i| &fonts[..i]))?;
-    game::proton_wine(Path::new(dir))
+    Some(PathBuf::from(dir))
+}
+
+fn steam_proton_wine(prefix: &Path) -> Option<PathBuf> {
+    game::proton_wine(&steam_proton_dir(prefix)?)
+}
+
+/// The Proton/Wine build that runs the game: Steam's last one for the
+/// prefix, or the one set in Heroic.
+fn runner(ctx: &Ctx) -> Option<hdr::Runner> {
+    let path = match ctx.game.store {
+        Store::Steam => steam_proton_dir(ctx.game.proton_prefix.as_deref()?)?,
+        _ => game::heroic_game(ctx.home, &ctx.game.path)?.wine?,
+    };
+    Some(hdr::runner(&path))
 }
 
 /// On Windows the game runs natively: there's no prefix, no overrides and no
@@ -818,6 +841,60 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
         }
     }
 
+    // HDR, when a connected display supports it.
+    let steam = g.store == Store::Steam;
+    if let Some(st) = hdr::status(&ctx.probe.hdr, runner(ctx).as_ref(), steam) {
+        let cur = if steam {
+            g.launch_options.clone().unwrap_or_default()
+        } else {
+            let env = game::heroic_game(ctx.home, &g.path).map(|h| h.env).unwrap_or_default();
+            env.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(" ")
+        };
+        let set = st.plan.as_ref().is_some_and(|p| hdr::has_plan(&cur, p));
+        let ok = set && st.missing.is_empty();
+        let mut detail = format!("{}.", st.found.join("; "));
+        if !st.missing.is_empty() {
+            detail.push_str(&format!(" Missing: {}.", st.missing.join("; ")));
+        }
+        let want = st.plan.as_ref().map(|p| hdr::merge(&cur, p));
+        match &st.plan {
+            Some(p) if !set && steam => detail.push_str(&format!(" Launch options lack {}.", p.line())),
+            Some(p) if !set => detail.push_str(&format!(
+                " Heroic › game settings › Advanced › Environment variables lacks {}.",
+                p.env.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(", ")
+            )),
+            _ => {}
+        }
+        if set {
+            detail.push_str(" In game: Settings › Video › HDR Mode › HDR10 PQ.");
+        }
+        let steam_block = if ctx.probe.steam_running { Some(CLOSE_STEAM) } else { None };
+        let no_config = localconfigs(ctx.home).is_empty().then_some("Steam has no settings for this game yet. Start it once from Steam, then try again.");
+        out.push(Check {
+            id: FIX_HDR.into(),
+            title: "HDR".into(),
+            state: if ok { State::Ok } else { State::Problem },
+            detail,
+            fix: match &want {
+                Some(want) if steam && !set => action(
+                    "Set HDR launch options",
+                    format!(
+                        "Set Cyberpunk 2077's Steam launch options to:\n\n{want}\n\nNow: {}\n\nUndo removes the HDR settings again.",
+                        if cur.trim().is_empty() { "(empty)" } else { cur.trim() }
+                    ),
+                    steam_block.or(no_config),
+                ),
+                _ => None,
+            },
+            undo: undo_action(ctx, FIX_HDR, "the launch options without the HDR settings", steam_block),
+            copy: match (&st.plan, want) {
+                (Some(_), Some(w)) if steam && !set => Some(w),
+                (Some(p), _) if !set => Some(p.env.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(" ")),
+                _ => None,
+            },
+        });
+    }
+
     // Folders that exist under two spellings.
     let dups = case_duplicates(&g.path);
     let rec = load_record(ctx, FIX_CASE).is_some();
@@ -926,6 +1003,31 @@ pub fn apply(ctx: &Ctx, id: &str) -> Result<String> {
             }
             rec.applied_at = now();
             save_record(ctx, FIX_LAUNCH, &rec)?;
+            Ok(format!("Launch options set: {set}"))
+        }
+        FIX_HDR => {
+            let plan = hdr::status(&ctx.probe.hdr, runner(ctx).as_ref(), true)
+                .and_then(|s| s.plan)
+                .ok_or_else(|| Error::Other("no HDR launch options for this system".into()))?;
+            let mut rec = load_record(ctx, FIX_HDR).unwrap_or_default();
+            let mut set = String::new();
+            for cfg in localconfigs(ctx.home) {
+                let src = std::fs::read_to_string(&cfg)?;
+                let before = launch_in(&src);
+                let want = hdr::merge(before.as_deref().unwrap_or(""), &plan);
+                if before.as_deref() == Some(want.as_str()) {
+                    continue;
+                }
+                let new = vdf::set_value(&src, LAUNCH_PATH, &want, 2)
+                    .ok_or_else(|| Error::Other(format!("could not edit {}", cfg.display())))?;
+                if !rec.launch.iter().any(|(p, _)| p == &cfg) {
+                    rec.launch.push((cfg.clone(), before));
+                }
+                write_atomic(&cfg, &new)?;
+                set = want;
+            }
+            rec.applied_at = now();
+            save_record(ctx, FIX_HDR, &rec)?;
             Ok(format!("Launch options set: {set}"))
         }
         FIX_OVERRIDES => {
@@ -1129,6 +1231,19 @@ pub fn undo(ctx: &Ctx, id: &str) -> Result<String> {
             }
             "The previous launch options are back.".into()
         }
+        FIX_HDR => {
+            for (cfg, _) in &rec.launch {
+                let Ok(src) = std::fs::read_to_string(cfg) else { continue };
+                let Some(cur) = launch_in(&src) else { continue };
+                let want = hdr::strip(&cur);
+                if want != cur
+                    && let Some(new) = vdf::set_value(&src, LAUNCH_PATH, &want, 2)
+                {
+                    write_atomic(cfg, &new)?;
+                }
+            }
+            "HDR settings removed from the launch options.".into()
+        }
         FIX_OVERRIDES => {
             let prefix = g.proton_prefix.as_ref().ok_or_else(|| Error::Other("no prefix".into()))?;
             let reg_path = prefix.join("user.reg");
@@ -1320,6 +1435,55 @@ mod tests {
         assert!(c.undo.is_some());
         undo(&ctx2, FIX_LAUNCH).unwrap();
         assert_eq!(std::fs::read_to_string(&cfg).unwrap(), before, "undo restores the file exactly");
+    }
+
+    #[test]
+    #[cfg(not(windows))] // the checks are Linux-only
+    fn hdr_launch_options_fix_and_undo() {
+        let home = tempfile::tempdir().unwrap();
+        let root = home.path().join(".local/share/Steam");
+        std::fs::create_dir_all(root.join("steamapps")).unwrap();
+        let cfg = root.join("userdata/123/config/localconfig.vdf");
+        let mods = "WINEDLLOVERRIDES=\\\"winmm,version=n,b\\\" %command%";
+        let vdf_with = |opts: &str| {
+            format!("\"UserLocalConfigStore\"\n{{\n\t\"Software\"\n\t{{\n\t\t\"Valve\"\n\t\t{{\n\t\t\t\"Steam\"\n\t\t\t{{\n\t\t\t\t\"apps\"\n\t\t\t\t{{\n\t\t\t\t\t\"1091500\"\n\t\t\t\t\t{{\n\t\t\t\t\t\t\"LaunchOptions\"\t\t\"{opts}\"\n\t\t\t\t\t}}\n\t\t\t\t}}\n\t\t\t}}\n\t\t}}\n\t}}\n}}\n")
+        };
+        touch(&cfg, vdf_with(mods).as_bytes());
+        let before = launch_in(&std::fs::read_to_string(&cfg).unwrap()).unwrap();
+        // The prefix was last run by GE-Proton.
+        let compat = tempfile::tempdir().unwrap();
+        let pfx = compat.path().join("pfx");
+        std::fs::create_dir_all(&pfx).unwrap();
+        touch(&compat.path().join("config_info"), b"GE-Proton10-25\n/home/u/.steam/root/compatibilitytools.d/GE-Proton10-25/files/share/fonts/\n");
+        let gdir = tempfile::tempdir().unwrap();
+        let state = tempfile::tempdir().unwrap();
+        let g = install(gdir.path(), Store::Steam, Some(pfx), Some(&before));
+        let hdr = hdr::Probe {
+            displays: vec![hdr::Display { connector: "DP-1".into(), name: None, pq: true, mode: Some((3840, 2160)) }],
+            wayland: true,
+            desktop: "KDE".into(),
+            desktop_version: None,
+            desktop_hdr: Some(true),
+            gpu: Some(hdr::Gpu::Mesa("25.2.3".into())),
+            hdr_layer: false,
+            gamescope: false,
+        };
+        let ctx = Ctx { home: home.path(), game: &g, state_dir: state.path().to_path_buf(), probe: Probe { hdr, ..Default::default() } };
+
+        let c = checks(&ctx).into_iter().find(|c| c.id == FIX_HDR).unwrap();
+        assert_eq!(c.state, State::Problem);
+        assert!(c.detail.contains("GE-Proton10-25 (Wine Wayland driver)") && c.detail.contains("lack PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1"), "{}", c.detail);
+        apply(&ctx, FIX_HDR).unwrap();
+        let now = launch_in(&std::fs::read_to_string(&cfg).unwrap()).unwrap();
+        assert_eq!(now, format!("PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1 {before}"));
+
+        let g2 = GameInstall { launch_options: Some(now), ..g.clone() };
+        let ctx2 = Ctx { game: &g2, ..ctx };
+        let c = checks(&ctx2).into_iter().find(|c| c.id == FIX_HDR).unwrap();
+        assert_eq!(c.state, State::Ok, "{}", c.detail);
+        assert!(c.fix.is_none() && c.undo.is_some());
+        undo(&ctx2, FIX_HDR).unwrap();
+        assert_eq!(launch_in(&std::fs::read_to_string(&cfg).unwrap()).unwrap(), before);
     }
 
     #[test]
