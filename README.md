@@ -150,9 +150,10 @@ Screenshots show sample data, with file locations blurred.
   analysis.
 - **Mod profiles**: named lists of enabled mods, filed under each game
   version. Applying one enables its mods and disables every other installed
-  mod in the same game folder; mods updated since still match.
-- **Multi-select**: select several installed mods to enable, disable or
-  uninstall them together, or several downloads to delete them, with one
+  mod in the same game folder; mods updated since still match. The current
+  version's chip switches to the stock game (every mod disabled).
+- **Multi-select**: select several installed mods to enable, disable,
+  tag or uninstall them together, or several downloads to delete them, with one
   confirmation listing what is removed.
 - **Netrunner tab** (formerly Diagnostics): one place for overview and
   diagnosis. It opens with a summary of what needs attention (game setup

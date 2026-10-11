@@ -368,6 +368,17 @@ async fn apply_profile(app: AppHandle, id: i64) -> Result<profiles::ApplyReport>
     .await
 }
 
+/// The stock game: disable every installed mod.
+#[tauri::command]
+async fn apply_stock_profile(app: AppHandle, game_id: i64) -> Result<profiles::ApplyReport> {
+    blocking(move || {
+        let state = app.state::<AppState>();
+        let db = state.db.lock().unwrap();
+        with_installer(&db, |i| profiles::apply_stock(i, game_id))
+    })
+    .await
+}
+
 #[tauri::command]
 async fn install_archive(app: AppHandle, game_id: i64, path: String, name: Option<String>, overwrite: bool) -> Result<InstallOutcome> {
     blocking(move || {
@@ -1566,6 +1577,7 @@ fn main() {
             game_version_history,
             game_version_loadout,
             list_profiles,
+            apply_stock_profile,
             create_profile,
             save_profile,
             rename_profile,

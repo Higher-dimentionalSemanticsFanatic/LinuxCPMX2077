@@ -242,6 +242,22 @@ pub fn apply(inst: &Installer, id: i64) -> Result<ApplyReport> {
     Ok(r)
 }
 
+/// The stock game: disable every enabled mod of the game. Files the app
+/// doesn't track (mods copied in by hand) stay where they are.
+pub fn apply_stock(inst: &Installer, game_id: i64) -> Result<ApplyReport> {
+    let mut r = ApplyReport::default();
+    for m in inst.db.mods(game_id)?.into_iter().filter(|m| m.status == "installed") {
+        match inst.disable(m.id) {
+            Ok(kept) => {
+                r.kept_files += kept.len();
+                r.disabled.push(m.name);
+            }
+            Err(e) => r.failed.push((m.name, e.to_string())),
+        }
+    }
+    Ok(r)
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Write;
@@ -345,6 +361,13 @@ mod tests {
         rename(&db, lite, "Everything").unwrap();
         delete(&db, lite).unwrap();
         assert!(plan(&db, lite).is_err());
+        assert!(on(a) && on(b));
+
+        // Stock disables everything; the full profile brings it back.
+        let r = apply_stock(&inst, g.id).unwrap();
+        assert_eq!(r.disabled.len(), 2);
+        assert!(!on(a) && !on(b) && !root.join("game/archive/pc/mod/A-main.archive").exists());
+        apply(&inst, full).unwrap();
         assert!(on(a) && on(b));
     }
 

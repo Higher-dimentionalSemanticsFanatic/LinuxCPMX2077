@@ -170,7 +170,7 @@ removes it; the same buttons stay in the Game panel and Get mods.
 | Selection box (first column) | Selects the mod for the actions in the selection bar. It changes nothing on its own; see *Selecting several mods* below. |
 | **On** switch | The slider. Turns a mod off without uninstalling it: its files leave the game, whatever they replaced comes back, and a checked copy is kept. Turning it on puts them back without a download. Files the mod changed after install (its own settings) are kept. Disabled mods are left out of compatibility and crash checks. |
 | **Name / Tags & category / Mod version / Source** | Click a heading to sort (*Tags & category* sorts by a mod's first tag, then its Nexus category). **Mod version** is the mod's own version (the game version is under **Installed on game**). A mod's tags show as chips: **+ Tag** (or **+** once it has one) adds one of your tags (see [Modpacks](#modpacks)), **×** on a chip takes it off. A mod can have any number of tags. The Nexus category is shown under them. |
-| **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since, so check the mod still works. A second badge comes from the [patch-note check](#patch-note-check): *predates game 2.31* (a core framework older than a game patch), *before game 2.0* (released before a patch that reworked the systems mods build on), *in base game 2.1?* (a patch added what the mod does), *unlisted on Nexus*. Hover it for the details. |
+| **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since: red when an update or the patch-note check names the mod, plain when neither does (hover for both builds). A second badge comes from the [patch-note check](#patch-note-check): *predates game 2.31* (a core framework older than a game patch), *before game 2.0* (released before a patch that reworked the systems mods build on), *in base game 2.1?* (a patch added what the mod does), *unlisted on Nexus*. Hover it for the details. |
 | **Update to …** | Appears when a newer file is available. *Switch to stable …* appears when you run a pre-release and a stable release is out. |
 | **Mod page** | Opens the mod's page in **Get mods** (description, files, requirements), for mods from Nexus or GitHub. From there **Open on nexusmods.com** opens the website. Not shown for mods installed from an archive on disk. |
 | **Verify** | Re-hashes the mod's files and reports missing, edited or overridden ones. |
@@ -184,12 +184,14 @@ the stored copy and removes the mod from the list.
 
 - Tick the box in the first column of each mod. **Shift**-click a second box
   to select every mod between the two. The box in the header selects every
-  mod the current tag/category filter and game-version ribbon show.
+  mod the current filters show.
 - With at least one mod selected, a bar above the list shows the count and:
   - **Enable**: switches the selected disabled mods on. A mod whose files
     conflict with an enabled mod is left off and named in the report; switch
     it on with its own **On** switch to choose which mod's files win.
   - **Disable**: switches the selected enabled mods off.
+  - **Add tag…** / **Remove tag…**: puts one of your tags on every selected
+    mod, or takes it off (shown once you have tags).
   - **Uninstall**: one confirmation lists every selected mod, then uninstalls
     them, newest install first, so files one mod replaced are put back in
     order.
@@ -205,19 +207,21 @@ Above the list:
 - **Check for updates** asks Nexus and GitHub for newer files (also runs at
   start-up). **Update all** queues every available update.
 - **Install from archive…** installs a `.zip`, `.7z` or `.rar` from disk.
-- **Game version ribbon**: one chip per game version the app has seen. Pick
-  one to list the mods installed on it. For an older version, a summary shows
-  what you had when the game updated and what changed since (updated, turned
-  off, removed, added).
-- **Mod profiles** (card under the ribbon): named lists of enabled mods,
-  filed under the game version picked on the ribbon (the current version
-  when **All** is picked). Each chip shows the profile's name, its mod count
-  and what applying it would change; *active* (green dot) means the enabled
-  mods match it now.
-  - **Save N enabled mods as profile**: type a name in **Profile name** and
-    save the mods enabled now. Shown for the current game version only.
-    Names are up to 60 characters and unique per game version.
-  - Click a profile to select it, then:
+- **Game version and profiles**: one column per game version the app has
+  seen, oldest on the left, with that version's mod profiles (named lists
+  of enabled mods) as chips under it. Each profile chip shows its name, mod
+  count and what applying it would change; *active* (green dot) means the
+  enabled mods match it now. Click a chip to show its actions under the
+  ribbon.
+  - The current version's own chip (*stock · no mods*) is the stock game:
+    **Apply** disables every enabled mod (stored copies are kept; files not
+    installed by CPMX2077 stay in the game folder). When the enabled mods
+    match no profile, it first offers to save them as *Before stock*, so
+    one click brings them back.
+  - **+ Profile** (current version only): type a name and click **Save N
+    enabled mods as profile**. Names are up to 60 characters and unique per
+    game version.
+  - On a profile:
     - **Apply**: one confirmation lists the mods to enable, to disable and
       the profile's mods that are no longer installed (skipped). Then it
       enables the profile's mods and disables every other installed mod,
@@ -232,8 +236,14 @@ Above the list:
     name, so a mod updated after the profile was saved still counts. Where a
     mod has several files installed (main plus optional file), only the
     files in the profile are enabled.
+- **Filter by name**: shows mods whose name or archive name contains the
+  text.
 - **Tag and category filter**: one of your tags (or *No tags*), or a Nexus
   category.
+- **Game version filter** (with two or more game versions seen): the mods
+  installed on one version. For an older version, a summary shows what you
+  had when the game updated and what changed since (updated, turned off,
+  removed, added).
 - **Dependencies** and **Recommendations** are two checkboxes that add rows
   under each mod; turn on either, both, or neither (plain list). With both
   on, each mod's dependencies come first, then its recommendations, each row
@@ -436,7 +446,7 @@ connected Nexus account for collections.
   **Check for updates** asks Nexus for new revisions; **See what changed**
   shows what a revision adds, changes and drops, with one button to update.
   **Stop following** leaves its mods installed.
-- **Your tags**: add tags with a name and color, rename them or change their
+- **Your tags**: add tags with a name and color (a new tag starts with a colour no other tag uses), rename them or change their
   color, or delete them (a deleted tag comes off its mods; the mods stay
   installed). Give mods tags in Installed mods; a mod can have several. Tags
   stay with a mod through updates and can group the [graph](#graph). The

@@ -437,7 +437,9 @@ function renderMods() {
   sel.value = [...sel.options].some((o) => o.value === keep) ? keep : "";
   const f = sel.value;
   const tagsOf = (m) => modTags.mods[m.id] || [];
-  const shown = missingFirst(sortMods(mods.filter((m) => (!f
+  const q = $("#mods-filter").value.trim().toLowerCase();
+  const named = (m) => !q || m.name.toLowerCase().includes(q) || (m.archive_name || "").toLowerCase().includes(q);
+  const shown = missingFirst(sortMods(mods.filter((m) => named(m) && (!f
     || (f.startsWith("tag:") ? (f === `tag:${NO_CATEGORY}` ? !tagsOf(m).length : tagsOf(m).includes(f.slice(4)))
       : f === NO_CATEGORY ? !m.category : m.category === f)) && ribbonFilter(m))));
   document.querySelectorAll("#tab-mods th.sortable").forEach((th) => {
@@ -445,6 +447,8 @@ function renderMods() {
     th.classList.toggle("desc", th.dataset.sort === modSort.key && modSort.dir < 0);
   });
   $("#mods-empty").classList.toggle("hidden", mods.length > 0);
+  $("#mods-none-shown").classList.toggle("hidden", !mods.length || shown.length > 0);
+  renderBulkTags();
   syncModsSubs();
   $("#mods-body").replaceChildren(...deficitRows(), ...shown.flatMap((m) => [modRow(m), ...dependencyRows(m)]));
   modSel.render(shown.map((m) => m.id));
@@ -465,6 +469,16 @@ function modPageButton(m) {
   }, "Mod page");
 }
 
+// The game was patched since the mod went in: red when an update or the
+// patch-note check names the mod, plain otherwise.
+function staleBadge(m, up) {
+  const flagged = up || patchFindings.has(m.id);
+  return el("div", { class: `badge${flagged ? " bad" : ""}`,
+    title: `Installed on build ${m.game_build_id}; the game is now build ${currentGame.install.build_id}. `
+      + (flagged ? "An update or the patch-note check names this mod." : "No update and no patch-note finding for this mod.") },
+  "game updated since");
+}
+
 function modRow(m) {
   const stale = m.game_build_id && currentGame.install.build_id && m.game_build_id !== currentGame.install.build_id;
   const on = m.status === "installed";
@@ -482,7 +496,7 @@ function modRow(m) {
     el("td", {}, el("span", { class: "badge" }, sourceLabel(m))),
     el("td", {}, m.file_count),
     el("td", {}, m.game_version || "—",
-      stale ? el("div", { class: "badge bad", title: `Current game build is ${currentGame.install.build_id}` }, "game updated since") : null,
+      stale ? staleBadge(m, up) : null,
       patchBadge(m)),
     el("td", { class: "actions" },
       up ? el("button", {
@@ -502,6 +516,7 @@ document.querySelectorAll("#tab-mods th.sortable").forEach((th) => th.addEventLi
   renderMods();
 }));
 $("#mods-category").addEventListener("change", renderMods);
+$("#mods-filter").addEventListener("input", renderMods);
 
 // ---- selection and bulk actions --------------------------------------------
 const modSel = rowSelection($("#mods-body"), $("#mods-select-all"), () => {
@@ -568,6 +583,28 @@ $("#mods-bulk-uninstall").addEventListener("click", (e) => busy(e.target, async 
 }).finally(loadMods));
 
 $("#mods-bulk-clear").addEventListener("click", () => modSel.clear());
+
+// Add or remove one of the user's tags on every selected mod.
+function renderBulkTags() {
+  const names = modTags.tags.map((t) => t.name);
+  for (const [id, label] of [["#mods-bulk-tag-add", "Add tag…"], ["#mods-bulk-tag-remove", "Remove tag…"]]) {
+    $(id).replaceChildren(el("option", { value: "" }, label), ...names.map((n) => el("option", { value: n }, n)));
+    $(id).classList.toggle("hidden", !names.length);
+  }
+}
+for (const [id, add] of [["#mods-bulk-tag-add", true], ["#mods-bulk-tag-remove", false]]) {
+  $(id).addEventListener("change", (e) => busy(e.target, async () => {
+    const tag = e.target.value;
+    e.target.value = "";
+    if (!tag) return;
+    const list = selectedMods().filter((m) => (modTags.mods[m.id] || []).includes(tag) !== add);
+    const failed = await eachMod(list, (m) => {
+      const cur = modTags.mods[m.id] || [];
+      return setModTags(m, add ? [...cur, tag] : cur.filter((t) => t !== tag));
+    });
+    bulkReport(`${add ? "Added" : "Removed"} ${tag} ${add ? "to" : "from"} ${list.length - failed.length} mod${list.length === 1 ? "" : "s"}`, failed);
+  }));
+}
 
 // ---- updates ------------------------------------------------------------
 async function checkUpdates(quiet = false) {
@@ -2977,30 +3014,24 @@ async function loadVersionRibbon() {
   renderVersionRibbon();
 }
 
+// The version filter next to the tag filter, and the ribbon of versions
+// with their mod profiles (profiles.js).
 function renderVersionRibbon() {
-  const ribbon = $("#version-ribbon");
-  ribbon.classList.toggle("hidden", gameVersions.length === 0);
+  const sel = $("#mods-version");
+  sel.classList.toggle("hidden", gameVersions.length < 2);
   // Two versions with one exe version (a Steam hotfix) are told apart by build.
   const dupe = (v) => gameVersions.filter((x) => x.version === v.version).length > 1;
-  const chip = (label, sub, i, title, extra = "") => el("button", {
-    class: `chip${ribbonPick === i ? " active" : ""}${extra}`, role: "tab", "aria-selected": String(ribbonPick === i), title,
-    onclick: () => { ribbonPick = i; renderVersionRibbon(); renderMods(); renderProfiles(); showLoadout().catch((e) => toast(String(e), true)); },
-  }, el("b", {}, label), el("span", { class: "muted small" }, sub));
-  ribbon.replaceChildren(
-    el("span", { class: "muted small ribbon-label" }, "Game version"),
-    chip("All", `${mods.length} mods`, null, "Every installed mod"),
-    ...gameVersions.map((v, i) => {
-      const label = versionLabel(v) + (dupe(v) && v.build_id ? ` · ${v.build_id}` : "");
-      const sub = `${v.mod_ids.length} installed${v.current ? " · current" : ""}`;
-      const title = [
-        v.build_id ? `Steam build ${v.build_id}` : null,
-        v.first_seen ? `First seen ${v.first_seen.slice(0, 10)}` : null,
-        v.left_at ? `Updated away from on ${v.left_at.slice(0, 10)}` : null,
-        v.id == null ? "From mods installed before CPMX2077 kept a version history" : null,
-      ].filter(Boolean).join("\n");
-      return [i ? el("span", { class: "ribbon-arrow", "aria-hidden": "true" }, "→") : null, chip(label, sub, i, title, v.current ? " current" : "")];
-    }).flat().filter(Boolean));
+  sel.replaceChildren(el("option", { value: "" }, `All game versions (${mods.length} mods)`),
+    ...gameVersions.map((v, i) => el("option", { value: String(i) },
+      `Installed on ${versionLabel(v)}${dupe(v) && v.build_id ? ` · ${v.build_id}` : ""}${v.current ? " (current)" : ""}: ${v.mod_ids.length}`)));
+  sel.value = ribbonPick == null ? "" : String(ribbonPick);
+  renderProfiles();
 }
+$("#mods-version").addEventListener("change", (e) => {
+  ribbonPick = e.target.value === "" ? null : Number(e.target.value);
+  renderMods();
+  showLoadout().catch((err) => toast(String(err), true));
+});
 
 // Filter for the installed list: mods installed on the picked version.
 function ribbonFilter(m) {

@@ -266,6 +266,14 @@ async function renderCategories() {
   const counts = {};
   for (const names of Object.values(modTags.mods)) for (const n of names) counts[n] = (counts[n] || 0) + 1;
   $("#cat-list").replaceChildren(...modTags.tags.map((c) => categoryItem(c, counts[c.name] || 0)));
+  $("#cat-color").value = nextTagColor();
+}
+
+// A new tag starts with the first colour no tag uses yet.
+const TAG_COLORS = ["#00f0ff", "#f6cf3c", "#ff5a6a", "#7cff6b", "#b48cff", "#ff9a4d", "#ff6bd6", "#4f8cff", "#d9e021", "#a0a0b4"];
+function nextTagColor() {
+  const used = new Set(modTags.tags.map((t) => (t.color || "").toLowerCase()));
+  return TAG_COLORS.find((c) => !used.has(c)) || TAG_COLORS[modTags.tags.length % TAG_COLORS.length];
 }
 
 function categoryItem(c, count) {

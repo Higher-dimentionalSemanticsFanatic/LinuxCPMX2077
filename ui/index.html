@@ -99,7 +99,9 @@
       <div id="version-profiles" class="hidden"></div>
       <div id="version-loadout" class="card hidden"></div>
       <div class="row filters">
+        <input id="mods-filter" type="search" class="inline" placeholder="Filter by name" aria-label="Filter by name" maxlength="100">
         <select id="mods-category" class="inline" aria-label="Tag or category"><option value="">All tags and categories</option></select>
+        <select id="mods-version" class="inline hidden" aria-label="Game version the mod was installed on"></select>
         <label class="check small dep-key" title="Under each mod: what it needs, from its Nexus page and from the frameworks its files use">
           <input type="checkbox" id="show-deps"> Dependencies</label>
         <label class="check small rec-key" title="Under each mod: requirements its author marked optional or recommended on its Nexus page">
@@ -114,6 +116,8 @@
         <span id="mods-bulk-count"></span>
         <button id="mods-bulk-enable" title="Put the selected mods' files back into the game">Enable</button>
         <button id="mods-bulk-disable" title="Take the selected mods' files out of the game; their stored copies are kept">Disable</button>
+        <select id="mods-bulk-tag-add" class="inline hidden" aria-label="Add a tag to the selected mods"></select>
+        <select id="mods-bulk-tag-remove" class="inline hidden" aria-label="Remove a tag from the selected mods"></select>
         <button id="mods-bulk-uninstall" class="danger" title="Remove the selected mods and their stored copies">Uninstall</button>
         <button id="mods-bulk-clear" class="link">Clear selection</button>
       </div>
@@ -129,6 +133,7 @@
         </tr></thead>
         <tbody id="mods-body"></tbody>
       </table>
+      <p id="mods-none-shown" class="muted hidden">No installed mod matches the filters.</p>
       <p id="mods-empty" class="muted">No mods installed yet. Install an archive (.zip, .7z, .rar) or get one from Nexus or GitHub.</p>
       </div>
     </section>
