@@ -42,6 +42,9 @@ pub const FIX_LAUNCH: &str = "launch-options";
 pub const FIX_OVERRIDES: &str = "dll-overrides";
 pub const FIX_CASE: &str = "case-folders";
 pub const FIX_HDR: &str = "hdr";
+/// HDR through gamescope, or back to Wine's Wayland driver, when both work.
+pub const FIX_HDR_GAMESCOPE: &str = "hdr-gamescope";
+pub const FIX_HDR_WAYLAND: &str = "hdr-wayland";
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -70,6 +73,10 @@ pub struct Check {
     pub undo: Option<Action>,
     /// Text the user can copy and set by hand instead (launch options).
     pub copy: Option<String>,
+    /// A second way to fix it (HDR through gamescope instead of Wayland),
+    /// applied with `alt_id` in place of `id`.
+    pub alt: Option<Action>,
+    pub alt_id: Option<String>,
 }
 
 /// A way to install Windows components into a prefix.
@@ -714,6 +721,8 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
     if needs || vc_record {
         match &g.proton_prefix {
             None if g.store == Store::Steam => out.push(Check {
+                alt: None,
+                alt_id: None,
                 id: FIX_VC.into(),
                 title: "Visual C++ runtime".into(),
                 state: State::Problem,
@@ -756,6 +765,8 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
                     }
                 });
                 out.push(Check {
+                    alt: None,
+                    alt_id: None,
                     id: FIX_VC.into(),
                     title: "Visual C++ runtime".into(),
                     state: if vc.ok() { State::Ok } else { State::Problem },
@@ -790,6 +801,8 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
             }
         });
         out.push(Check {
+            alt: None,
+            alt_id: None,
             id: FIX_D3DCOMPILER.into(),
             title: "Shader compiler for ReShade".into(),
             state: if ok { State::Ok } else { State::Problem },
@@ -825,6 +838,8 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
         let steam_block = if ctx.probe.steam_running { Some(CLOSE_STEAM) } else { None };
         let no_config = localconfigs(ctx.home).is_empty().then_some("Steam has no settings for this game yet. Start it once from Steam, then try again.");
         out.push(Check {
+            alt: None,
+            alt_id: None,
             id: FIX_LAUNCH.into(),
             title: "Steam launch options".into(),
             state: if ok { State::Ok } else { State::Problem },
@@ -856,6 +871,8 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
             let ok = dlls.iter().all(|d| o.get(*d).is_some_and(|v| v.starts_with('n')));
             let names = dlls.join(", ");
             out.push(Check {
+                alt: None,
+                alt_id: None,
                 id: FIX_OVERRIDES.into(),
                 title: "DLL overrides".into(),
                 state: if ok { State::Ok } else { State::Problem },
@@ -891,7 +908,8 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
             let env = game::heroic_game(ctx.home, &g.path).map(|h| h.env).unwrap_or_default();
             env.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(" ")
         };
-        let set = st.plan.as_ref().is_some_and(|p| hdr::has_plan(&cur, p));
+        let on_alt = st.alt.as_ref().is_some_and(|p| hdr::has_plan(&cur, p));
+        let set = on_alt || st.plan.as_ref().is_some_and(|p| hdr::has_plan(&cur, p));
         // A display in HDR mode running the game in SDR loses quality; one
         // the user keeps in SDR is fine.
         let ok = (set && st.missing.is_empty()) || st.sdr;
@@ -899,7 +917,10 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
         if !st.missing.is_empty() {
             detail.push_str(&format!(" Missing: {}.", st.missing.join("; ")));
         }
-        let want = st.plan.as_ref().map(|p| hdr::merge(&cur, p));
+        let want = st.plan.as_ref().map(|p| hdr::merge(&if on_alt { hdr::strip(&cur) } else { cur.clone() }, p));
+        if steam && st.plan.as_ref().is_some_and(|p| p.gamescope.is_some()) {
+            detail.push_str(" Without gamescope: GE-Proton 10 or newer (Steam › Properties › Compatibility) outputs HDR through Wine's Wayland driver.");
+        }
         match &st.plan {
             Some(p) if !set && steam => detail.push_str(&format!(" Launch options lack {}.", p.line())),
             Some(p) if !set => detail.push_str(&format!(
@@ -913,7 +934,28 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
         }
         let steam_block = if ctx.probe.steam_running { Some(CLOSE_STEAM) } else { None };
         let no_config = localconfigs(ctx.home).is_empty().then_some("Steam has no settings for this game yet. Start it once from Steam, then try again.");
+        let confirm = |w: &str, method: &str| {
+            format!(
+                "Set Cyberpunk 2077's Steam launch options to ({method}):\n\n{w}\n\nNow: {}\n\nUndo removes the HDR settings again.",
+                if cur.trim().is_empty() { "(empty)" } else { cur.trim() }
+            )
+        };
+        // Wayland is offered first; gamescope stays available when installed.
+        let (alt, alt_id) = match (&st.alt, &want) {
+            (Some(_), Some(w)) if steam && on_alt => (action("Use Wayland instead", confirm(w, "Wine Wayland driver"), steam_block.or(no_config)), Some(FIX_HDR_WAYLAND)),
+            (Some(a), _) if steam => (
+                action(
+                    if set { "Use gamescope instead" } else { "Set HDR with gamescope" },
+                    confirm(&hdr::merge(&hdr::strip(&cur), a), "gamescope"),
+                    steam_block.or(no_config),
+                ),
+                Some(FIX_HDR_GAMESCOPE),
+            ),
+            _ => (None, None),
+        };
         out.push(Check {
+            alt,
+            alt_id: alt_id.map(String::from),
             id: FIX_HDR.into(),
             title: if st.sdr && !set { "HDR (desktop in SDR mode)".into() } else { "HDR".into() },
             state: if ok { State::Ok } else { State::Problem },
@@ -944,6 +986,8 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
     if !dups.is_empty() || rec {
         let list: Vec<String> = dups.iter().map(|d| format!("{} ({})", d.keep, d.others.join(", "))).collect();
         out.push(Check {
+            alt: None,
+            alt_id: None,
             id: FIX_CASE.into(),
             title: "Folder names".into(),
             state: if dups.is_empty() { State::Ok } else { State::Problem },
@@ -1117,8 +1161,48 @@ fn find<'a>(checks: &'a [Check], id: &str) -> Result<&'a Check> {
     checks.iter().find(|c| c.id == id).ok_or_else(|| Error::Other(format!("nothing to do for {id}")))
 }
 
+/// Switch HDR between Wine's Wayland driver and gamescope.
+fn apply_hdr_choice(ctx: &Ctx, id: &str) -> Result<String> {
+    let all = checks(ctx);
+    let check = find(&all, FIX_HDR)?;
+    let action = check.alt.as_ref().filter(|_| check.alt_id.as_deref() == Some(id)).ok_or_else(|| Error::Other("that HDR method is not available".into()))?;
+    if let Some(b) = &action.blocked {
+        return Err(Error::Other(b.clone()));
+    }
+    let st = hdr::status(&ctx.probe.hdr, runner(ctx).as_ref(), true).ok_or_else(|| Error::Other("no HDR display".into()))?;
+    let plan = if id == FIX_HDR_GAMESCOPE { st.alt } else { st.plan }.ok_or_else(|| Error::Other("no HDR launch options for this system".into()))?;
+    write_hdr(ctx, &plan)
+}
+
+/// Replace whatever HDR settings the launch options carry with `plan`. The
+/// record keeps each file's options from before the first HDR change.
+fn write_hdr(ctx: &Ctx, plan: &hdr::Plan) -> Result<String> {
+    let mut rec = load_record(ctx, FIX_HDR).unwrap_or_default();
+    let mut set = String::new();
+    for cfg in localconfigs(ctx.home) {
+        let src = std::fs::read_to_string(&cfg)?;
+        let before = launch_in(&src);
+        let want = hdr::merge(&hdr::strip(before.as_deref().unwrap_or("")), plan);
+        if before.as_deref() == Some(want.as_str()) {
+            continue;
+        }
+        let new = vdf::set_value(&src, LAUNCH_PATH, &want, 2).ok_or_else(|| Error::Other(format!("could not edit {}", cfg.display())))?;
+        if !rec.launch.iter().any(|(p, _)| p == &cfg) {
+            rec.launch.push((cfg.clone(), before));
+        }
+        write_atomic(&cfg, &new)?;
+        set = want;
+    }
+    rec.applied_at = now();
+    save_record(ctx, FIX_HDR, &rec)?;
+    Ok(format!("Launch options set: {set}"))
+}
+
 /// Apply one fix after the user confirmed it. Returns a line for the user.
 pub fn apply(ctx: &Ctx, id: &str) -> Result<String> {
+    if id == FIX_HDR_GAMESCOPE || id == FIX_HDR_WAYLAND {
+        return apply_hdr_choice(ctx, id);
+    }
     let all = checks(ctx);
     let check = find(&all, id)?;
     let fix = check.fix.as_ref().ok_or_else(|| Error::Other(format!("{} is already fine", check.title)))?;
@@ -1157,26 +1241,7 @@ pub fn apply(ctx: &Ctx, id: &str) -> Result<String> {
             let plan = hdr::status(&ctx.probe.hdr, runner(ctx).as_ref(), true)
                 .and_then(|s| s.plan)
                 .ok_or_else(|| Error::Other("no HDR launch options for this system".into()))?;
-            let mut rec = load_record(ctx, FIX_HDR).unwrap_or_default();
-            let mut set = String::new();
-            for cfg in localconfigs(ctx.home) {
-                let src = std::fs::read_to_string(&cfg)?;
-                let before = launch_in(&src);
-                let want = hdr::merge(before.as_deref().unwrap_or(""), &plan);
-                if before.as_deref() == Some(want.as_str()) {
-                    continue;
-                }
-                let new = vdf::set_value(&src, LAUNCH_PATH, &want, 2)
-                    .ok_or_else(|| Error::Other(format!("could not edit {}", cfg.display())))?;
-                if !rec.launch.iter().any(|(p, _)| p == &cfg) {
-                    rec.launch.push((cfg.clone(), before));
-                }
-                write_atomic(&cfg, &new)?;
-                set = want;
-            }
-            rec.applied_at = now();
-            save_record(ctx, FIX_HDR, &rec)?;
-            Ok(format!("Launch options set: {set}"))
+            write_hdr(ctx, &plan)
         }
         FIX_OVERRIDES => {
             let prefix = g.proton_prefix.as_ref().ok_or_else(|| Error::Other("no prefix".into()))?;
@@ -1639,7 +1704,27 @@ mod tests {
         let c = checks(&ctx2).into_iter().find(|c| c.id == FIX_HDR).unwrap();
         assert_eq!(c.state, State::Ok, "{}", c.detail);
         assert!(c.fix.is_none() && c.undo.is_some());
+        assert!(c.alt.is_none(), "no gamescope installed, no second method");
         undo(&ctx2, FIX_HDR).unwrap();
+        assert_eq!(launch_in(&std::fs::read_to_string(&cfg).unwrap()).unwrap(), before);
+
+        // With gamescope installed too, either method can be picked.
+        let mut ctx3 = Ctx { game: &g, ..ctx2 };
+        ctx3.probe.hdr.gamescope = true;
+        let c = checks(&ctx3).into_iter().find(|c| c.id == FIX_HDR).unwrap();
+        assert_eq!(c.alt.as_ref().unwrap().label, "Set HDR with gamescope");
+        assert_eq!(c.alt_id.as_deref(), Some(FIX_HDR_GAMESCOPE));
+        apply(&ctx3, FIX_HDR_GAMESCOPE).unwrap();
+        let gs = launch_in(&std::fs::read_to_string(&cfg).unwrap()).unwrap();
+        assert!(gs.starts_with("DXVK_HDR=1 ") && gs.contains("--hdr-enabled --force-grab-cursor -- %command%") && !gs.contains("WAYLAND"), "{gs}");
+        let g4 = GameInstall { launch_options: Some(gs), ..g.clone() };
+        let ctx4 = Ctx { game: &g4, ..ctx3 };
+        let c = checks(&ctx4).into_iter().find(|c| c.id == FIX_HDR).unwrap();
+        assert_eq!(c.state, State::Ok);
+        assert_eq!(c.alt.as_ref().unwrap().label, "Use Wayland instead");
+        apply(&ctx4, FIX_HDR_WAYLAND).unwrap();
+        assert_eq!(launch_in(&std::fs::read_to_string(&cfg).unwrap()).unwrap(), format!("PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1 {before}"));
+        undo(&ctx4, FIX_HDR).unwrap();
         assert_eq!(launch_in(&std::fs::read_to_string(&cfg).unwrap()).unwrap(), before);
     }
 

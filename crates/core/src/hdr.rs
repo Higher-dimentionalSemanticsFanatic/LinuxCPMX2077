@@ -356,6 +356,9 @@ pub struct Status {
     /// Requirements outside the launch options that are not met.
     pub missing: Vec<String>,
     pub plan: Option<Plan>,
+    /// The gamescope wrapper as a second choice, when the Proton build also
+    /// has the Wine Wayland driver.
+    pub alt: Option<Plan>,
     /// The desktop reports HDR off on every display: the game runs in SDR
     /// by the user's choice, so nothing is lost.
     pub sdr: bool,
@@ -416,6 +419,9 @@ pub fn status(p: &Probe, runner: Option<&Runner>, steam: bool) -> Option<Status>
         }
     };
 
+    let (w, h) = display.mode.unwrap_or((3840, 2160));
+    let gamescope = Plan { env: vec![("DXVK_HDR", "1")], gamescope: Some(format!("gamescope -W {w} -H {h} -f --hdr-enabled {GRAB_CURSOR} --")) };
+    let mut alt = None;
     let plan = match runner {
         None => {
             missing.push("Proton build not detected: start the game once, then rescan".into());
@@ -427,12 +433,14 @@ pub fn status(p: &Probe, runner: Option<&Runner>, steam: bool) -> Option<Status>
             if layer {
                 env.push(("ENABLE_HDR_WSI", "1"));
             }
+            if p.gamescope && steam {
+                alt = Some(gamescope.clone());
+            }
             Some(Plan { env, gamescope: None })
         }
         Some(r) if p.gamescope && steam => {
             found.push(format!("{} (no Wine Wayland driver), gamescope installed", r.name));
-            let (w, h) = display.mode.unwrap_or((3840, 2160));
-            Some(Plan { env: vec![("DXVK_HDR", "1")], gamescope: Some(format!("gamescope -W {w} -H {h} -f --hdr-enabled {GRAB_CURSOR} --")) })
+            Some(gamescope)
         }
         Some(r) => {
             found.push(format!("{} (no Wine Wayland driver)", r.name));
@@ -444,7 +452,7 @@ pub fn status(p: &Probe, runner: Option<&Runner>, steam: bool) -> Option<Status>
             None
         }
     };
-    Some(Status { found, missing, plan, sdr: p.wayland && p.desktop_hdr == Some(false) })
+    Some(Status { found, missing, plan, alt, sdr: p.wayland && p.desktop_hdr == Some(false) })
 }
 
 // ---- Launch options ----------------------------------------------------------------
@@ -627,7 +635,12 @@ mod tests {
 
         let s = status(&probe(), Some(&valve), true).unwrap();
         assert!(s.plan.is_none() && s.missing.iter().any(|m| m.contains("GE-Proton 10")));
+        let s = status(&Probe { gamescope: true, ..probe() }, Some(&ge), true).unwrap();
+        assert_eq!(s.plan.unwrap().line(), "PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1", "Wayland first");
+        assert!(s.alt.unwrap().gamescope.is_some(), "gamescope as the second choice");
+        assert!(status(&probe(), Some(&ge), true).unwrap().alt.is_none(), "no gamescope installed");
         let s = status(&Probe { gamescope: true, ..probe() }, Some(&valve), true).unwrap();
+        assert!(s.alt.is_none());
         assert_eq!(s.plan.unwrap().line(), "DXVK_HDR=1 gamescope -W 3440 -H 1440 -f --hdr-enabled --force-grab-cursor --");
         let s = status(&Probe { gamescope: true, ..probe() }, Some(&valve), false).unwrap();
         assert!(s.plan.is_none(), "gamescope wrapper only through Steam launch options");

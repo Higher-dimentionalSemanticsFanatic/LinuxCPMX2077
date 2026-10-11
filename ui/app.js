@@ -305,6 +305,7 @@ function setupItem(c) {
   const ok = c.state === "ok";
   const buttons = [];
   if (c.fix) buttons.push(el("button", { class: "primary", title: c.fix.blocked || "", onclick: (e) => runSetup(e.target, c, c.fix, "setup_fix") }, c.fix.label));
+  if (c.alt) buttons.push(el("button", { title: c.alt.blocked || "", onclick: (e) => runSetup(e.target, c, c.alt, "setup_fix", c.alt_id) }, c.alt.label));
   if (c.copy) buttons.push(copyLaunchOption(c.copy));
   if (c.undo) buttons.push(el("button", { onclick: (e) => runSetup(e.target, c, c.undo, "setup_undo") }, c.undo.label));
   return el("li", { class: ok ? "ok" : "" },
@@ -314,14 +315,14 @@ function setupItem(c) {
     buttons.length ? el("div", { class: "row" }, ...buttons) : null);
 }
 
-async function runSetup(button, c, action, command) {
+async function runSetup(button, c, action, command, id = c.id) {
   if (action.blocked) return toast(action.blocked, true);
   const go = await dialog.ask(action.confirm, { title: c.title, kind: "warning" });
   if (!go) return;
   await busy(button, async () => {
     if (c.id === "vc-runtime" && command === "setup_fix") toast("Installing the Visual C++ runtime. This can take a few minutes…");
     if (c.id === "d3dcompiler" && command === "setup_fix") toast("Installing d3dcompiler_47. This can take a few minutes…");
-    toast(await invoke(command, { gameId: currentGame.id, id: c.id }));
+    toast(await invoke(command, { gameId: currentGame.id, id }));
   });
   await loadSetup();
 }

@@ -141,8 +141,17 @@ it), the left and right arrow keys also resize it.
       `--force-grab-cursor` keeps the mouse captured in gamescope; without
       it the camera stops turning at the window edge. A wrapper set by an
       earlier version without it is marked as a problem, and the button adds
-      it.
+      it. With gamescope in use, the item names GE-Proton 10 or newer
+      (Steam › Properties › Compatibility) as the way to output HDR without
+      gamescope.
       Without either: select GE-Proton in Steam › Properties › Compatibility.
+    - Both methods work (GE-Proton 10+ or proton-cachyos, and `gamescope`
+      installed): **Set HDR launch options** uses Wine's Wayland driver, and
+      **Set HDR with gamescope** uses the gamescope wrapper instead. Once one
+      is set, **Use gamescope instead** or **Use Wayland instead** swaps the
+      HDR settings and keeps the rest of the launch options. The Wayland
+      method runs without a nested compositor, so the mouse is never
+      confined to a gamescope window.
     Other launch options are kept; **Undo** removes only the HDR variables
     and the HDR `gamescope` wrapper. Only works while Steam is closed. With
     Heroic, **Copy** copies the variables for Heroic › game settings ›
