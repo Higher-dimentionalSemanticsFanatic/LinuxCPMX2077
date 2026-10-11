@@ -8,6 +8,13 @@ The app shows tab names, buttons and headings in capitals (INSTALL FROM
 ARCHIVE…); this guide writes them in normal case (**Install from
 archive…**). The selected tab is the amber one in the left menu.
 
+Two tabs have sections listed under them in the left menu: **Installed
+mods** (**Mod list**, **ReShade**, **Ultra+ recommendations**, **Patch-note
+check**) and **Get mods** (**Browse mods**, **Modpacks**). **▾** next to the
+tab shows or hides its sections; the choice is kept. A section shows in
+the menu once it applies: ReShade and Patch-note check once a mod is
+installed, Ultra+ recommendations once Ultra+ is in the game.
+
 - [How it works](#how-it-works)
 - [Game panel](#game-panel)
 - [Installed mods](#installed-mods)
@@ -75,7 +82,12 @@ one is installed next to it instead.
 
 ## Game panel
 
-The left-hand panel shows the install the rest of the app works on.
+The top of the left-hand menu: the setup items and frameworks of the
+install the rest of the app works on. The install list itself (with each
+install's folder, version and prefix) is in
+[Settings › Game installs](#settings). A drop-down to switch installs shows
+here only when more than one is found; while none is found, the panel has
+**Rescan** and **Add path…**.
 
 To make the left-hand menu wider or narrower, drag the line between it and
 the main area left or right. The width is kept the next time you open the
@@ -83,11 +95,6 @@ app, and a docked debug terminal fills whatever width you choose. Double-click
 the line to put it back to the default. With the line selected (Tab to
 it), the left and right arrow keys also resize it.
 
-- **Game drop-down**: every install found. Steam libraries (native, Flatpak
-  and Snap Steam) and Heroic's GOG installs are scanned. **Rescan** looks
-  again; **Add path…** adds a game folder by hand.
-- **Version, Steam build, Prefix**: read from the game's executable, Steam's
-  manifest and the Proton prefix location.
 - **Linux setup items**: what mods need from Proton/Wine, each with a fix
   button and, after a fix, **Undo**. Every fix asks for confirmation first,
   and the app offers fixes on its own after you install a mod that needs one
@@ -139,13 +146,24 @@ it), the left and right arrow keys also resize it.
     When the desktop reports HDR disabled on every display, it shows as
     *✓ HDR (desktop in SDR mode)*; desktops that aren't checked count as HDR.
 - **Frameworks**: CET, RED4ext, redscript, ArchiveXL, TweakXL, Codeware and
-  REDmod, highlighted when present in the game folder.
+  REDmod, highlighted when present in the game folder. While any of the six
+  GitHub frameworks is missing, **Install missing frameworks** under the
+  list queues them from GitHub, each after what it needs (REDmod ships with
+  the game). Framework problems such as *ArchiveXL is installed but
+  RED4ext is missing* are listed above with the same button.
 
 ## Installed mods
 
 ![The Installed mods tab with the game panel on the left](images/installed-mods.png)
 
-The list of mods CPMX2077 installed in the selected game.
+The list of mods CPMX2077 installed in the selected game (**Mod list** in
+the menu).
+
+**First setup** checklist: on top of the list while a first-run step is
+open. *Core frameworks* (**Install missing frameworks**), *Linux setup*
+(**Fix now** offers every open fix in one dialog; not on Windows) and
+*Nexus account* (**Connect in Get mods**), each ticked once done. **Hide**
+removes it; the same buttons stay in the Game panel and Get mods.
 
 | Column / control | What it does |
 |---|---|
@@ -252,12 +270,13 @@ Above the list:
 
 When [Ultra+](https://www.nexusmods.com/cyberpunk2077/mods/10490) (the path
 tracing mod) is installed, through CPMX2077 or by hand or with Ultra+
-Manager, an **Ultra+ recommendations** card appears above the list. It shows
+Manager, **Ultra+ recommendations** appears under Installed mods in the
+menu. It shows
 what the Ultra+ team's
 [Cyberpunk page](https://theultraplace.com/games/cyberpunk2077/) lists, and
 where each mod stands in your game. The heading line sums it up (conflicting
 mods installed, how many recommended mods you have, and a missing
-requirement); click it to fold the card away.
+requirement).
 
 - **Conflicts with Ultra+ path tracing**: mods the Ultra+ team says don't
   work with its path tracing. Ones you have are marked *installed* in red,
@@ -288,7 +307,7 @@ show under **Known problems** in Netrunner's
 
 ![The Patch-note check card with two warnings and five hints](images/patch-note-check.png)
 
-The **Patch-note check** card compares each turned-on mod's dates with the
+The **Patch-note check** section (under Installed mods in the menu) compares each turned-on mod's dates with the
 game's official patch notes (cyberpunk.net), from Hotfix 1.04 to Patch
 2.31. The list is built into the app; the line under the heading says when
 it was last compared with the official notes. The heading line counts
@@ -322,7 +341,7 @@ without dates) are listed at the bottom as *Not checked*.
 
 ![The ReShade card with a shader pack and two presets](images/reshade-card.png)
 
-The **ReShade** card above the list installs
+The **ReShade** section (under Installed mods in the menu) installs
 [ReShade](https://reshade.me/), the post-processing injector used for
 sharpening, colour grading and presets, and keeps it up to date. Its heading
 line shows the installed version and the DLL name it loads as, or *not
@@ -397,7 +416,7 @@ In game, the Home key opens ReShade's overlay.
 
 ## Modpacks
 
-Nexus collections, your own tags, and mod list import/export. Needs a
+Under **Get mods** in the menu. Nexus collections, your own tags, and mod list import/export. Needs a
 connected Nexus account for collections.
 
 - **Search collections**: search Cyberpunk 2077 collections and sort by most
@@ -711,6 +730,13 @@ Every archive you downloaded, grouped by mod with each version under it.
 
 ## Settings
 
+- **Game installs**: every Cyberpunk 2077 install found, in a drop-down.
+  Steam libraries (native, Flatpak and Snap Steam) and Heroic's GOG installs
+  are scanned (on Windows: Steam, GOG Galaxy and Epic). Below it the
+  selected install's version (from the game's executable), Steam build
+  (from Steam's manifest), folder and Proton prefix. **Rescan** looks
+  again; **Add path…** adds a game folder by hand (the folder that contains
+  `bin/x64/Cyberpunk2077.exe`).
 - **CPMX2077 updates**: compares this build's version with the newest
   CPMX2077 release on GitHub, pre-releases included. *Check on startup* (on
   by default) runs the check each time the app starts; **Check now** runs it
@@ -742,9 +768,10 @@ Every archive you downloaded, grouped by mod with each version under it.
 - **Nexus account**: **Forget API key** removes it from the keyring.
 - **Introduction tour**: **Start tour** reopens the walkthrough shown on
   first start. Each step switches to its tab and outlines one element:
-  the Game panel, the tabs, the Nexus account box (API key, Free vs Premium
-  downloads), **Install missing frameworks** in Get mods › GitHub, the Linux
-  setup items (not on Windows), Installed mods and Netrunner. The outlined
+  the Game panel, the tabs, **Install missing frameworks** under the
+  Frameworks list, the Linux setup items (not on Windows), the Nexus
+  account box (API key, Free vs Premium downloads), Installed mods,
+  Netrunner, and last the First setup checklist. The outlined
   element stays clickable; everything else is dimmed. **Next** / **Back**
   or the arrow keys step through, **Skip tour** or Esc closes it, and the
   last step has **Open getting started guide**. Closing it returns to the
@@ -902,7 +929,7 @@ options). No *HDR* item means no connected display lists HDR10 in its EDID.
 **Set launch options says Steam is running.** Steam overwrites its settings
 while it runs. Quit Steam completely and click the button again.
 
-**The game isn't found.** Use **Add path…** and pick the folder holding
+**The game isn't found.** Use **Add path…** (Game panel, or Settings → Game installs) and pick the folder holding
 `bin/x64/Cyberpunk2077.exe`. Run the game once through Steam or Heroic first
 so its prefix exists.
 

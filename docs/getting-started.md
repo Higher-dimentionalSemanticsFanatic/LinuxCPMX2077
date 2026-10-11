@@ -47,20 +47,38 @@ and hasn't been tried on a real Windows PC yet.
 
 ## 2. Check the game was found
 
-The **Game** panel on the left lists every Cyberpunk 2077 install it found in
-your Steam libraries (native, Flatpak and Snap Steam) and in Heroic. It shows
-the game version, the Steam build and the Proton prefix.
+CPMX2077 looks for Cyberpunk 2077 in your Steam libraries (native, Flatpak
+and Snap Steam) and in Heroic. **Settings → Game installs** lists every
+install it found, with the game version, the Steam build, the folder and
+the Proton prefix.
 
-- If nothing is found, click **Add path…** and pick the folder that contains
-  `bin/x64/Cyberpunk2077.exe`.
-- If you have more than one install, pick the one to mod in the drop-down.
-  Everything else in the app works on the selected install.
+- If nothing is found, the **Game** panel on the left says so: click **Add
+  path…** there and pick the folder that contains `bin/x64/Cyberpunk2077.exe`.
+- If you have more than one install, pick the one to mod in the drop-down
+  in the Game panel. Everything else in the app works on the selected
+  install.
 
 Under **Frameworks** you see which of CET, RED4ext, redscript, ArchiveXL,
 TweakXL, Codeware and REDmod are already in the game folder. Highlighted
 names are installed.
 
-## 3. Connect your Nexus account
+The **First setup** checklist at the top of **Installed mods** lists the
+next steps (frameworks, Linux setup, Nexus account), each with its button,
+and ticks them off as you go.
+
+## 3. Install the core frameworks
+
+Most mods need some of the frameworks, so install them first.
+
+Click **Install missing frameworks** under the Frameworks list in the Game
+panel (or in the First setup checklist). The same button is in **Get mods**
+with the source at the top right switched to **GitHub**.
+
+Each one is downloaded from its official GitHub release, checked against the
+SHA-256 digest GitHub publishes, and installed in the right order (for
+example RED4ext before the plugins that need it).
+
+## 4. Connect your Nexus account
 
 Open **Get mods**.
 
@@ -78,18 +96,6 @@ to land in the app. You can change this later in Settings.
 
 > "Sign in with Nexus Mods" (browser sign-in) only works once Nexus has
 > registered the app. Until then, the API key is the way in.
-
-## 4. Install the core frameworks
-
-Most mods need some of the frameworks, so install them first.
-
-1. In **Get mods**, switch the source at the top right to **GitHub**.
-2. The featured list shows the six core frameworks. Click
-   **Install missing frameworks**.
-
-Each one is downloaded from its official GitHub release, checked against the
-SHA-256 digest GitHub publishes, and installed in the right order (for
-example RED4ext before the plugins that need it).
 
 ## 5. Let the app fix the Linux side
 
@@ -149,7 +155,7 @@ download button on each page and the app installs that mod in the background
 while it moves on to the next. The queue bar at the top of the window shows
 progress and has **Skip this mod** and **Cancel**.
 
-Prefer a ready-made setup? The **Modpacks** tab lists Nexus collections. Open
+Prefer a ready-made setup? **Modpacks** (under **Get mods** in the menu) lists Nexus collections. Open
 one to see which of its mods you already have, then **Install required
 mods** to queue the rest.
 
@@ -176,14 +182,14 @@ sidebar. **Pop out** moves it to its own window.
   uninstalling them.
 - Click **Check for updates** in **Installed mods** now and then (it also
   runs at start-up).
-- After a game update, open the **Patch-note check** card in **Installed
-  mods** and click **Read release dates**: it lists frameworks that need a
+- After a game update, open **Patch-note check** under **Installed
+  mods** in the menu and click **Read release dates**: it lists frameworks that need a
   newer release and mods older than the patches you have (see
   [Patch-note check](user-guide.md#patch-note-check)).
 - Using Ultra+ for path tracing? Once it's installed, the **Ultra+
-  recommendations** card in **Installed mods** shows what its authors
+  recommendations** (under **Installed mods** in the menu) shows what its authors
   recommend with it and what conflicts with it.
-- Want ReShade? Open the **ReShade** card in **Installed mods** and click
+- Want ReShade? Open **ReShade** under **Installed mods** in the menu and click
   **Install ReShade**. On Linux, accept the launch options and
   d3dcompiler_47 fixes the app offers afterwards (close Steam first). See
   [ReShade](user-guide.md#reshade) in the user guide.

@@ -140,6 +140,25 @@ nav button.active {
   background: var(--yellow); border-color: var(--yellow); border-left: 1px solid var(--yellow);
   color: #16130a; padding-left: 20px; filter: drop-shadow(0 0 8px rgba(246, 207, 60, .35));
 }
+/* Parent entry with a caret; its sections indented under it. */
+nav .nav-group { display: flex; align-items: stretch; gap: 2px; }
+nav .nav-group .nav-parent { flex: 1; }
+nav .nav-group.active .nav-parent {
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 12px 100%, 0 50%);
+  background: var(--yellow); border-color: var(--yellow); color: #16130a; padding-left: 20px;
+  filter: drop-shadow(0 0 8px rgba(246, 207, 60, .35));
+}
+nav .nav-caret { flex: 0 0 auto; width: 30px; padding: 0; text-align: center; letter-spacing: 0; font-size: 14px; }
+nav .nav-sub { display: flex; flex-direction: column; gap: 2px; margin: 0 0 4px 22px; padding-left: 8px; border-left: 1px solid var(--line); }
+nav .nav-sub button { font-size: 13px; letter-spacing: 1.5px; padding: 3px 10px; }
+nav .nav-sub button.active { clip-path: none; background: transparent; border-color: transparent; color: var(--yellow); filter: none; padding-left: 10px; }
+#side-frameworks { margin-top: 10px; width: 100%; }
+.checklist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.checklist li { display: flex; gap: 10px; align-items: center; }
+.checklist li > div { flex: 1; min-width: 0; }
+.checklist .check-mark { width: 18px; color: var(--muted); font-weight: 700; }
+.checklist li.done .check-mark { color: var(--cyan); }
+.checklist li.done b { color: var(--muted); }
 nav::after {
   /* Fine print under the menu. */
   content: "CPMX2077 // mod manager for Cyberpunk 2077. Not affiliated with CD PROJEKT RED.";

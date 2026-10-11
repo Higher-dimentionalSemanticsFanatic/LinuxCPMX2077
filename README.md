@@ -23,7 +23,8 @@ check the download against. A Windows installer
 - **New here?** Follow [Getting started](docs/getting-started.md): install,
   connect Nexus, set up the frameworks and Proton, and install your first mod.
   The app also opens a short introduction tour on first start (Settings →
-  Start tour shows it again).
+  Start tour shows it again), and a First setup checklist in Installed mods
+  ticks off frameworks, Linux setup and the Nexus account.
 - **Reference:** the [user guide](docs/user-guide.md) explains how the app
   works and what every tab and button does, plus troubleshooting.
 
@@ -121,16 +122,16 @@ Screenshots show sample data, with file locations blurred.
 - **Mod page** button in Installed mods opens a mod's Nexus or GitHub page
   in Get mods.
 - **Ultra+ recommendations**: with the Ultra+ path tracing mod installed, a
-  card in Installed mods lists what the Ultra+ team's page recommends next to
+  section under Installed mods lists what the Ultra+ team's page recommends next to
   it and what conflicts with it, marks what you have, and queues the missing
   ones. Installed conflicts also show as known problems in Netrunner.
-- **Patch-note check**: a card in Installed mods compares each mod's file
+- **Patch-note check**: a section under Installed mods compares each mod's file
   and release dates with the official patch notes (built in, 1.04 to 2.31):
   core frameworks older than a game patch, mods released before Update 2.0's
   rework, mods whose feature a patch added to the base game (metro,
   Radioport, transmog, AutoDrive, …), and mods no longer published on Nexus.
   Hints only, offline after one "Read release dates".
-- **ReShade**: a card in Installed mods installs ReShade from reshade.me
+- **ReShade**: a section under Installed mods installs ReShade from reshade.me
   (or a setup file you downloaded), checks the DLL inside the setup before
   using it, loads it as `dxgi.dll` (or `d3d12.dll` when that name is taken),
   checks for updates, and uninstalls it without leftovers. Presets stay. On

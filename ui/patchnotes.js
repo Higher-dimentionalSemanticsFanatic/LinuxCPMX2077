@@ -4,7 +4,6 @@
 // Loaded after app.js and built from its helpers (el, $, busy, docLink, …).
 // Names, summaries and notes are inserted as text, never as HTML.
 
-let patchOpen = loadPref("patchOpen", false);
 let patchFindings = new Map(); // installed mod id -> findings, worst first
 
 const PATCH_KIND_BADGE = {
@@ -54,7 +53,7 @@ function renderPatchNotes(r) {
   const dates = r.dates_read_at
     ? `Release dates read from Nexus and GitHub ${fmtAgo(r.dates_read_at)}.`
     : "Release dates not read yet: file dates from Nexus file names only.";
-  const details = el("details", { open: patchOpen ? "" : null },
+  const details = el("details", { open: "" },
     el("summary", {}, el("b", {}, "Patch-note check"), el("span", { class: "muted" }, ` · ${summary.join(" · ")}`)),
     el("p", { class: "muted small" },
       `Mod dates compared with the official patch notes up to ${r.newest_patch} (list checked ${r.data_checked}). `, dates,
@@ -74,6 +73,5 @@ function renderPatchNotes(r) {
       : el("p", { class: "muted" }, `No findings for ${r.dated} dated mod${r.dated === 1 ? "" : "s"}.`),
     r.undated.length ? el("p", { class: "muted small" },
       `Not checked, no file or release date (${r.undated.length}): ${r.undated.join(", ")}`) : null);
-  details.addEventListener("toggle", () => { patchOpen = details.open; savePref("patchOpen", patchOpen); });
   $("#patch-notes").replaceChildren(details);
 }

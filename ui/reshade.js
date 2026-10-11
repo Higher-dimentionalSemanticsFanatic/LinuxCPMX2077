@@ -3,7 +3,6 @@
 // ReShade itself is a tracked mod, so Disable and Uninstall reuse the mod
 // table's actions. Loaded after app.js and built from its helpers.
 
-let reshadeOpen = loadPref("reshadeOpen", false);
 let reshadeLatest = null;
 // Pack id → newest commit sha, after Check for updates.
 let reshadePackLatest = {};
@@ -156,7 +155,7 @@ function renderReShade(s, launch, packs, presets) {
       const path = await dialog.open({ title: "Choose the ReShade setup from reshade.me", filters: [{ name: "ReShade setup", extensions: ["exe"] }] });
       if (path) await reshadeInstall({ path });
     }) }, "Install from setup file…");
-  const details = el("details", { open: reshadeOpen ? "" : null },
+  const details = el("details", { open: "" },
     el("summary", {}, el("b", {}, "ReShade"), el("span", { class: "muted" }, ` · ${reshadeSummary(s)}`)),
     el("p", { class: "muted small" },
       "Post-processing injector (sharpening, colour grading, presets). Downloaded from reshade.me only; ",
@@ -188,7 +187,6 @@ function renderReShade(s, launch, packs, presets) {
     reshadePacks(packs),
     el("h3", {}, "Presets"),
     reshadePresets(presets));
-  details.addEventListener("toggle", () => { reshadeOpen = details.open; savePref("reshadeOpen", reshadeOpen); });
   $("#reshade").replaceChildren(details);
 }
 

@@ -12,21 +12,37 @@
     <h1>CPMX2077<span>MOD MANAGER</span></h1>
     <section id="game-panel">
       <h2>Game</h2>
-      <select id="game-select"></select>
-      <div id="game-info" class="muted">Detecting Cyberpunk 2077 installs…</div>
-      <div class="row">
-        <button id="rescan">Rescan</button>
-        <button id="add-path">Add path…</button>
+      <select id="game-select-side" class="hidden" aria-label="Game install"></select>
+      <div id="game-none" class="muted">Detecting Cyberpunk 2077 installs…</div>
+      <div id="game-none-actions" class="row hidden">
+        <button id="side-rescan">Rescan</button>
+        <button id="side-add-path">Add path…</button>
       </div>
       <ul id="game-warnings" class="warnings"></ul>
       <h3>Frameworks</h3>
       <ul id="frameworks"></ul>
+      <button id="side-frameworks" class="primary hidden" title="Download and install every core framework this game is missing, from GitHub, each after what it needs">Install missing frameworks</button>
     </section>
     <nav>
-      <button data-tab="mods" class="active">Installed mods</button>
-      <button data-tab="modpacks">Modpacks</button>
+      <div class="nav-group active" data-tabs="mods">
+        <button data-tab="mods" data-sub="list" class="nav-parent">Installed mods</button>
+        <button class="nav-caret" data-group="mods" aria-expanded="true" aria-controls="nav-sub-mods" title="Show or hide the Installed mods sections">▾</button>
+      </div>
+      <div class="nav-sub" id="nav-sub-mods">
+        <button data-tab="mods" data-sub="list" class="active">Mod list</button>
+        <button data-tab="mods" data-sub="reshade" class="hidden">ReShade</button>
+        <button data-tab="mods" data-sub="ultraplus" class="hidden">Ultra+ recommendations</button>
+        <button data-tab="mods" data-sub="patchnotes" class="hidden">Patch-note check</button>
+      </div>
       <button data-tab="netrunner">Netrunner</button>
-      <button data-tab="nexus">Get mods</button>
+      <div class="nav-group" data-tabs="nexus modpacks">
+        <button data-tab="nexus" class="nav-parent">Get mods</button>
+        <button class="nav-caret" data-group="nexus" aria-expanded="true" aria-controls="nav-sub-nexus" title="Show or hide the Get mods sections">▾</button>
+      </div>
+      <div class="nav-sub" id="nav-sub-nexus">
+        <button data-tab="nexus">Browse mods</button>
+        <button data-tab="modpacks">Modpacks</button>
+      </div>
       <button data-tab="downloads">Downloads</button>
       <button data-tab="settings">Settings</button>
     </nav>
@@ -65,20 +81,23 @@
 
     <section id="tab-mods" class="tab active">
       <header>
-        <h2>Installed mods</h2>
-        <div class="row">
+        <h2 id="mods-title">Installed mods</h2>
+        <div class="row mods-sub" data-sub="list">
           <label class="check"><input type="checkbox" id="overwrite"> Allow overwriting other mods</label>
           <button id="check-updates">Check for updates</button>
           <button id="update-all" class="update hidden">Update all</button>
           <button id="install-file" class="primary">Install from archive…</button>
         </div>
       </header>
-      <div id="version-ribbon" class="ribbon hidden" role="tablist" aria-label="Game versions"></div>
-      <div id="version-profiles" class="card hidden"></div>
+      <div class="mods-sub hidden" data-sub="reshade"><div id="reshade" class="card hidden"></div></div>
+      <div class="mods-sub hidden" data-sub="ultraplus"><div id="ultraplus" class="card hidden"></div>
+        <p class="muted ultraplus-none">Ultra+ is not installed in this game.</p></div>
+      <div class="mods-sub hidden" data-sub="patchnotes"><div id="patch-notes" class="card hidden"></div></div>
+      <div class="mods-sub" data-sub="list">
+      <div id="setup-checklist" class="card hidden"></div>
+      <div id="version-ribbon" class="ribbon hidden" role="group" aria-label="Game versions and mod profiles"></div>
+      <div id="version-profiles" class="hidden"></div>
       <div id="version-loadout" class="card hidden"></div>
-      <div id="reshade" class="card hidden"></div>
-      <div id="ultraplus" class="card hidden"></div>
-      <div id="patch-notes" class="card hidden"></div>
       <div class="row filters">
         <select id="mods-category" class="inline" aria-label="Tag or category"><option value="">All tags and categories</option></select>
         <label class="check small dep-key" title="Under each mod: what it needs, from its Nexus page and from the frameworks its files use">
@@ -111,6 +130,7 @@
         <tbody id="mods-body"></tbody>
       </table>
       <p id="mods-empty" class="muted">No mods installed yet. Install an archive (.zip, .7z, .rar) or get one from Nexus or GitHub.</p>
+      </div>
     </section>
 
     <section id="tab-modpacks" class="tab">
@@ -455,6 +475,16 @@
 
     <section id="tab-settings" class="tab">
       <header><h2>Settings</h2></header>
+      <div class="card" id="settings-game">
+        <h3>Game installs</h3>
+        <p>Cyberpunk 2077 installs found in Steam libraries (native, Flatpak, Snap), Heroic, GOG Galaxy and Epic. Every tab works on the install selected here.</p>
+        <select id="game-select" aria-label="Game install"></select>
+        <div id="game-info" class="muted">Detecting Cyberpunk 2077 installs…</div>
+        <div class="row">
+          <button id="rescan">Rescan</button>
+          <button id="add-path" title="Select the folder that contains bin/x64/Cyberpunk2077.exe">Add path…</button>
+        </div>
+      </div>
       <div class="card">
         <h3>CPMX2077 updates</h3>
         <p>Compares this build <span id="app-version" class="mono"></span> with the newest release on GitHub, pre-releases

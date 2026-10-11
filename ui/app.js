@@ -121,10 +121,43 @@ function fmtSize(n) {
 }
 
 // ---- tabs ---------------------------------------------------------------
-document.querySelectorAll("nav button").forEach((b) =>
-  b.addEventListener("click", () => showTab(b.dataset.tab)));
-function showTab(name) {
-  document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+// Installed mods has sections (mod list, ReShade, Ultra+, patch notes) and
+// Get mods holds Modpacks, each a collapsible submenu in the sidebar.
+let modsSub = "list";
+const MODS_TITLES = { list: "Installed mods", reshade: "ReShade", ultraplus: "Ultra+ recommendations", patchnotes: "Patch-note check" };
+document.querySelectorAll("nav button[data-tab]").forEach((b) =>
+  b.addEventListener("click", () => showTab(b.dataset.tab, b.dataset.sub)));
+const navOpen = loadPref("navOpen", { mods: true, nexus: true });
+document.querySelectorAll("nav .nav-caret").forEach((c) => {
+  const set = (open) => {
+    navOpen[c.dataset.group] = open;
+    c.setAttribute("aria-expanded", String(open));
+    c.textContent = open ? "▾" : "▸";
+    $(`#nav-sub-${c.dataset.group}`).classList.toggle("hidden", !open);
+  };
+  set(navOpen[c.dataset.group] !== false);
+  c.addEventListener("click", () => { set(!navOpen[c.dataset.group]); savePref("navOpen", navOpen); });
+});
+
+function showModsSub(sub) {
+  modsSub = MODS_TITLES[sub] ? sub : "list";
+  $("#mods-title").textContent = MODS_TITLES[modsSub];
+  document.querySelectorAll("#tab-mods .mods-sub").forEach((x) => x.classList.toggle("hidden", x.dataset.sub !== modsSub));
+}
+
+// A section's menu entry shows once its card has something to show.
+function syncModsSubs() {
+  const shown = { reshade: mods.length > 0, ultraplus: !$("#ultraplus").classList.contains("hidden"), patchnotes: mods.length > 0 };
+  for (const [sub, on] of Object.entries(shown)) $(`#nav-sub-mods [data-sub="${sub}"]`).classList.toggle("hidden", !on);
+  $("#tab-mods .ultraplus-none").classList.toggle("hidden", shown.ultraplus);
+}
+new MutationObserver(syncModsSubs).observe($("#ultraplus"), { attributes: true, attributeFilter: ["class"] });
+
+function showTab(name, sub) {
+  if (name === "mods") showModsSub(sub || "list");
+  document.querySelectorAll("nav button[data-tab]").forEach((b) => b.classList.toggle("active",
+    b.dataset.tab === name && !b.classList.contains("nav-parent") && (name !== "mods" || b.dataset.sub === modsSub)));
+  document.querySelectorAll("nav .nav-group").forEach((g) => g.classList.toggle("active", g.dataset.tabs.split(" ").includes(name)));
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === `tab-${name}`));
   if (name === "downloads") busy(null, loadDownloads);
   if (name === "nexus") busy(null, () => selectSource(currentSource));
@@ -134,13 +167,23 @@ function showTab(name) {
 }
 
 // ---- game ---------------------------------------------------------------
+const gameVersionOf = (g) => g.install.exe_product_version || g.install.exe_file_version || "";
+
+// The install list lives in Settings › Game installs; the sidebar shows a
+// picker only when there is more than one, and the way to add one while
+// none is found.
 async function detect() {
   games = await invoke("detect_games");
-  const sel = $("#game-select");
-  sel.replaceChildren(...games.map((g) =>
+  $("#game-select").replaceChildren(...games.map((g) =>
     el("option", { value: g.id }, `${g.install.store.toUpperCase()} · ${g.install.path}`)));
+  $("#game-select-side").replaceChildren(...games.map((g) =>
+    el("option", { value: g.id, title: g.install.path }, [g.install.store.toUpperCase(), gameVersionOf(g)].filter(Boolean).join(" · "))));
+  $("#game-select-side").classList.toggle("hidden", games.length < 2);
+  $("#game-none").classList.toggle("hidden", games.length > 0);
+  $("#game-none-actions").classList.toggle("hidden", games.length > 0);
   if (!games.length) {
-    $("#game-info").textContent = "No Cyberpunk 2077 install found. Use “Add path…” to pick the game folder.";
+    $("#game-none").textContent = "No Cyberpunk 2077 install found. Add path… and select the folder that contains bin/x64/Cyberpunk2077.exe.";
+    $("#game-info").textContent = "No Cyberpunk 2077 install found.";
     currentGame = null;
   } else {
     selectGame(currentGame?.id ?? games[0].id);
@@ -151,6 +194,7 @@ function selectGame(id) {
   if (currentGame?.id !== Number(id)) { ribbonPick = null; gameVersions = []; profiles = []; profilePick = null; }
   currentGame = games.find((g) => g.id === Number(id)) || games[0];
   $("#game-select").value = currentGame.id;
+  $("#game-select-side").value = currentGame.id;
   renderGame();
   loadMods();
 }
@@ -184,14 +228,17 @@ function copyLaunchOption(line) {
 
 function renderGame(withSetup = true) {
   const g = currentGame.install;
-  $("#game-info").replaceChildren(
+  $("#game-info").replaceChildren(...[
     el("div", {}, "Version: ", el("b", {}, g.exe_product_version || g.exe_file_version || "unknown")),
     g.build_id ? el("div", {}, "Steam build: ", el("span", { class: "mono" }, g.build_id)) : null,
-    g.proton_prefix ? el("div", { class: "muted mono" }, "Prefix: " + g.proton_prefix) : null,
-  );
+    el("div", { class: "mono" }, "Folder: " + g.path),
+    g.proton_prefix ? el("div", { class: "mono" }, "Prefix: " + g.proton_prefix) : null,
+  ].filter(Boolean));
   renderWarnings();
   $("#frameworks").replaceChildren(...g.frameworks.map((f) =>
     el("li", { class: f.installed ? "on" : "" }, f.name)));
+  $("#side-frameworks").classList.toggle("hidden", !coreMissing().length);
+  renderChecklist();
   if (withSetup) loadSetup().catch(() => {});
 }
 
@@ -206,6 +253,9 @@ function renderWarnings() {
   const items = setupChecks.map(setupItem);
   items.push(...currentGame.install.warnings.map(warningItem));
   $("#game-warnings").replaceChildren(...items);
+  // The heading stands over the install picker or the setup items, if any.
+  $("#game-panel > h2").classList.toggle("hidden", !items.length && games.length === 1);
+  renderChecklist();
   // Netrunner's summary lists the same problems.
   if (lastDiag && $("#tab-netrunner").classList.contains("active")) renderProblems(lastDiag.analysis, lastDiag.crash);
 }
@@ -272,15 +322,54 @@ async function offerSetup(list) {
   await loadSetup();
 }
 
-$("#game-select").addEventListener("change", (e) => selectGame(e.target.value));
-$("#rescan").addEventListener("click", (e) => busy(e.target, detect));
-$("#add-path").addEventListener("click", (e) => busy(e.target, async () => {
+for (const id of ["#game-select", "#game-select-side"]) $(id).addEventListener("change", (e) => selectGame(e.target.value));
+for (const id of ["#rescan", "#side-rescan"]) $(id).addEventListener("click", (e) => busy(e.target, detect));
+for (const id of ["#add-path", "#side-add-path"]) $(id).addEventListener("click", (e) => busy(e.target, async () => {
   const path = await dialog.open({ directory: true, title: "Select the Cyberpunk 2077 folder" });
   if (!path) return;
   const g = await invoke("add_game_path", { path });
   await detect();
   selectGame(g.id);
 }));
+$("#side-frameworks").addEventListener("click", (e) => busy(e.target, () => installFrameworks()));
+
+// The core frameworks from GitHub (REDmod ships with the game) not in the game folder.
+const CORE_FRAMEWORKS = ["cet", "red4ext", "redscript", "archivexl", "tweakxl", "codeware"];
+function coreMissing() {
+  return currentGame ? currentGame.install.frameworks.filter((f) => CORE_FRAMEWORKS.includes(f.id) && !f.installed) : [];
+}
+
+// ---- first setup checklist (Installed mods) --------------------------------
+// The first-run steps with their buttons, ticked as each is done, until all
+// are done or the user hides it.
+function renderChecklist() {
+  const box = $("#setup-checklist");
+  if (!currentGame) { box.classList.add("hidden"); return; }
+  const fw = coreMissing();
+  const setupOpen = setupChecks.filter((c) => c.state === "problem" && c.fix);
+  const steps = [
+    { done: !fw.length, title: "Core frameworks",
+      detail: fw.length ? `Missing: ${fw.map((f) => f.name).join(", ")}. Most mods require some of them.` : "CET, RED4ext, redscript, ArchiveXL, TweakXL and Codeware are in the game folder.",
+      button: fw.length ? el("button", { class: "primary", onclick: (e) => busy(e.target, () => installFrameworks()) }, "Install missing frameworks") : null },
+  ];
+  if (!/Windows/i.test(navigator.userAgent)) steps.push({ done: !setupOpen.length, title: "Linux setup",
+    detail: setupOpen.length ? `Open: ${setupOpen.map((c) => c.title).join(", ")}. Close Steam before Set launch options.` : "No open fixes for the installed frameworks.",
+    button: setupOpen.length ? el("button", { onclick: (e) => busy(e.target, () => offerSetup(setupOpen)) }, "Fix now") : null });
+  steps.push({ done: !!nexusUser, title: "Nexus account",
+    detail: nexusUser ? `Connected: ${nexusUser.name} (${nexusUser.is_premium ? "Premium" : "Free"}).` : "Required to download from Nexus. API key from nexusmods.com › Site preferences › API Keys.",
+    button: nexusUser ? null : el("button", { onclick: () => { showTab("nexus"); selectSource("nexus").catch(() => {}); } }, "Connect in Get mods") });
+  const left = steps.filter((x) => !x.done).length;
+  box.classList.toggle("hidden", !left || loadPref("checklistHidden", false) === true);
+  box.replaceChildren(
+    el("div", { class: "row" }, el("b", {}, "First setup"), el("span", { class: "muted small" }, `${steps.length - left} of ${steps.length} done`),
+      el("span", { class: "spacer" }),
+      el("button", { class: "link", title: "Hide the checklist; the same buttons stay in the Game panel and Get mods",
+        onclick: () => { savePref("checklistHidden", true); box.classList.add("hidden"); } }, "Hide")),
+    el("ol", { class: "checklist" }, ...steps.map((x) => el("li", { class: x.done ? "done" : "" },
+      el("span", { class: "check-mark", "aria-hidden": "true" }, x.done ? "✓" : "○"),
+      el("div", {}, el("b", {}, x.title), el("div", { class: "muted small" }, x.detail)),
+      x.button))));
+}
 
 // ---- mods ---------------------------------------------------------------
 let mods = [];
@@ -356,6 +445,7 @@ function renderMods() {
     th.classList.toggle("desc", th.dataset.sort === modSort.key && modSort.dir < 0);
   });
   $("#mods-empty").classList.toggle("hidden", mods.length > 0);
+  syncModsSubs();
   $("#mods-body").replaceChildren(...deficitRows(), ...shown.flatMap((m) => [modRow(m), ...dependencyRows(m)]));
   modSel.render(shown.map((m) => m.id));
 }
@@ -996,6 +1086,7 @@ function runWizard({ token, name, fomod }) {
 async function refreshNexus() {
   const s = await invoke("nexus_status");
   nexusUser = s.user;
+  renderChecklist();
   $("#nexus-login").classList.toggle("hidden", !!s.user);
   $("#nexus-browse").classList.toggle("hidden", !s.user);
   const box = $("#nexus-user");

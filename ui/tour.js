@@ -29,9 +29,9 @@ function tourSteps() {
       target: () => "#game-panel",
       body: [
         tourOnWindows
-          ? "Cyberpunk 2077 installs found in Steam, GOG Galaxy and Epic. Every tab works on the install selected here."
-          : "Cyberpunk 2077 installs found in Steam (native, Flatpak, Snap) and Heroic libraries. Every tab works on the install selected here.",
-        "Install not listed: Add path… and select the folder that contains bin/x64/Cyberpunk2077.exe.",
+          ? "Cyberpunk 2077 installs found in Steam, GOG Galaxy and Epic. Every tab works on the selected install; Settings › Game installs lists each one with its folder and version."
+          : "Cyberpunk 2077 installs found in Steam (native, Flatpak, Snap) and Heroic libraries. Every tab works on the selected install; Settings › Game installs lists each one with its folder, version and Proton prefix.",
+        "Install not listed: Settings › Game installs › Add path… and select the folder that contains bin/x64/Cyberpunk2077.exe.",
         "Frameworks: highlighted names are present in the game folder.",
       ],
     },
@@ -40,37 +40,20 @@ function tourSteps() {
       target: () => "#sidebar nav",
       body: [
         el("ul", {},
-          el("li", {}, el("b", {}, "Installed mods"), ": enable, disable, update, verify, uninstall."),
-          el("li", {}, el("b", {}, "Modpacks"), ": Nexus collections, tags, mod list import and export."),
+          el("li", {}, el("b", {}, "Installed mods"), ": enable, disable, update, verify, uninstall; profiles per game version. Sections: ReShade, Ultra+ recommendations, Patch-note check."),
           el("li", {}, el("b", {}, "Netrunner"), ": setup problems, crashes and logs, file map, graph, compatibility."),
-          el("li", {}, el("b", {}, "Get mods"), ": Nexus Mods and GitHub."),
+          el("li", {}, el("b", {}, "Get mods"), ": Nexus Mods and GitHub. Section Modpacks: Nexus collections, tags, mod list import and export."),
           el("li", {}, el("b", {}, "Downloads"), ": downloaded archives per mod and version; reinstall or switch."),
-          el("li", {}, el("b", {}, "Settings"), ": download location, nxm:// links, debug terminal.")),
-      ],
-    },
-    {
-      title: "Nexus account",
-      tab: "nexus",
-      source: "nexus",
-      target: () => visible("#nexus-user") ? "#nexus-user" : "#nexus-login",
-      body: () => [
-        nexusUser
-          ? `Connected: ${nexusUser.name} (${nexusUser.is_premium ? "Premium" : "Free"}).`
-          : "Not connected. Copy the personal API key from nexusmods.com › Site preferences › API Keys, paste it into the field and click Connect.",
-        "The key is verified with Nexus and stored in the system keyring, not in a file.",
-        el("ul", {},
-          el("li", {}, el("b", {}, "Free"), ": Get from Nexus opens the file page in the in-app Nexus window. Click Slow download there; the download is caught, checked and installed."),
-          el("li", {}, el("b", {}, "Premium"), ": Download & install. No browser step.")),
+          el("li", {}, el("b", {}, "Settings"), ": game installs, download location, nxm:// links, debug terminal.")),
+        "▾ next to a tab shows or hides its sections.",
       ],
     },
     {
       title: "Core frameworks from GitHub",
-      tab: "nexus",
-      source: "github",
-      target: () => visible("#install-frameworks") ? "#install-frameworks" : "#source-switch",
+      target: () => visible("#side-frameworks") ? "#side-frameworks" : "#frameworks",
       body: [
-        "Source GitHub lists CET, RED4ext, redscript, ArchiveXL, TweakXL and Codeware from their official GitHub releases. Most mods require some of them.",
-        "Install missing frameworks queues every framework missing from the selected game, requirements first. Each file is checked against the SHA-256 digest GitHub publishes.",
+        "CET, RED4ext, redscript, ArchiveXL, TweakXL and Codeware, from their official GitHub releases. Most mods require some of them: install them first.",
+        "Install missing frameworks queues every framework missing from the selected game, requirements first. Each file is checked against the SHA-256 digest GitHub publishes. The same button is in Get mods › GitHub.",
       ],
     },
   ];
@@ -81,6 +64,22 @@ function tourSteps() {
     body: [
       "Frameworks under Proton need the Visual C++ runtime (vcrun2022) in the game prefix and DLL overrides in the Steam launch options. Missing items (also HDR and folder name spellings) are listed in the Game panel, each with a fix button and, once fixed, Undo.",
       "After a framework install the fixes are offered in one dialog. Close Steam before Set launch options: Steam overwrites the setting while it runs.",
+    ],
+  });
+  steps.push({
+    title: "Nexus account",
+    tab: "nexus",
+    source: "nexus",
+    target: () => visible("#nexus-user") ? "#nexus-user" : "#nexus-login",
+    body: () => [
+      nexusUser
+        ? `Connected: ${nexusUser.name} (${nexusUser.is_premium ? "Premium" : "Free"}).`
+        : "Not connected. Copy the personal API key from nexusmods.com › Site preferences › API Keys, paste it into the field and click Connect.",
+      "The key is verified with Nexus and stored in the system keyring, not in a file.",
+      el("ul", {},
+        el("li", {}, el("b", {}, "Free"), ": Get from Nexus opens the file page in the in-app Nexus window. Click Slow download there; the download is caught, checked and installed."),
+        el("li", {}, el("b", {}, "Premium"), ": Download & install. No browser step.")),
+      "Mods with missing requirements: a dialog offers to queue the requirements first.",
     ],
   });
   steps.push(
@@ -103,7 +102,12 @@ function tourSteps() {
     },
     {
       title: "Done",
-      body: [
+      tab: "mods",
+      target: () => visible("#setup-checklist") ? "#setup-checklist" : null,
+      body: () => [
+        visible("#setup-checklist")
+          ? "First setup: frameworks, Linux setup and the Nexus account, ticked as each is done. Each step has its button."
+          : "First setup is complete: frameworks installed, no open Linux setup fixes, Nexus connected.",
         "Step-by-step first setup, including Proton fixes and multi-mod downloads: Getting started guide.",
         "Reopen this tour: Settings › Start tour.",
       ],

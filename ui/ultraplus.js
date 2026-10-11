@@ -4,7 +4,6 @@
 // Loaded after app.js and built from its helpers (el, $, busy, enqueue, …).
 // Names and notes from the page are inserted as text, never as HTML.
 
-let ultraOpen = loadPref("ultraOpen", true);
 
 const ULTRA_STATE = {
   installed: ["installed", "ok"],
@@ -84,7 +83,7 @@ function renderUltraPlus(r) {
   const source = r.fetched_at
     ? `From the Ultra+ page, read ${fmtAgo(r.fetched_at)}.`
     : `Built-in copy of the Ultra+ page from ${r.checked || "this release"}.`;
-  const details = el("details", { open: ultraOpen ? "" : null },
+  const details = el("details", { open: "" },
     el("summary", {}, el("b", {}, "Ultra+ recommendations"), el("span", { class: "muted" }, ` · ${summary.join(" · ")}`)),
     el("p", { class: "muted small" }, source, " ",
       "The Ultra+ team lists these mods on their Cyberpunk page; “not installed” means not installed through CPMX2077."),
@@ -108,6 +107,5 @@ function renderUltraPlus(r) {
     r.ray_tracing.length ? el("h3", {}, "Also recommended for ray tracing only") : null,
     r.ray_tracing.length ? el("p", { class: "muted small" }, "Ultra+ doesn't fix ray traced lighting; these mods do. Don't use them with path tracing.") : null,
     r.ray_tracing.length ? ultraTable(r.ray_tracing, false) : null);
-  details.addEventListener("toggle", () => { ultraOpen = details.open; savePref("ultraOpen", ultraOpen); });
   $("#ultraplus").replaceChildren(details);
 }
