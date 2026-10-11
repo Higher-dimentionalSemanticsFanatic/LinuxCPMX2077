@@ -82,6 +82,7 @@ code, .mono { font-family: ui-monospace, "JetBrains Mono", monospace; font-size:
 .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; background: var(--panel-2); }
 .badge.ok { color: var(--green); }
 .badge.bad { color: var(--red); }
+.badge.warn { color: var(--yellow); }
 .file { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
 .file:first-of-type { border-top: 0; }
 .progress { position: relative; height: 22px; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 14px; overflow: hidden; }
@@ -252,6 +253,10 @@ button.update { border-color: var(--cyan); color: var(--cyan); }
 #queue-items li { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-top: 1px solid var(--border); }
 #queue-items li:first-child { border-top: 0; }
 #queue-items .q-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#queue-items .q-note { flex: 2; overflow-wrap: anywhere; }
+#picker { position: fixed; inset: 0; background: rgba(5, 5, 10, .75); display: flex; align-items: center; justify-content: center; z-index: 11; }
+#picker .wiz-panel { height: auto; max-height: 90vh; width: min(640px, 94vw); }
+#picker-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .list-head p { margin: 0; }
 .list-head { margin-bottom: 8px; }
 button.select-mode.active { border-color: var(--yellow); color: var(--yellow); }

@@ -249,6 +249,8 @@ async function loadSetup(offer = false) {
     return;
   }
   const fresh = problems.filter((c) => !setupSeen.has(c.id));
+  // Mid-queue the offer waits until the queue finishes (finishItem).
+  if (offer && fresh.length && queueBusy()) return;
   fresh.forEach((c) => setupSeen.add(c.id));
   if (offer && fresh.length) await offerSetup(fresh);
 }
@@ -1088,8 +1090,60 @@ async function getFromNexus(modId, fileId) {
     return false;
   }
   await invoke("nexus_open_in_app", { modId, fileId });
+  singleWindow = true;
   toast("Sign in to Nexus in the new window if it asks, then click “Slow download”. CPMX2077 downloads and installs the file by itself.");
   return true;
+}
+
+// The Nexus window was opened for one download (not by the queue): it
+// closes once that download's link arrives, so progress shows here.
+let singleWindow = false;
+listen("nexus-window-closed", () => { singleWindow = false; });
+
+// ---- requirements before a download -----------------------------------------
+// Required Nexus mods (from the mod's page) that this game doesn't have.
+async function missingRequirements(modId) {
+  const d = await invoke("nexus_mod_details", { modId, refresh: false });
+  const req = (d.requirements?.nexus || []).filter((q) => !q.optional && q.mod_id && q.mod_id !== modId);
+  if (!req.length || !currentGame) return { name: d.info.name, missing: [], off: [] };
+  const st = await invoke("requirement_states", { gameId: currentGame.id, nexusIds: req.map((q) => q.mod_id) });
+  const named = (s) => ({ ...s, name: req.find((q) => q.mod_id === s.nexus_mod_id)?.name || `Mod ${s.nexus_mod_id}` });
+  return {
+    name: d.info.name,
+    missing: st.mods.filter((s) => s.state === "missing").map(named),
+    off: st.mods.filter((s) => s.state === "disabled").map(named),
+  };
+}
+
+// Before a Nexus download: when required mods are missing, offer to queue
+// them ahead of this file. True when it was queued that way (the caller
+// stops); false to go on and download it now.
+async function requirementsGate(modId, fileId) {
+  if (!currentGame) return false;
+  let r;
+  try { r = await missingRequirements(modId); } catch { return false; } // the page is a nicety
+  if (!r.missing.length && !r.off.length) return false;
+  const lines = [];
+  if (r.missing.length) lines.push(`Not installed (${r.missing.length}):`, nameList(r.missing.map((m) => m.name), 10));
+  if (r.off.length) lines.push(`Installed but disabled (${r.off.length}):`, nameList(r.off.map((m) => m.name), 10));
+  const ask = `${r.name} requires mods this game is missing.\n\n${lines.join("\n")}\n\n`
+    + (r.missing.length ? `Queue the missing requirements first? The queue installs them, then ${r.name}.` : "Enable them in Installed mods.");
+  const first = r.missing.length && await dialog.ask(ask, { title: "Missing requirements", kind: "warning",
+    okLabel: "Queue requirements first", cancelLabel: "Install without them" });
+  if (!r.missing.length) await dialog.message(ask, { title: "Missing requirements", kind: "warning" });
+  if (first) {
+    await getMissingDeps(r.missing);
+    enqueue([{ kind: "nexus", name: r.name, modId, fileId }]);
+    return true;
+  }
+  // Installed anyway: the missing requirements show on top of Installed mods.
+  if (!depsOn.deps) {
+    depsOn.deps = true;
+    savePref("depsShowDeps", true);
+    $("#show-deps").checked = true;
+    $("#deps-top-wrap").classList.remove("hidden");
+  }
+  return false;
 }
 
 // The fallback: the user's normal browser, which needs the nxm:// handler.
@@ -1381,6 +1435,7 @@ async function quickDownload(m, f, card) {
   if (!currentGame) throw "Select a game first";
   const key = `${m.mod_id}:${f.file_id}`;
   if (cardBars.has(key)) throw `${f.name || f.file_name} is already downloading`;
+  if (await requirementsGate(m.mod_id, f.file_id)) return;
   const bar = el("div", { class: "card-progress", onclick: (e) => e.stopPropagation() }, el("div", { class: "progress-bar" }), el("span", { class: "progress-text" }, "Starting…"));
   card.querySelector(".thumb-wrap").append(bar);
   cardBars.set(key, bar);
@@ -1819,9 +1874,13 @@ function fileRow(modId, f, highlightFile, downloaded = false) {
       el("div", { class: "muted mono" }, `${f.file_name} · ${fmtSize(f.size_in_bytes)} · v${f.version || "?"} · ${fmtDate(f.uploaded_timestamp)}`)),
     el("div", { class: "actions" },
       nexusUser?.is_premium
-        ? el("button", { class: "primary", onclick: (e) => busy(e.target, () => download(modId, f.file_id)) }, "Download & install")
+        ? el("button", { class: "primary", onclick: (e) => busy(e.target, async () => {
+          if (!(await requirementsGate(modId, f.file_id))) await download(modId, f.file_id);
+        }) }, "Download & install")
         : el("div", {},
-          el("button", { class: "primary", onclick: (e) => busy(e.target, () => getFromNexus(modId, f.file_id)) }, "Get from Nexus"),
+          el("button", { class: "primary", onclick: (e) => busy(e.target, async () => {
+            if (!(await requirementsGate(modId, f.file_id))) await getFromNexus(modId, f.file_id);
+          }) }, "Get from Nexus"),
           el("div", {}, el("button", { class: "link small", title: "Opens the file in your normal browser",
             onclick: (e) => busy(e.target, () => openInBrowser(modId, f.file_id)) }, "or use your browser")))));
 }
@@ -1885,6 +1944,10 @@ function hideProgress() {
 listen("nxm-link", (e) => busy(null, async () => {
   const ref = await invoke("nexus_resolve", { input: e.payload });
   if (ref?.kind !== "collection" && queueTakeNxm(await invoke("parse_nxm", { url: e.payload }))) return;
+  if (singleWindow && !queue.usedWindow) {
+    singleWindow = false;
+    invoke("nexus_window_close").catch(() => {});
+  }
   await handleNxm(e.payload);
 }));
 listen("download-progress", (e) => {
@@ -2185,12 +2248,20 @@ let downloadLane = Promise.resolve();
 let installLane = Promise.resolve();
 
 const FINISHED = new Set(["done", "downloaded", "skipped", "failed", "cancelled", "pick"]);
+// Installed when everything else is done: FOMOD selections come last.
+const AWAITING = new Set(["choices-wait"]);
 const Q_LABEL = {
   queued: "waiting", resolving: "looking up its files", "ready-click": "waiting for the Nexus window",
   click: "in the Nexus window", "ready-download": "waiting to download", downloading: "downloading",
-  "ready-install": "waiting to install", installing: "installing", choices: "waiting for your installer choices",
+  "ready-install": "waiting to install", installing: "installing", choices: "FOMOD selections open",
+  "choices-wait": "waiting for FOMOD selections", picking: "select the file to install",
   done: "installed", downloaded: "downloaded", skipped: "skipped", failed: "failed", cancelled: "cancelled", pick: "pick a file",
 };
+
+// Something in the queue still runs (or waits for the user).
+function queueBusy() {
+  return queue.items.some((q) => !FINISHED.has(q.state));
+}
 
 function enqueue(seeds) {
   if (!currentGame) throw "Select a game first";
@@ -2220,6 +2291,69 @@ function pickSourceFile(files) {
   return newest.length === 1 ? newest[0] : null;
 }
 
+// A mod with several files to choose from: ask which one, one dialog at a
+// time. False when the user skipped it.
+let pickLane = Promise.resolve();
+function pickFile(it) {
+  const run = async () => {
+    if (it.state === "cancelled") return false;
+    it.state = "picking";
+    renderQueue();
+    let options;
+    try {
+      options = it.kind === "nexus"
+        ? (await invoke("nexus_mod_details", { modId: it.modId })).files
+          .filter((f) => ["MAIN", "OPTIONAL", "UPDATE"].includes(f.category_name))
+          .map((f) => ({ value: f.file_id, label: f.name || f.file_name,
+            sub: [f.category_name === "MAIN" ? "main file" : f.category_name.toLowerCase(), f.version && `v${f.version}`, fmtSize(f.size_in_bytes), fmtDate(f.uploaded_timestamp)].filter(Boolean).join(" · ") }))
+        : (await invoke("source_details", { source: it.source, id: it.ref })).files.filter((f) => f.installable)
+          .map((f) => ({ value: f, label: f.file_name, sub: [f.group, f.prerelease ? "pre-release" : null, fmtSize(f.size)].filter(Boolean).join(" · ") }));
+    } catch (e) {
+      finishItem(it, "failed", String(e));
+      return false;
+    }
+    if (it.state === "cancelled") return false;
+    if (!options.length) { finishItem(it, "failed", "no installable files"); return false; }
+    const choice = await chooseDialog({
+      title: "Several files: select the file to install",
+      text: `${it.name} has ${options.length} files. Select the one to install; the others are not downloaded.`,
+      options, okLabel: "Install this file", cancelLabel: "Skip this mod",
+    });
+    if (it.state === "cancelled") return false;
+    if (choice === null) { finishItem(it, "skipped", "no file selected"); return false; }
+    if (it.kind === "nexus") it.fileId = choice; else it.file = choice;
+    return true;
+  };
+  const p = pickLane.then(run);
+  pickLane = p.catch(() => false);
+  return p;
+}
+
+let pickerClose = null; // closes an open chooseDialog as cancelled
+// A list of options in a dialog; resolves with the picked option's value,
+// or null when cancelled.
+function chooseDialog({ title, text, options, okLabel = "OK", cancelLabel = "Cancel" }) {
+  const box = $("#picker");
+  $("#picker-title").textContent = title;
+  $("#picker-text").textContent = text;
+  let picked = 0;
+  $("#picker-list").replaceChildren(...options.map((o, i) => {
+    const input = el("input", { type: "radio", name: "picker-choice" });
+    input.checked = i === 0;
+    input.addEventListener("change", () => { picked = i; });
+    return el("label", { class: "plugin" }, input, " ", el("b", {}, o.label), o.sub ? el("div", { class: "muted small" }, o.sub) : null);
+  }));
+  $("#picker-ok").textContent = okLabel;
+  $("#picker-cancel").textContent = cancelLabel;
+  box.classList.remove("hidden");
+  return new Promise((resolve) => {
+    const close = (v) => { box.classList.add("hidden"); pickerClose = null; resolve(v); };
+    pickerClose = () => close(null);
+    $("#picker-ok").onclick = () => close(options[picked].value);
+    $("#picker-cancel").onclick = () => close(null);
+  });
+}
+
 async function startItem(it) {
   try {
     if (it.kind === "nexus" && it.fileId === undefined) {
@@ -2243,11 +2377,11 @@ async function startItem(it) {
   }
   if (it.state === "cancelled") return;
   if (it.kind === "source") {
-    if (!it.file) return finishItem(it, "pick", "it has several files: open it and pick one");
+    if (!it.file && !(await pickFile(it))) return;
     return scheduleDownload(it);
   }
   if (it.kind === "nexus" && nexusUser?.is_premium) {
-    if (!it.fileId) return finishItem(it, "pick", "it has several main files: open it and pick one");
+    if (!it.fileId && !(await pickFile(it))) return;
     return scheduleDownload(it);
   }
   if (it.kind === "nexus" && !nexusUser) return finishItem(it, "failed", "connect your Nexus account first");
@@ -2338,11 +2472,13 @@ async function runInstall(it) {
   it.state = "installing";
   renderQueue();
   try {
-    let outcome = await invoke("install_download", { downloadId: it.downloadId, gameId: it.gameId, overwrite: $("#overwrite").checked, replaces: it.replaces ?? null });
+    const outcome = await invoke("install_download", { downloadId: it.downloadId, gameId: it.gameId, overwrite: $("#overwrite").checked, replaces: it.replaces ?? null });
     if (outcome.status === "needs_choices") {
-      it.state = "choices";
+      // The FOMOD selections wait until every other mod is in.
+      it.state = "choices-wait";
+      it.outcome = outcome;
       renderQueue();
-      if (!(await runWizard(outcome))) return finishItem(it, "downloaded", "installer cancelled; it's in Downloads");
+      return;
     }
     if (it.replaces && updatesByMod.delete(it.replaces)) updatesChanged();
     finishItem(it, "done", it.note);
@@ -2350,18 +2486,61 @@ async function runInstall(it) {
     finishItem(it, "failed", String(e));
   } finally {
     loadMods().catch(() => {});
+    runChoices();
   }
 }
 
+// Once nothing else is left to download or install, open the waiting FOMOD
+// installers one after another.
+let choicesOpen = false;
+async function runChoices() {
+  if (choicesOpen) return;
+  const pending = queue.items.filter((q) => !FINISHED.has(q.state) && !AWAITING.has(q.state));
+  const next = queue.items.find((q) => q.state === "choices-wait");
+  if (pending.length || !next) return;
+  choicesOpen = true;
+  next.state = "choices";
+  renderQueue();
+  try {
+    const report = await runWizard(next.outcome);
+    next.outcome = null;
+    if (!report) finishItem(next, "downloaded", "FOMOD installer cancelled; the archive is in Downloads");
+    else {
+      if (next.replaces && updatesByMod.delete(next.replaces)) updatesChanged();
+      finishItem(next, "done", next.note);
+    }
+  } catch (e) {
+    finishItem(next, "failed", String(e));
+  } finally {
+    choicesOpen = false;
+    loadMods().catch(() => {});
+  }
+  runChoices();
+}
+
+let queueClearTimer = null;
 function finishItem(it, state, note = "") {
   it.state = state;
   it.note = note || "";
   it.progress = null;
   renderQueue();
+  runChoices();
   if (queue.items.length && queue.items.every((q) => FINISHED.has(q.state))) {
     const c = (s) => queue.items.filter((q) => q.state === s).length;
-    toast(`Download queue finished: ${queueSummary()}`, c("failed") > 0);
+    const attention = c("failed") + c("pick") > 0;
+    toast(`Download queue finished: ${queueSummary()}`, attention);
     loadDownloads().catch(() => {});
+    // Linux setup the new mods need, offered once the queue is done.
+    loadSetup(true).catch(() => {});
+    // Failures stay listed; a clean run clears itself.
+    clearTimeout(queueClearTimer);
+    if (attention) { queue.showList = true; renderQueue(); }
+    else {
+      const finished = queue.items;
+      queueClearTimer = setTimeout(() => {
+        if (queue.items === finished && !queueBusy()) { queue.items = []; renderQueue(); }
+      }, 10000);
+    }
   }
 }
 
@@ -2385,10 +2564,14 @@ function queueCancel() {
   queue.paused = false;
   // Downloads the user already started in the Nexus window still finish.
   for (const q of queue.items) {
-    if (["queued", "resolving", "ready-click", "click"].includes(q.state) || (q.state === "ready-download" && !q.link)) {
+    if (["queued", "resolving", "ready-click", "click", "picking"].includes(q.state) || (q.state === "ready-download" && !q.link)) {
       finishItem(q, "cancelled");
+    } else if (q.state === "choices-wait") {
+      invoke("cancel_install", { token: q.outcome.token }).catch(() => {});
+      finishItem(q, "downloaded", "cancelled before the FOMOD selections; the archive is in Downloads");
     }
   }
+  pickerClose?.();
   queue.usedWindow = false;
   invoke("nexus_window_close").catch(() => {});
   renderQueue();
@@ -2419,12 +2602,14 @@ function renderQueue() {
   const finished = items.filter((q) => FINISHED.has(q.state)).length;
   const active = finished < items.length;
   const c = queue.clickItem;
-  const busyItem = items.find((q) => q.state === "downloading") || items.find((q) => q.state === "installing" || q.state === "choices");
+  const busyItem = items.find((q) => q.state === "downloading") || items.find((q) => ["installing", "choices", "picking"].includes(q.state));
+  const waiting = items.filter((q) => q.state === "choices-wait");
   $("#queue-title").textContent = active ? `Download queue: ${finished} of ${items.length} done` : `Download queue finished: ${queueSummary()}`;
   $("#queue-bar").style.width = `${(100 * finished) / items.length}%`;
   $("#queue-now").textContent = queue.paused ? "Paused because the Nexus window was closed."
     : c ? `In the Nexus window: click “Slow download” for ${c.name}${c.fileId ? "" : " (pick the file you want)"}.`
-    : busyItem ? `${Q_LABEL[busyItem.state][0].toUpperCase()}${Q_LABEL[busyItem.state].slice(1)}: ${busyItem.name}` : "";
+    : busyItem ? `${Q_LABEL[busyItem.state][0].toUpperCase()}${Q_LABEL[busyItem.state].slice(1)}: ${busyItem.name}`
+    : waiting.length ? `Waiting for FOMOD selections: ${waiting.map((q) => q.name).join(", ")}. The installers open after the other mods are installed.` : "";
   $("#queue-show").classList.toggle("hidden", !c && !queue.paused);
   $("#queue-show").textContent = queue.paused ? "Resume" : "Show Nexus window";
   $("#queue-skip").classList.toggle("hidden", !c);
@@ -2433,17 +2618,17 @@ function renderQueue() {
   $("#queue-toggle").textContent = queue.showList ? "Hide list" : "Show list";
   $("#queue-items").classList.toggle("hidden", !queue.showList);
   if (!queue.showList) return;
-  const badge = { done: "badge ok", failed: "badge bad", pick: "badge bad", cancelled: "badge", skipped: "badge" };
+  const badge = { done: "badge ok", failed: "badge bad", pick: "badge bad", cancelled: "badge", skipped: "badge", "choices-wait": "badge warn" };
   $("#queue-items").replaceChildren(...items.map((q) => el("li", {},
     el("span", { class: "q-name", title: q.name }, q.name),
-    q.note ? el("span", { class: "muted small", title: q.note }, q.note.length > 80 ? q.note.slice(0, 80) + "…" : q.note) : null,
+    q.note ? el("span", { class: "muted small q-note" }, q.note) : null,
     el("span", { class: badge[q.state] || "badge" },
       q.state === "downloading" && q.progress != null ? `downloading ${Math.round(q.progress * 100)}%` : Q_LABEL[q.state]))));
 }
 
 $("#queue-skip").addEventListener("click", queueSkip);
 $("#queue-cancel").addEventListener("click", queueCancel);
-$("#queue-clear").addEventListener("click", () => { queue.items = []; renderQueue(); });
+$("#queue-clear").addEventListener("click", () => { clearTimeout(queueClearTimer); queue.items = []; renderQueue(); });
 $("#queue-toggle").addEventListener("click", () => { queue.showList = !queue.showList; renderQueue(); });
 $("#queue-show").addEventListener("click", (e) => busy(e.target, async () => {
   if (queue.paused) {

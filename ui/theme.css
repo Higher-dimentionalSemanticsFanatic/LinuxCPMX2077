@@ -175,7 +175,7 @@ pre, .description, .bbcode, .requirements { border-radius: 0; background: rgba(1
 #toast { --fill: var(--panel-solid); --frame: var(--line); border-left: 3px solid var(--cyan); border-radius: 0; }
 #toast.error { border-left-color: var(--red); }
 #queue, #select-bar { --fill: var(--panel-solid); }
-#log-viewer, #wizard { background: rgba(8, 6, 8, .78); }
+#log-viewer, #wizard, #picker { background: rgba(8, 6, 8, .78); }
 #log-text { border-radius: 0; background: var(--bg); }
 .wiz-panel { --fill: #16181c; border-top: 3px solid var(--yellow); }
 #tour-card { --fill: #16181c; --frame: var(--line); --cut: 14px; border-top: 3px solid var(--yellow); }

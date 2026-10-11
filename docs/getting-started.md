@@ -120,8 +120,12 @@ yourself.
    - **Premium**: click **Download & install**. Done.
    - **Free account**: click **Get from Nexus**. The file's page opens in a
      Nexus window inside the app. Sign in there once, then click **Slow
-     download**. The app catches the download link, fetches the file, checks
-     it with Nexus, and installs it.
+     download**. The app catches the download link, closes the Nexus window,
+     fetches the file, checks it with Nexus, and installs it.
+
+If the mod needs other mods you don't have (most need some of the core
+frameworks), a *Missing requirements* dialog lists them first. Click
+**Queue requirements first** and the app installs them, then the mod.
 
 You stay on **Get mods** while it downloads; the progress bar is at the top of
 the page. For a quick install from the list, click the **⬇** button on a mod's

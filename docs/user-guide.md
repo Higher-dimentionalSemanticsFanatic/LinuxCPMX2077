@@ -90,7 +90,8 @@ it), the left and right arrow keys also resize it.
   manifest and the Proton prefix location.
 - **Linux setup items**: what mods need from Proton/Wine, each with a fix
   button and, after a fix, **Undo**. Every fix asks for confirmation first,
-  and the app offers fixes on its own after you install a mod that needs one.
+  and the app offers fixes on its own after you install a mod that needs one
+  (after a download queue, once the whole queue has finished).
   - *Visual C++ runtime* → **Install vcrun2022** (protontricks, Flatpak
     protontricks, or winetricks with the game's own Proton).
   - *Steam launch options* → **Set launch options** writes
@@ -611,12 +612,20 @@ Browse and download mods. The switch at the top right picks the source:
   them optional get an amber **recommended** badge and are counted
   separately, not queued by **Get missing**. This works before you install the mod, so you
   can see what it will need. **Refresh** asks Nexus again instead of using the saved copy.
+- **Missing requirements**: before a Nexus file downloads (from the mod
+  page or the **⬇** button on a card), its required mods are checked
+  against the game. When some are missing, a *Missing requirements* dialog
+  lists them: **Queue requirements first** queues them (core frameworks from
+  GitHub, the rest from Nexus) with the mod after them; **Install without
+  them** installs the mod alone and switches on **Dependencies** in
+  Installed mods, so the missing ones show at the top. Required mods that
+  are installed but disabled are listed too.
 - **Downloading a file**:
   - *Premium*: **Download & install** downloads through the API and
     installs.
   - *Free*: **Get from Nexus** opens the file page in a Nexus window inside
     the app. Click **Slow download** there; the app catches the `nxm://`
-    link, downloads, verifies and installs. *or use your browser* opens the
+    link, closes the Nexus window, downloads, verifies and installs. *or use your browser* opens the
     page in your normal browser instead (the app offers to become the
     `nxm://` handler first).
   - You stay on **Get mods** while it downloads: a progress bar shows at the
@@ -666,6 +675,18 @@ The queue bar at the top shows progress, with **Show Nexus window**,
 **Skip this mod**, **Cancel** and **Show list**. Closing the Nexus window
 pauses the queue; **Resume** carries on. Skip and Cancel are also in the
 window's *Download queue* menu.
+
+- **Several files**: when a mod has more than one file to choose from
+  (Premium and GitHub; a free account picks the file in the Nexus window), a
+  *Several files: select the file to install* dialog lists them. **Install
+  this file** carries on with it; **Skip this mod** leaves it out.
+- **FOMOD installers last**: a mod with a FOMOD installer is marked
+  *waiting for FOMOD selections* and the queue installs the other mods
+  first. Its installer opens once everything else is done, one after
+  another.
+- When the queue finishes, a clean run clears itself after 10 seconds.
+  When something failed, the list stays open with the full error for each
+  mod until you click **Clear**.
 
 ## Downloads
 

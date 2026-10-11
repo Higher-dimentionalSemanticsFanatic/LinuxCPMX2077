@@ -1130,6 +1130,10 @@ fn nexus_window_close(app: AppHandle) {
     if let Some(w) = app.get_webview_window(NEXUS_WINDOW) {
         let _ = w.close();
     }
+    // Back to the main window, where the download's progress shows.
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.set_focus();
+    }
 }
 
 fn is_nexus_host(host: &str) -> bool {
