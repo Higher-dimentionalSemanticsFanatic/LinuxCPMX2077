@@ -869,8 +869,10 @@ Every archive you downloaded, grouped by mod with each version under it.
   first start. Each step switches to its tab and outlines one element:
   the Game panel, the tabs, **Install missing frameworks** under the
   Frameworks list, the Linux setup items (not on Windows), the Nexus
-  account box (API key, Free vs Premium downloads), Installed mods,
-  Netrunner, and last the First setup checklist. The outlined
+  account box (API key, Free vs Premium downloads), Installed mods, the
+  *Game version and profiles* ribbon (profiles under each game version,
+  **+ Profile**, **Apply**, the stock chip, load order saved with a
+  profile), Netrunner, and last the First setup checklist. The outlined
   element stays clickable and can be scrolled (the outline and the step
   card follow it); everything else is dimmed. **Next** / **Back**
   or the arrow keys step through, **Skip tour** or Esc closes it, and the
