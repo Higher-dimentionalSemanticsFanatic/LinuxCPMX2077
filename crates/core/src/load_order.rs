@@ -10,13 +10,19 @@
 //! - The first archive containing a resource wins.
 //!
 //! Source: the RED modding wiki's load-order page (CDPR-Modding-Documentation).
+//!
+//! Changing the order writes `modlist.txt` (`set`); the app remembers what
+//! it wrote so it only ever removes its own file (`reset`), and a
+//! `modlist.txt` that was there before is kept aside and put back.
 
 use std::collections::HashMap;
 use std::path::Path;
 
 use serde::Serialize;
 
+use crate::db::{Db, GameRow};
 use crate::install::resolve_ci;
+use crate::{Error, Result};
 
 /// How the archive order was decided.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -162,6 +168,128 @@ pub fn contests<'a>(touches: impl IntoIterator<Item = (&'a str, &'a str)>, pos: 
     out
 }
 
+// ---------------------------------------------------------------------------
+// Changing the order
+
+const MODLIST: &str = "archive/pc/mod/modlist.txt";
+
+fn owned_key(game_id: i64) -> String {
+    format!("load_order.owned.{game_id}")
+}
+
+fn modlist_path(game_dir: &Path) -> std::path::PathBuf {
+    resolve_ci(game_dir, "archive/pc/mod").join("modlist.txt")
+}
+
+fn user_backup(backups_root: &Path, game_id: i64) -> std::path::PathBuf {
+    backups_root.join(format!("modlist-{game_id}.txt"))
+}
+
+/// `modlist.txt` exists and is the one CPMX2077 wrote.
+pub fn managed(db: &Db, game: &GameRow) -> Result<bool> {
+    let Some(owned) = db.get_setting(&owned_key(game.id))? else { return Ok(false) };
+    Ok(std::fs::read_to_string(modlist_path(Path::new(&game.path))).is_ok_and(|t| t == owned))
+}
+
+/// The order with each archive's mod, for the Load order view.
+#[derive(Debug, Clone, Serialize)]
+pub struct View {
+    pub via: Via,
+    /// `modlist.txt` was written by CPMX2077.
+    pub managed: bool,
+    pub slots: Vec<ViewSlot>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ViewSlot {
+    pub pos: usize,
+    pub path: String,
+    pub name: String,
+    pub source: Source,
+    pub mod_id: Option<i64>,
+    pub mod_name: Option<String>,
+}
+
+pub fn view(db: &Db, game: &GameRow) -> Result<View> {
+    let order = effective(Path::new(&game.path));
+    let mut owner: HashMap<String, (i64, String)> = HashMap::new();
+    for m in db.mods(game.id)?.into_iter().filter(|m| m.enabled()) {
+        for f in db.mod_files(m.id)? {
+            if source_of(&f.rel_path).is_some() {
+                owner.insert(f.rel_path.to_lowercase(), (m.id, m.name.clone()));
+            }
+        }
+    }
+    let slots = order
+        .slots
+        .into_iter()
+        .map(|s| {
+            let o = owner.get(&s.path.to_lowercase());
+            ViewSlot { pos: s.pos, name: file_name(&s.path).to_string(), source: s.source, mod_id: o.map(|o| o.0), mod_name: o.map(|o| o.1.clone()), path: s.path }
+        })
+        .collect();
+    Ok(View { via: order.via, managed: managed(db, game)?, slots })
+}
+
+/// Write `names` (archive file names in `archive/pc/mod`, first loaded
+/// first) as `modlist.txt`. Archives in the folder that `names` leaves out
+/// are appended by name, so every archive is listed. A `modlist.txt` that
+/// CPMX2077 didn't write is moved to `backups_root` first.
+pub fn set(db: &Db, game: &GameRow, backups_root: &Path, names: &[String]) -> Result<()> {
+    let game_dir = Path::new(&game.path);
+    let present: Vec<String> = effective(game_dir).slots.into_iter().filter(|s| s.source == Source::Archive).map(|s| file_name(&s.path).to_string()).collect();
+    let mut out: Vec<String> = Vec::new();
+    for n in names {
+        if n.contains(['/', '\\', '\r', '\n']) || !n.to_lowercase().ends_with(".archive") {
+            return Err(Error::Other(format!("not an archive file name: {n}")));
+        }
+        // Archives removed since the order was made are skipped.
+        let Some(real) = present.iter().find(|p| p.eq_ignore_ascii_case(n)) else { continue };
+        if !out.iter().any(|o| o.eq_ignore_ascii_case(real)) {
+            out.push(real.clone());
+        }
+    }
+    let mut rest: Vec<&String> = present.iter().filter(|p| !out.iter().any(|o| o.eq_ignore_ascii_case(p))).collect();
+    rest.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
+    out.extend(rest.into_iter().cloned());
+
+    let path = modlist_path(game_dir);
+    if path.exists() && !managed(db, game)? {
+        std::fs::create_dir_all(backups_root)?;
+        std::fs::copy(&path, user_backup(backups_root, game.id))?;
+    }
+    let text: String = out.iter().map(|n| format!("{n}\r\n")).collect();
+    let mut tmp = tempfile::NamedTempFile::new_in(path.parent().ok_or_else(|| Error::Other(format!("no folder for {MODLIST}")))?)?;
+    std::io::Write::write_all(&mut tmp, text.as_bytes())?;
+    tmp.persist(&path).map_err(|e| Error::Other(format!("writing {MODLIST}: {e}")))?;
+    db.set_setting(&owned_key(game.id), &text)?;
+    Ok(())
+}
+
+/// Back to the game's default order: remove the `modlist.txt` CPMX2077
+/// wrote and put back one that was there before. A `modlist.txt` someone
+/// else wrote is left alone. Returns whether anything changed.
+pub fn reset(db: &Db, game: &GameRow, backups_root: &Path) -> Result<bool> {
+    if !managed(db, game)? {
+        return Ok(false);
+    }
+    let path = modlist_path(Path::new(&game.path));
+    std::fs::remove_file(&path)?;
+    let backup = user_backup(backups_root, game.id);
+    if backup.is_file() {
+        std::fs::copy(&backup, &path)?;
+        std::fs::remove_file(&backup)?;
+    }
+    db.set_setting(&owned_key(game.id), "")?;
+    Ok(true)
+}
+
+/// The archive order to store with a profile: the managed `modlist.txt`'s
+/// names, or None for the game's default order.
+pub fn current_managed(db: &Db, game: &GameRow) -> Result<Option<Vec<String>>> {
+    Ok(if managed(db, game)? { read_modlist(Path::new(&game.path)) } else { None })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -237,5 +365,34 @@ mod tests {
         assert_eq!(c["archive/pc/mod/zz.archive"], (1, 0));
         assert_eq!(c["archive/pc/mod/aa.archive"], (1, 1));
         assert_eq!(c["mods/rm/archives/r.archive"], (0, 2));
+    }
+
+    #[test]
+    fn set_and_reset_keep_a_users_modlist() {
+        use crate::game::{GameInstall, Store};
+        let dir = tempfile::tempdir().unwrap();
+        let g = dir.path().join("game");
+        let backups = dir.path().join("backups");
+        std::fs::create_dir_all(g.join("archive/pc/mod")).unwrap();
+        for f in ["a.archive", "B.archive", "c.archive"] {
+            std::fs::write(g.join("archive/pc/mod").join(f), b"").unwrap();
+        }
+        std::fs::write(g.join("archive/pc/mod/modlist.txt"), "mine\n").unwrap();
+        let db = Db::open_in_memory().unwrap();
+        let gi = GameInstall { path: g.clone(), store: Store::Manual, proton_prefix: None, build_id: None, exe_file_version: None, exe_product_version: None, frameworks: vec![], launch_options: None, warnings: vec![] };
+        let game = db.game(db.upsert_game(&gi).unwrap()).unwrap();
+        assert!(!managed(&db, &game).unwrap());
+        assert!(!reset(&db, &game, &backups).unwrap(), "someone else's modlist.txt stays");
+
+        assert!(set(&db, &game, &backups, &s(&["../x.archive"])).is_err());
+        set(&db, &game, &backups, &s(&["c.archive", "gone.archive", "A.archive"])).unwrap();
+        assert!(managed(&db, &game).unwrap());
+        assert_eq!(read_modlist(&g).unwrap(), s(&["c.archive", "a.archive", "B.archive"]));
+        assert_eq!(effective(&g).slots[0].path, "archive/pc/mod/c.archive");
+        assert_eq!(current_managed(&db, &game).unwrap().unwrap().len(), 3);
+
+        assert!(reset(&db, &game, &backups).unwrap());
+        assert_eq!(std::fs::read_to_string(g.join("archive/pc/mod/modlist.txt")).unwrap(), "mine\n");
+        assert!(!managed(&db, &game).unwrap());
     }
 }

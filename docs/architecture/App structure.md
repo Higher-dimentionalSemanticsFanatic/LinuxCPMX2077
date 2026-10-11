@@ -47,7 +47,7 @@ flowchart LR
 |---|---|---|---|
 | Installed mods | `app.js`, `profiles.js`, `reshade.js`, `ultraplus.js` | `install_archive`, `finish_install`, `uninstall_mod`, `disable_mod`, `enable_mod`, `verify_mod`, `check_updates`, `game_version_history`, `*_profile(s)`, `reshade_*`, `ultraplus_*` | `install`, `updates`, `game_versions`, `profiles`, `reshade`, `ultraplus` |
 | Modpacks | `modpacks.js` | `nexus_collections`, `collection_view`, `track_collection`, tags, `export_modlist`, `import_modlist`, `mod_dependencies` | `modpacks`, `nexus_browse`, `dependencies` |
-| Netrunner | `netrunner.js`, `graph.js` | `analyze_game`, `mod_file_tree`, `crash_analysis`, `read_log` | `analysis`, `file_tree`, `crash`, `startup`, `known_issues` |
+| Netrunner | `netrunner.js`, `graph.js` | `analyze_game`, `mod_file_tree`, `load_order_view`, `set_load_order`, `reset_load_order`, `crash_analysis`, `read_log` | `analysis`, `file_tree`, `load_order`, `crash`, `startup`, `known_issues` |
 | Get mods | `app.js` | `nexus_search`, `nexus_mod_details`, `nexus_download`, `nexus_open_in_app`, `source_search`, `source_download`, `framework_plan` | `nexus`, `nexus_browse`, `sources::github` |
 | Downloads | `app.js` | `list_downloads`, `install_download`, `delete_download`, `organize_downloads` | `downloads`, `install` |
 | Settings | `app.js` | `nexus_set_key`, `nexus_sso_login`, `set_downloads_location`, `register_nxm_handler` | `secrets`, `sso`, `desktop`, `downloads` |
@@ -66,6 +66,7 @@ All paths come from `core::paths` (XDG on Linux, `dirs` equivalents on Windows).
 | Unpacked copy of each mod | `<data>/…/staging/<mod id>/` | [[Deploy and tracking]] |
 | Archives being installed | `<data>/…/staging/incoming-*/` | [[Archive extraction]] |
 | Original game files a mod replaced | `<data>/…/backups/<game id>/<path>` | [[Deploy and tracking]] |
+| Archive load order set in Netrunner | `<game>/archive/pc/mod/modlist.txt` (its text also in the `settings` table, to tell it apart from a user's own); a `modlist.txt` that was there before: `<data>/…/backups/modlist-<game id>.txt` | `core::load_order` |
 | Downloads | Settings → download location (default `<data>/…/downloads/`) | `core::downloads` |
 | Nexus API key | system keyring | `core::secrets` |
 | Nexus page cache | `<cache>/cp2077-modmanager/nexus/` | `core::nexus_cache` |

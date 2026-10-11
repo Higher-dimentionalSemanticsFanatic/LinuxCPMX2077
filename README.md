@@ -165,7 +165,9 @@ Screenshots show sample data, with file locations blurred.
   installed and whether it is in use, overridden by a newer mod, missing or
   switched off. A **Load order** view and column give each `.archive` its
   load position (file name or `modlist.txt`, REDmods last) and how many
-  shared resources it wins or loses. “Show in graph” next to a
+  shared resources it wins or loses. The order can be changed (drag, or
+  "Load first" from a conflict) after a warning; it is written as a
+  `modlist.txt` CPMX2077 can remove again, and saved with profiles. “Show in graph” next to a
   finding or a crash suspect lights up the mods involved and what they share.
 - **Compatibility check** (no AI needed): every enabled mod is indexed for
   what it touches: game resources inside `.archive` files (and which of them
@@ -338,7 +340,7 @@ and the Windows installer as a release with a SHA256SUMS file.
 
 ## Roadmap
 
-- Changing the `.archive` load order (shown today, not editable)
+- REDmod load order (`redMod deploy`)
 - Applying a collection's own load order and settings files
 - Full Windows support
 

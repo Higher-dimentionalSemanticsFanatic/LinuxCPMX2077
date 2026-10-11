@@ -81,7 +81,7 @@
       "severity": "warning",
       "title": "A modlist.txt file changes your archive load order",
       "explanation": "When archive/pc/mod/modlist.txt exists, the game loads .archive mods in the order that file lists instead of by name. That makes conflicts hard to predict, and the wiki advises against it.",
-      "fix": "Delete archive/pc/mod/modlist.txt unless you created it on purpose.",
+      "fix": "Delete archive/pc/mod/modlist.txt unless you created it on purpose. An order set in Netrunner › File map › Load order is not reported here; Reset to file-name order removes it.",
       "link": "https://wiki.redmodding.org/cyberpunk-2077-modding/for-mod-users/users-modding-cyberpunk-2077/load-order",
       "all": [ { "path": "archive/pc/mod/modlist.txt" } ]
     },

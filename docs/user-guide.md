@@ -215,7 +215,8 @@ Above the list:
   ribbon.
   - The current version's own chip (*stock · no mods*) is the stock game:
     **Apply** disables every enabled mod (stored copies are kept; files not
-    installed by CPMX2077 stay in the game folder). When the enabled mods
+    installed by CPMX2077 stay in the game folder) and removes a load order
+    set in CPMX2077. When the enabled mods
     match no profile, it first offers to save them as *Before stock*, so
     one click brings them back.
   - **+ Profile** (current version only): type a name and click **Save N
@@ -230,7 +231,7 @@ Above the list:
       older game version can be applied too; the confirmation names both
       versions, since mods may need updates.
     - **Update from enabled mods**: replace the profile's list with the mods
-      enabled now.
+      enabled now (and the archive [load order](#file-map)).
     - **Rename**, **Delete** (installed mods are not changed).
   - Mods are matched by their Nexus mod, source listing or (manual installs)
     name, so a mod updated after the profile was saved still counts. Where a
@@ -535,9 +536,31 @@ position and which one is used (needs **Check again** to have run). In **By
 mod**, a mod's archive positions show next to its name (**#3**, or
 **#3–#5** for several archives). **Sort: load order** sorts folders, mods
 and files by position instead of name. The **Load order** view lists every
-mod archive in load order and says how the order is decided (file name or
-`modlist.txt`). Positions are shown, not changed: renaming archives breaks
-update matching, so CPMX2077 doesn't do it.
+archive in load order (archives not installed by CPMX2077 are marked *not
+installed by CPMX2077*) and says how the order is decided (file name, a
+`modlist.txt` written by CPMX2077, or one written by something else).
+
+Changing the order:
+
+- **Change order** makes the `archive/pc/mod` archives movable: drag a row,
+  or use **▲** / **▼**. REDmod archives stay after them. **Save order**
+  first shows a warning (what `modlist.txt` changes, that the RED modding
+  wiki advises against it, that archives installed later load after the
+  listed ones); **Write modlist.txt** writes `archive/pc/mod/modlist.txt`,
+  **Cancel** changes nothing.
+- In the wins/losses dialog of an archive that loses to another
+  `archive/pc/mod` archive, **Load *name* first** moves it directly before
+  the archive that wins, after the same warning.
+- **Reset to file-name order** (shown while the order is CPMX2077's)
+  removes the `modlist.txt` it wrote. A `modlist.txt` that was there before
+  CPMX2077 wrote its own is kept in the app's backups folder and put back.
+  A `modlist.txt` written by something else is never deleted.
+- Archives are never renamed (that would break update matching and
+  verification). While the order is CPMX2077's, the *modlist.txt changes
+  your archive load order* known-problem notice is not shown.
+- Saving a profile stores the order with it, and applying the profile
+  restores it (or the file-name order). The stock chip resets it. Profiles
+  saved before this leave the order as it is.
 
 ### Graph
 
@@ -938,6 +961,7 @@ logs are only readable from a fixed list of known locations.
 | Downloads (default) | `~/.local/share/cp2077-modmanager/downloads/` |
 | Staged copies of mods | `~/.local/share/cp2077-modmanager/staging/` |
 | Backed-up game files | `~/.local/share/cp2077-modmanager/backups/` |
+| Archive load order set in Netrunner | `archive/pc/mod/modlist.txt` in the game folder; a `modlist.txt` that was there before: `~/.local/share/cp2077-modmanager/backups/modlist-<game id>.txt` |
 | Linux setup records and backups | `~/.local/share/cp2077-modmanager/setup/<game>/` |
 | ReShade setups from reshade.me | `~/.local/share/cp2077-modmanager/reshade/` |
 | Saved Nexus pages | `~/.cache/cp2077-modmanager/nexus/` |

@@ -14,6 +14,8 @@
   let modNames = new Map();
   let gameId = null;
   let archives = []; // loaded archives from mods, in load order
+  let orderView = null; // load_order_view: every archive in the folders, managed or not
+  let editing = null; // archive/pc/mod file names in the order being edited
 
   // Keys are unique per node: the folder path, prefixed by the mod in the
   // "by mod" view where the same folder appears under several mods.
@@ -69,6 +71,8 @@
     archives = [];
     collect(tree.root, (f) => f.load_pos != null, archives);
     archives.sort((a, b) => a.load_pos - b.load_pos);
+    editing = null;
+    orderView = group === "order" ? await invoke("load_order_view", { gameId: currentGame.id }).catch(() => null) : null;
     index(tree.root, null, "");
     if (!byKey.has(selected)) selected = "";
     render();
@@ -85,15 +89,7 @@
     const box = $("#net-tree");
     $("#net-sort").classList.toggle("hidden", group === "order");
     if (group === "order") {
-      const redmods = archives.filter((f) => f.redmod).length;
-      box.replaceChildren(el("div", { class: "net-order-info" },
-        el("p", {}, el("b", {}, "Order: "), tree.load_order === "modlist"
-          ? "archive/pc/mod/modlist.txt (not written by CPMX2077), then unlisted archives by file name."
-          : "file name, byte order (! and _ and uppercase before lowercase). Game default."),
-        el("p", {}, `${archives.length - redmods} archive${archives.length - redmods === 1 ? "" : "s"} in archive/pc/mod`,
-          redmods ? `, then ${redmods} REDmod archive${redmods === 1 ? "" : "s"} (loaded after all archive/pc/mod archives)` : "", "."),
-        el("p", { class: "muted" }, "First loaded wins: when two archives contain the same resource, the lower number is used. "
-          + "Win and lose counts come from the compatibility index; click one for the archives involved.")));
+      box.replaceChildren(orderInfo());
       return;
     }
     if (!tree.root.file_count) {
@@ -184,9 +180,9 @@
     const rows = [];
     let total;
     if (group === "order") {
-      const hits = query ? archives.filter((f) => f.path.toLowerCase().includes(query) || (modNames.get(f.mod_id) || "").toLowerCase().includes(query)) : archives;
-      total = hits.length;
-      for (const f of hits.slice(0, ROW_LIMIT)) rows.push(fileRow(f));
+      const slots = orderSlots().filter((sl) => !query || sl.path.toLowerCase().includes(query) || (sl.mod_name || "").toLowerCase().includes(query));
+      total = slots.length;
+      for (const sl of slots.slice(0, ROW_LIMIT)) rows.push(orderRow(sl));
     } else if (query) {
       const hits = [];
       collect(tree.root, (f) => f.path.toLowerCase().includes(query) || (modNames.get(f.mod_id) || "").toLowerCase().includes(query), hits);
@@ -199,7 +195,7 @@
     }
     $("#net-rows").replaceChildren(...rows);
     const empty = $("#net-empty");
-    if (!total) empty.textContent = query ? "Nothing matches." : group === "order" ? "No enabled mod installs a loaded .archive file." : "This folder is empty.";
+    if (!total) empty.textContent = query ? "Nothing matches." : group === "order" ? "No .archive files in archive/pc/mod or mods/*/archives." : "This folder is empty.";
     else if (total > rows.length) empty.textContent = `Showing ${rows.length} of ${total}. Open a subfolder or search to narrow it down.`;
     empty.classList.toggle("hidden", !(total === 0 || total > rows.length));
   }
@@ -271,12 +267,122 @@
       el("td", {}, fmtSize(f.size)));
   }
 
+  // ---- load order view -------------------------------------------------
+  // Every archive in load order (from the game folder, so archives not
+  // installed by CPMX2077 count too); while editing, the edited order.
+  function orderSlots() {
+    const all = orderView?.slots || archives.map((f) => ({ pos: f.load_pos, path: f.path, name: f.name, source: f.redmod ? "redmod" : "archive", mod_id: f.mod_id, mod_name: modNames.get(f.mod_id) }));
+    if (!editing) return all;
+    const byName = new Map(all.filter((sl) => sl.source === "archive").map((sl) => [sl.name, sl]));
+    const moved = editing.map((n, i) => ({ ...byName.get(n), pos: i + 1 }));
+    return [...moved, ...all.filter((sl) => sl.source !== "archive").map((sl, i) => ({ ...sl, pos: moved.length + i + 1 }))];
+  }
+
+  function archiveNames() {
+    return (orderView?.slots || []).filter((sl) => sl.source === "archive").map((sl) => sl.name);
+  }
+
+  function orderInfo() {
+    const slots = orderView?.slots || [];
+    const redmods = slots.filter((sl) => sl.source === "redmod").length;
+    const plain = slots.length - redmods;
+    const via = !orderView ? "" : orderView.managed
+      ? "archive/pc/mod/modlist.txt, written by CPMX2077. Archives it doesn't list follow, by file name."
+      : orderView.via === "modlist"
+        ? "archive/pc/mod/modlist.txt (not written by CPMX2077), then unlisted archives by file name."
+        : "file name, byte order (! and _ and uppercase before lowercase). Game default.";
+    const actions = editing
+      ? [el("button", { class: "primary", onclick: (e) => busy(e.target, () => saveOrder(editing)) }, "Save order"),
+        el("button", { onclick: () => { editing = null; render(); } }, "Cancel")]
+      : [plain > 1 ? el("button", { onclick: () => { editing = archiveNames(); render(); } }, "Change order") : null,
+        orderView?.managed ? el("button", { onclick: (e) => busy(e.target, resetOrder) }, "Reset to file-name order") : null];
+    return el("div", { class: "net-order-info" },
+      el("p", {}, el("b", {}, "Order: "), via),
+      el("p", {}, `${plain} archive${plain === 1 ? "" : "s"} in archive/pc/mod`,
+        redmods ? `, then ${redmods} REDmod archive${redmods === 1 ? "" : "s"} (loaded after all archive/pc/mod archives)` : "", "."),
+      el("p", { class: "muted" }, editing
+        ? "Drag rows or use ▲ ▼. Only archive/pc/mod archives move; REDmod archives always load after them."
+        : "First loaded wins: when two archives contain the same resource, the lower number is used. "
+          + "Win and lose counts come from the compatibility index; click one for the archives involved."),
+      el("div", { class: "row" }, ...actions.filter(Boolean)));
+  }
+
+  function orderRow(sl) {
+    const f = archives.find((a) => a.path.toLowerCase() === sl.path.toLowerCase());
+    const movable = editing && sl.source === "archive";
+    const tr = f && !editing ? fileRow(f) : el("tr", { class: "net-file" },
+      el("td", { class: "mono", title: sl.path }, sl.name),
+      el("td", { class: "mono muted" }, `${gameName()}/${sl.path.slice(0, sl.path.lastIndexOf("/") + 1)}`),
+      el("td", {}, sl.mod_name || el("span", { class: "muted" }, "not installed by CPMX2077")),
+      el("td", {}, movable ? el("span", { class: "net-move" },
+        el("button", { class: "link", title: "Load earlier", onclick: () => moveArchive(sl.name, -1) }, "▲"),
+        el("button", { class: "link", title: "Load later", onclick: () => moveArchive(sl.name, 1) }, "▼")) : ""),
+      el("td", {}, el("span", { class: "net-load" }, el("span", { class: "mono" }, `#${sl.pos}`),
+        sl.source === "redmod" ? el("span", { class: "badge" }, "REDmod") : null)),
+      el("td", {}, f ? fmtSize(f.size) : ""));
+    if (movable) {
+      tr.draggable = true;
+      tr.classList.add("net-drag");
+      tr.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", sl.name); e.dataTransfer.effectAllowed = "move"; });
+      tr.addEventListener("dragover", (e) => { e.preventDefault(); tr.classList.add("drop"); });
+      tr.addEventListener("dragleave", () => tr.classList.remove("drop"));
+      tr.addEventListener("drop", (e) => {
+        e.preventDefault();
+        const from = e.dataTransfer.getData("text/plain");
+        if (!from || from === sl.name || !editing.includes(from)) return;
+        editing = editing.filter((n) => n !== from);
+        editing.splice(editing.indexOf(sl.name), 0, from);
+        render();
+      });
+    }
+    return tr;
+  }
+
+  function moveArchive(name, step) {
+    const i = editing.indexOf(name);
+    const j = i + step;
+    if (j < 0 || j >= editing.length) return;
+    [editing[i], editing[j]] = [editing[j], editing[i]];
+    render();
+  }
+
+  // Every change to the order goes through this warning.
+  function confirmOrderWrite() {
+    const userFile = orderView && orderView.via === "modlist" && !orderView.managed;
+    return dialog.ask(
+      "This writes archive/pc/mod/modlist.txt. The game then loads archive mods in that order instead of by file name, "
+      + "which changes whose files are used where mods replace the same resources.\n\n"
+      + "The RED modding wiki advises against modlist.txt: mod authors name compatibility patches (_00_, !) to load first, "
+      + "and a custom order can undo that. Archives installed later load after the listed ones, by file name. "
+      + "REDmod archives still load after all of them.\n\n"
+      + (userFile ? "The existing modlist.txt (not written by CPMX2077) is kept in CPMX2077's backups and put back on reset.\n\n" : "")
+      + "Reset to file-name order removes the file again. Saving a profile stores the order with it.",
+      { title: "Change archive load order", kind: "warning", okLabel: "Write modlist.txt", cancelLabel: "Cancel" });
+  }
+
+  async function saveOrder(names) {
+    if (!(await confirmOrderWrite())) return;
+    await invoke("set_load_order", { gameId: currentGame.id, names });
+    editing = null;
+    toast("Load order written to archive/pc/mod/modlist.txt");
+    await runDiagnostics();
+  }
+
+  async function resetOrder() {
+    const ok = await dialog.ask("Remove the modlist.txt written by CPMX2077? Archives then load by file name again"
+      + " (a modlist.txt that was there before is put back).", { title: "Reset load order", kind: "warning", okLabel: "Reset", cancelLabel: "Cancel" });
+    if (!ok) return;
+    await invoke("reset_load_order", { gameId: currentGame.id });
+    toast("Load order reset to file names");
+    await runDiagnostics();
+  }
+
   // "#3", REDmod marker, and the shared-resource wins/losses.
   function loadCell(f) {
     if (f.load_pos == null) return "";
     const contest = f.wins || f.loses
       ? el("button", { class: `link net-contest${f.loses ? " loses" : ""}`, title: "Archives sharing resources with this one",
-        onclick: () => showContest(f) }, [f.wins && `wins ${f.wins}`, f.loses && `loses ${f.loses}`].filter(Boolean).join(" / "))
+        onclick: (e) => busy(e.target, () => showContest(f)) }, [f.wins && `wins ${f.wins}`, f.loses && `loses ${f.loses}`].filter(Boolean).join(" / "))
       : null;
     return el("span", { class: "net-load" }, el("span", { class: "mono" }, `#${f.load_pos}`),
       f.redmod ? el("span", { class: "badge", title: "REDmod archives load after every archive/pc/mod archive" }, "REDmod") : null, contest);
@@ -284,21 +390,37 @@
 
   // The compatibility findings for an archive's shared resources, with each
   // archive's load position.
-  function showContest(f) {
+  async function showContest(f) {
     const findings = (lastDiag?.analysis?.findings || []).filter((x) => x.kind === "resource"
       && x.affected.some((a) => a.title.endsWith(` · ${f.path}`)));
     const pos = new Map(archives.map((a) => [a.path.toLowerCase(), a]));
+    let first = null; // the earliest-loading other archive
     const text = findings.length ? findings.map((x) => {
       const lines = x.affected.map((a) => {
         const [mod, file] = a.title.split(" · ");
         const p = pos.get((file || "").toLowerCase());
+        if (p && p !== f && (!first || p.load_pos < first.load_pos)) first = p;
         return { pos: p?.load_pos ?? Infinity, line: `${p ? `#${p.load_pos}` : "not loaded"}  ${file} (${mod}): ${a.items.length + a.more} resource${a.items.length + a.more === 1 ? "" : "s"}` };
       }).sort((a, b) => a.pos - b.pos).map((l, i) => `${l.line}${i === 0 ? " (used)" : ""}`);
       return `${x.message}\n${lines.join("\n")}`;
     }).join("\n\n")
       : `${f.name}: wins ${f.wins}, loses ${f.loses} shared resources. Click Check again for the per-archive list.`;
-    dialog.message(text, { title: `Load order: ${f.name}`, kind: "info" });
+    const title = `Load order: ${f.name}`;
+    // Only an archive/pc/mod archive losing to another one can be moved ahead.
+    if (!f.loses || f.redmod || !first || first.redmod || first.load_pos > f.load_pos) {
+      const note = f.redmod && f.loses ? "\n\nREDmod archives load after all archive/pc/mod archives; no order change affects that." : "";
+      return dialog.message(text + note, { title, kind: "info" });
+    }
+    const go = await dialog.ask(`${text}\n\nLoad ${f.name} first moves it directly before ${first.name} (#${first.load_pos}).`,
+      { title, kind: "info", okLabel: `Load ${f.name} first`, cancelLabel: "Close" });
+    if (!go) return;
+    if (!orderView) orderView = await invoke("load_order_view", { gameId: currentGame.id });
+    const names = archiveNames().filter((n) => n !== f.name);
+    const at = names.indexOf(first.name);
+    names.splice(at < 0 ? 0 : at, 0, f.name);
+    await saveOrder(names);
   }
+
 
   async function showMod(modId) {
     setGroup("mod");

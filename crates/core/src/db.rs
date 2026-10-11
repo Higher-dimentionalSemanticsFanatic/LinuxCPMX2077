@@ -215,6 +215,10 @@ const MIGRATIONS: &[(&str, &str, &str)] = &[
     ("downloads", "category", "TEXT"),
     // Release channel: 'stable' | 'beta' | 'nightly' (see downloads.rs).
     ("downloads", "channel", "TEXT"),
+    // Archive load order saved with a profile: a JSON list of file names,
+    // '' for the game's default order, NULL for profiles saved before load
+    // order could be changed (applying them leaves the order alone).
+    ("profiles", "load_order", "TEXT"),
 ];
 
 pub struct Db {

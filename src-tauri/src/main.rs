@@ -677,6 +677,42 @@ async fn mod_file_tree(app: AppHandle, game_id: i64, group: file_tree::Group) ->
     .await
 }
 
+/// The archive load order, with each archive's mod (Netrunner › Load order).
+#[tauri::command]
+async fn load_order_view(app: AppHandle, game_id: i64) -> Result<cp2077mm_core::load_order::View> {
+    blocking(move || {
+        let state = app.state::<AppState>();
+        let db = state.db.lock().unwrap();
+        let game = db.game(game_id)?;
+        cp2077mm_core::load_order::view(&db, &game)
+    })
+    .await
+}
+
+/// Write `archive/pc/mod/modlist.txt` in the given order.
+#[tauri::command]
+async fn set_load_order(app: AppHandle, game_id: i64, names: Vec<String>) -> Result<()> {
+    blocking(move || {
+        let state = app.state::<AppState>();
+        let db = state.db.lock().unwrap();
+        let game = db.game(game_id)?;
+        cp2077mm_core::load_order::set(&db, &game, &paths::backups_dir()?, &names)
+    })
+    .await
+}
+
+/// Remove the modlist.txt CPMX2077 wrote (back to file-name order).
+#[tauri::command]
+async fn reset_load_order(app: AppHandle, game_id: i64) -> Result<bool> {
+    blocking(move || {
+        let state = app.state::<AppState>();
+        let db = state.db.lock().unwrap();
+        let game = db.game(game_id)?;
+        cp2077mm_core::load_order::reset(&db, &game, &paths::backups_dir()?)
+    })
+    .await
+}
+
 /// Open a folder of the game install (or its deepest existing parent).
 #[tauri::command]
 async fn open_game_folder(app: AppHandle, game_id: i64, path: String) -> Result<()> {
@@ -1596,6 +1632,9 @@ fn main() {
             analyze_game,
             crash_analysis,
             mod_file_tree,
+            load_order_view,
+            set_load_order,
+            reset_load_order,
             open_game_folder,
             read_log,
             open_log_folder,

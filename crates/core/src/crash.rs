@@ -589,6 +589,10 @@ pub fn analyze(db: &Db, game: &GameRow) -> Result<CrashReport> {
 
     let session_lines: Vec<String> = issues.iter().filter(|i| i.last_session).map(|i| i.line.clone()).collect();
     let mut known_issues = known_issues::check(&known_issues::Context { game_dir, mods: &infos, log_lines: &session_lines });
+    // A modlist.txt CPMX2077 wrote (Load order) is intended.
+    if crate::load_order::managed(db, game)? {
+        known_issues.retain(|i| i.id != "modlist-txt");
+    }
     known_issues.extend(crate::ultraplus::known_issues(game_dir, &infos, &crate::ultraplus::saved(db)));
     known_issues.sort_by_key(|i| i.severity);
     Ok(CrashReport { logs, issues, latest_crash, suspects, session, timeline, known_issues })

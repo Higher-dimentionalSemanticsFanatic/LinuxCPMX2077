@@ -161,7 +161,11 @@ fn store_enabled(db: &Db, id: i64, game_id: i64) -> Result<()> {
             params![id, mod_key(m), m.archive_name, m.name],
         )?;
     }
-    tx.execute("UPDATE profiles SET updated_at = datetime('now') WHERE id = ?1", [id])?;
+    let order = match crate::load_order::current_managed(db, &db.game(game_id)?)? {
+        Some(names) => serde_json::to_string(&names)?,
+        None => String::new(),
+    };
+    tx.execute("UPDATE profiles SET updated_at = datetime('now'), load_order = ?2 WHERE id = ?1", params![id, order])?;
     tx.commit()?;
     Ok(())
 }
@@ -239,6 +243,19 @@ pub fn apply(inst: &Installer, id: i64) -> Result<ApplyReport> {
             Err(e) => r.failed.push((name, e.to_string())),
         }
     }
+    // The archive load order saved with the profile.
+    let game = inst.db.game(game_of(inst.db, id)?)?;
+    let order: Option<String> = inst.db.conn.query_row("SELECT load_order FROM profiles WHERE id = ?1", [id], |r| r.get(0))?;
+    match order.as_deref() {
+        None => {}
+        Some("") => {
+            crate::load_order::reset(inst.db, &game, &inst.backups_root)?;
+        }
+        Some(json) => {
+            let names: Vec<String> = serde_json::from_str(json)?;
+            crate::load_order::set(inst.db, &game, &inst.backups_root, &names)?;
+        }
+    }
     Ok(r)
 }
 
@@ -255,6 +272,8 @@ pub fn apply_stock(inst: &Installer, game_id: i64) -> Result<ApplyReport> {
             Err(e) => r.failed.push((m.name, e.to_string())),
         }
     }
+    let game = inst.db.game(game_id)?;
+    crate::load_order::reset(inst.db, &game, &inst.backups_root)?;
     Ok(r)
 }
 
@@ -403,5 +422,34 @@ mod tests {
         // The exact file is installed: only it is enabled.
         let p = plan_for(&list, &[m(1, "A-1.0.zip", "disabled"), m(2, "A-opt.zip", "installed")]);
         assert_eq!((p.enable, p.disable), (vec![1], vec![2]));
+    }
+
+    #[test]
+    fn profiles_carry_the_archive_order() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        let db = Db::open_in_memory().unwrap();
+        let g = game(&db, root.join("game"));
+        let inst = Installer { db: &db, staging_root: root.join("staging"), backups_root: root.join("backups"), limits: Limits::default() };
+        install(&inst, &g, root, "A", None, "x");
+        install(&inst, &g, root, "B", None, "x");
+        let default = create(&db, g.id, "2.3", "Default").unwrap();
+        crate::load_order::set(&db, &g, &inst.backups_root, &["B-x.archive".to_string()]).unwrap();
+        let ordered = create(&db, g.id, "2.3", "Ordered").unwrap();
+        // A profile from before load order could be changed leaves it alone.
+        db.conn.execute("UPDATE profiles SET load_order = NULL WHERE id = ?1", [default]).unwrap();
+        apply(&inst, default).unwrap();
+        assert!(crate::load_order::managed(&db, &g).unwrap());
+
+        db.conn.execute("UPDATE profiles SET load_order = '' WHERE id = ?1", [default]).unwrap();
+        apply(&inst, default).unwrap();
+        assert!(!crate::load_order::managed(&db, &g).unwrap());
+        assert!(!Path::new(&g.path).join("archive/pc/mod/modlist.txt").exists());
+
+        apply(&inst, ordered).unwrap();
+        let ml = crate::load_order::read_modlist(Path::new(&g.path)).unwrap();
+        assert_eq!(ml, vec!["B-x.archive".to_string(), "A-x.archive".to_string()]);
+        apply_stock(&inst, g.id).unwrap();
+        assert!(!crate::load_order::managed(&db, &g).unwrap());
     }
 }
