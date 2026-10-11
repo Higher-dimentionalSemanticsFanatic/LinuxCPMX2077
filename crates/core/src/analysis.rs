@@ -520,7 +520,7 @@ pub struct Node {
     pub label: String,
     #[serde(rename = "type")]
     pub node_type: NodeType,
-    /// For mods: their id; otherwise None.
+    /// For mods (and frameworks installed as mods): their id; otherwise None.
     pub mod_id: Option<i64>,
     pub missing: bool,
     pub detail: Vec<String>,
@@ -923,11 +923,15 @@ pub fn report_for_game(db: &crate::db::Db, staging_root: &Path, game: &crate::db
         }
     };
     let mut indexes = Vec::new();
+    let mut fw_mods = Vec::new();
     for m in db.mods(game.id)?.into_iter().filter(|m| m.enabled()) {
         let touches = if db.index_version(m.id)? == Some(SCANNER_VERSION) { db.touches(m.id)? } else { index_mod(db, staging_root, m.id)? };
+        if let Some(k) = crate::dependencies::framework_of(&m) {
+            fw_mods.push((m.id, k));
+        }
         indexes.push((m.id, m.name, touches));
     }
-    Ok(build_report(game_dir, &base, &indexes))
+    Ok(build_report(game_dir, &base, &indexes, &fw_mods))
 }
 
 /// The same report from what's already stored, without writing anything.
@@ -936,24 +940,58 @@ pub fn report_from_index(db: &crate::db::Db, game: &crate::db::GameRow) -> Resul
     let base = db.base_resources(game.id, &build_key(game))?.unwrap_or_default();
     let mut indexes = Vec::new();
     let mut unindexed = Vec::new();
+    let mut fw_mods = Vec::new();
     for m in db.mods(game.id)?.into_iter().filter(|m| m.enabled()) {
         if db.index_version(m.id)?.is_none() {
             unindexed.push(m.name.clone());
         }
+        if let Some(k) = crate::dependencies::framework_of(&m) {
+            fw_mods.push((m.id, k));
+        }
         indexes.push((m.id, m.name.clone(), db.touches(m.id)?));
     }
-    Ok((build_report(Path::new(&game.path), &base, &indexes), unindexed))
+    Ok((build_report(Path::new(&game.path), &base, &indexes, &fw_mods), unindexed))
 }
 
 fn build_key(game: &crate::db::GameRow) -> String {
     game.build_id.clone().or(game.exe_file_version.clone()).unwrap_or_else(|| "unknown".into())
 }
 
-fn build_report(game_dir: &Path, base: &BTreeSet<u64>, indexes: &[(i64, String, Vec<Touch>)]) -> Report {
+fn build_report(game_dir: &Path, base: &BTreeSet<u64>, indexes: &[(i64, String, Vec<Touch>)], fw_mods: &[(i64, &str)]) -> Report {
     let frameworks: BTreeSet<String> =
         crate::game::detect_frameworks(game_dir).into_iter().filter(|f| f.installed).map(|f| f.id).collect();
     let views: Vec<ModIndex> = indexes.iter().map(|(id, name, t)| ModIndex { mod_id: *id, name, touches: t }).collect();
-    analyze(&views, base, &frameworks)
+    let mut report = analyze(&views, base, &frameworks);
+    merge_framework_nodes(&mut report.graph, fw_mods);
+    report
+}
+
+/// An installed framework (RED4ext from Nexus, say) would otherwise show
+/// twice: as its own mod node and as the `fw:` node other mods require.
+/// Fold the mod node into the framework node.
+pub fn merge_framework_nodes(g: &mut Graph, fw_mods: &[(i64, &str)]) {
+    for &(mod_id, key) in fw_mods {
+        let mid = format!("mod:{mod_id}");
+        let fid = format!("fw:{key}");
+        let Some(pos) = g.nodes.iter().position(|n| n.id == mid) else { continue };
+        let mod_node = g.nodes.remove(pos);
+        match g.nodes.iter_mut().find(|n| n.id == fid) {
+            Some(n) => {
+                n.mod_id = Some(mod_id);
+                n.missing = false;
+            }
+            None => g.nodes.push(Node { id: fid.clone(), label: framework_name(key).to_string(), node_type: NodeType::Framework, mod_id: Some(mod_id), missing: false, detail: mod_node.detail }),
+        }
+        for e in g.edges.iter_mut() {
+            if e.from == mid {
+                e.from = fid.clone();
+            }
+            if e.to == mid {
+                e.to = fid.clone();
+            }
+        }
+        g.edges.retain(|e| e.from != e.to);
+    }
 }
 
 #[cfg(test)]
@@ -1124,4 +1162,21 @@ protected cb func OnAction(action: ListenerAction) -> Bool { return true; }
         let big = Affected::new("x", (0..AFFECTED_CAP + 5).map(|i| i.to_string()));
         assert_eq!((big.items.len(), big.more), (AFFECTED_CAP, 5));
     }
+
+    #[test]
+    fn installed_framework_mod_merges_into_framework_node() {
+        let t = |kind, key: &str, file: &str| Touch { kind, key: key.into(), file: file.into() };
+        let a = vec![t(Kind::Requires, "red4ext", "r6/scripts/a.reds")];
+        let fw = vec![t(Kind::Requires, "redscript", "red4ext/plugins/x.dll")];
+        let mods = [ModIndex { mod_id: 1, name: "A", touches: &a }, ModIndex { mod_id: 9, name: "RED4ext 1.27", touches: &fw }];
+        let mut r = analyze(&mods, &BTreeSet::new(), &["red4ext".to_string()].into_iter().collect());
+        merge_framework_nodes(&mut r.graph, &[(9, "red4ext")]);
+        let g = &r.graph;
+        assert!(!g.nodes.iter().any(|n| n.id == "mod:9"));
+        let n = g.nodes.iter().find(|n| n.id == "fw:red4ext").unwrap();
+        assert_eq!(n.mod_id, Some(9));
+        assert!(g.edges.iter().any(|e| e.from == "mod:1" && e.to == "fw:red4ext"));
+        assert!(g.edges.iter().any(|e| e.from == "fw:red4ext" && e.to == "fw:redscript"));
+    }
+
 }

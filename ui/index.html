@@ -321,26 +321,23 @@
       </header>
       <div id="nexus-progress" class="progress hidden"><div class="progress-bar"></div><span class="progress-text"></span></div>
       <div id="source-nexus">
-      <div id="nxm-prompt" class="card finding info hidden">
-        <p>Downloads you start on nexusmods.com in your normal browser don't reach CPMX2077 yet. Downloads from CPMX2077's own Nexus window work either way.</p>
-        <div class="row">
-          <button id="nxm-prompt-yes" class="primary">Send Nexus downloads to CPMX2077</button>
-          <button id="nxm-prompt-no">Not now</button>
-        </div>
-      </div>
       <div id="nexus-login" class="card">
-        <p>Sign in on nexusmods.com in your browser and approve this app. Your password never passes through the manager.</p>
-        <div class="row">
-          <button id="sso-login" class="primary">Sign in with Nexus Mods</button>
-          <button id="sso-cancel" class="hidden">Cancel</button>
-          <span id="sso-note" class="muted"></span>
-        </div>
-        <h3>Or use an API key</h3>
-        <p>Paste your personal API key from <b>nexusmods.com → Site preferences → API Keys</b>.
-           It's checked with Nexus and stored in your system keyring, never in a plain file.</p>
+        <h3>Connect with an API key</h3>
+        <p>Copy your personal API key from <b>nexusmods.com → Site preferences → API Keys</b> and paste it here.
+           It is checked with Nexus and stored in the system keyring, not in a file.</p>
         <div class="row">
           <input id="api-key" type="password" placeholder="Nexus API key" autocomplete="off">
-          <button id="save-key">Connect</button>
+          <button id="save-key" class="primary">Connect</button>
+          <button id="open-api-keys">Open Nexus API keys page</button>
+        </div>
+        <div id="sso-block" class="hidden">
+          <h3>Or sign in through the browser</h3>
+          <p>Approve CPMX2077 on nexusmods.com. The password is entered on nexusmods.com only.</p>
+          <div class="row">
+            <button id="sso-login">Sign in with Nexus Mods</button>
+            <button id="sso-cancel" class="hidden">Cancel</button>
+            <span id="sso-note" class="muted"></span>
+          </div>
         </div>
       </div>
       <div id="nexus-user" class="card hidden"></div>

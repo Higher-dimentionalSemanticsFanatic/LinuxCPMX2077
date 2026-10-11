@@ -131,6 +131,14 @@ fn framework_mod<'a>(mods: &'a [ModRow], by_nexus: &HashMap<i64, &'a ModRow>, ke
         .or_else(|| mods.iter().find(|m| m.source_ref.as_deref().zip(*repo).is_some_and(|(r, f)| r.eq_ignore_ascii_case(f))))
 }
 
+/// The framework key (`cet`, `red4ext`, ...) an installed mod is, if any.
+pub fn framework_of(m: &ModRow) -> Option<&'static str> {
+    FRAMEWORKS.iter().find(|f| f.2.is_some() && f.2 == m.nexus_mod_id).map(|f| f.0).or_else(|| {
+        let r = m.source_ref.as_deref()?;
+        FRAMEWORKS.iter().find(|f| f.3.is_some_and(|repo| repo.eq_ignore_ascii_case(r))).map(|f| f.0)
+    })
+}
+
 fn state_of(m: Option<&ModRow>, present: bool) -> (DepState, Option<i64>) {
     match m {
         Some(m) if m.enabled() => (DepState::Installed, Some(m.id)),

@@ -74,7 +74,7 @@ function tourSteps() {
     body: () => [
       nexusUser
         ? `Connected: ${nexusUser.name} (${nexusUser.is_premium ? "Premium" : "Free"}).`
-        : "Not connected. Copy the personal API key from nexusmods.com › Site preferences › API Keys, paste it into the field and click Connect.",
+        : "Not connected. Open Nexus API keys page opens the key list on nexusmods.com; paste the personal API key into the field and click Connect.",
       "The key is verified with Nexus and stored in the system keyring, not in a file.",
       el("ul", {},
         el("li", {}, el("b", {}, "Free"), ": Get from Nexus opens the file page in the in-app Nexus window. Click Slow download there; the download is caught, checked and installed."),

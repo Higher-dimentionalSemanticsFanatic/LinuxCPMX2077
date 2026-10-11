@@ -411,15 +411,26 @@ function countsLine(c) {
     .filter(Boolean).join(" · ");
 }
 
+// Which required mods are missing and why: their state in the download
+// queue, or not installed.
+function missingList(t) {
+  const list = t.mods.filter((m) => m.state === "missing" && !m.optional);
+  if (!list.length) return null;
+  return el("details", { class: "affected" },
+    el("summary", {}, el("span", { class: "badge bad" }, `${list.length} required missing`)),
+    el("ul", { class: "affected-items" }, ...list.map((m) => el("li", {}, el("b", {}, m.mod_name), " ",
+      el("span", { class: "muted small" }, queueNote(m.mod_id) || "not installed")))));
+}
+
 function trackedRow(t) {
   return el("div", { class: "file" },
     el("div", {},
       el("b", {}, t.name), " ",
-      t.update_available ? el("span", { class: "badge ok" }, `revision ${t.latest_revision} is out`) : null, " ",
-      t.counts.missing_required ? el("span", { class: "badge bad" }, `${t.counts.missing_required} required missing`) : null,
+      t.update_available ? el("span", { class: "badge ok" }, `revision ${t.latest_revision} is out`) : null,
       el("div", { class: "muted small" }, [t.author && `by ${t.author}`, t.revision && `you have revision ${t.revision}`,
         t.game_version && `made for game ${t.game_version}`, plural(t.mods.length, "mod")].filter(Boolean).join(" · ")),
-      el("div", { class: "muted small" }, countsLine(t.counts))),
+      el("div", { class: "muted small" }, countsLine(t.counts)),
+      missingList(t)),
     el("div", { class: "actions" },
       el("button", { class: t.update_available ? "update" : "", onclick: (e) => busy(e.target, () => showCollection(t.slug)) },
         t.update_available ? "See what changed" : "Open"), " ",
@@ -520,8 +531,24 @@ const STATE_BADGE = {
   missing: () => el("span", { class: "badge bad" }, "missing"),
 };
 
+// The collection on screen, redrawn as its queued mods finish.
+let openCollection = null; // { slug, revision }
+let collectionTimer = null;
+window.collectionQueueTick = () => {
+  clearTimeout(collectionTimer);
+  collectionTimer = setTimeout(() => busy(null, async () => {
+    if (!$("#tab-modpacks").classList.contains("active")) return;
+    if (openCollection && !$("#coll-detail").classList.contains("hidden")) {
+      const { slug, revision } = openCollection;
+      const v = await invoke("collection_view", { gameId: currentGame.id, slug, revision });
+      if (openCollection?.slug === slug && !$("#coll-detail").classList.contains("hidden")) renderCollection(v);
+    } else if (!$("#modpacks-main").classList.contains("hidden")) await renderTracked();
+  }), 600);
+};
+
 function renderCollection(v) {
   const c = v.collection;
+  openCollection = { slug: c.slug, revision: c.revision };
   const gameId = currentGame.id;
   const seed = (m) => ({ kind: "nexus", name: m.mod_name, modId: m.mod_id, fileId: m.file_id });
   const replaceSeed = (m) => ({ ...seed(m), replaces: m.installed_id });
@@ -547,7 +574,8 @@ function renderCollection(v) {
     el("div", {},
       el("b", {}, m.mod_name), " ",
       m.optional ? el("span", { class: "badge" }, "optional") : null, " ",
-      STATE_BADGE[m.state]?.(m),
+      STATE_BADGE[m.state]?.(m), " ",
+      m.state === "missing" && queueNote(m.mod_id) ? el("span", { class: "muted small" }, queueNote(m.mod_id)) : null,
       el("div", { class: "muted mono" }, [m.file_name, m.version && `v${m.version}`].filter(Boolean).join(" · "))),
     el("div", { class: "actions" },
       el("button", { onclick: (e) => busy(e.target, async () => {

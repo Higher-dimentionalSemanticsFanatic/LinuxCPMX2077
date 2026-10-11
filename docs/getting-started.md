@@ -82,19 +82,20 @@ example RED4ext before the plugins that need it).
 
 Open **Get mods**.
 
-1. On nexusmods.com go to *Site preferences → API Keys* and copy your
-   personal API key.
-2. Paste it into **Or use an API key** and click **Connect**.
+1. Click **Open Nexus API keys page** (or on nexusmods.com go to *Site
+   preferences → API Keys*) and copy your personal API key.
+2. Paste it into **Connect with an API key** and click **Connect**.
 
 The key is checked with Nexus and stored in your system keyring (GNOME
 Keyring, KWallet, or another Secret Service provider), never in a file. Your
 name and account type (Free or Premium) then appear at the top of the tab.
 
-When CPMX2077 asks whether to **Send Nexus downloads to CPMX2077**, say yes
-if you also want the "Mod Manager Download" buttons in your normal browser
-to land in the app. You can change this later in Settings.
+With a free account, the line under your name has **Send Nexus downloads to
+CPMX2077**: click it if you also want the "Mod Manager Download" buttons in
+your normal browser to land in the app. You can change this later in
+Settings.
 
-> "Sign in with Nexus Mods" (browser sign-in) only works once Nexus has
+> "Sign in with Nexus Mods" (browser sign-in) appears only once Nexus has
 > registered the app. Until then, the API key is the way in.
 
 ## 5. Let the app fix the Linux side

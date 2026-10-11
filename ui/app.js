@@ -1130,14 +1130,11 @@ async function refreshNexus() {
   box.classList.toggle("hidden", !s.user);
   if (s.user) {
     // replaceChildren would show a null as the text "null".
-    box.replaceChildren(...[
+    box.replaceChildren(
       el("b", {}, s.user.name), " ",
-      el("span", { class: "badge" }, s.user.is_premium ? "Premium" : "Free account"), " ",
-      s.user.is_premium ? null : el("p", { class: "muted" },
-        "Nexus only lets Premium accounts download straight through apps like this one. With a free account, "
-        + "“Get from Nexus” opens the file on Nexus in a CPMX2077 window instead: sign in there once, click "
-        + "“Slow download” and wait for the short countdown. CPMX2077 then downloads, checks and installs the file by itself."),
-    ].filter(Boolean));
+      el("span", { class: "badge" }, s.user.is_premium ? "Premium" : "Free account"),
+      el("div", { id: "nexus-note", class: "row hidden" }),
+    );
     loadCategories().catch(() => {});
   }
   refreshNxmStatus().catch(() => {});
@@ -1154,9 +1151,13 @@ $("#save-key").addEventListener("click", (e) => busy(e.target, async () => {
 async function refreshSso() {
   const slug = await invoke("nexus_sso_slug");
   $("#sso-slug").value = slug || "";
-  $("#sso-login").disabled = !slug;
-  $("#sso-note").textContent = slug ? "" : "Browser sign-in needs a Nexus application slug (Settings).";
+  // Browser sign-in needs a Nexus-issued application slug; until one is
+  // set, the API key is the only way in, so the option is not shown.
+  $("#sso-block").classList.toggle("hidden", !slug);
 }
+
+$("#open-api-keys").addEventListener("click", (e) => busy(e.target, () =>
+  invoke("open_web_link", { url: "https://www.nexusmods.com/users/myaccount?tab=api" })));
 
 $("#sso-login").addEventListener("click", (e) => busy(e.target, async () => {
   $("#sso-cancel").classList.remove("hidden");
@@ -1188,25 +1189,39 @@ async function refreshNxmStatus() {
   $("#nxm-status").textContent = st.registered ? "CPMX2077 handles nxm:// links."
     : st.handler ? `Right now they go to ${st.handler}.` : "No app handles nxm:// links right now.";
   $("#register-nxm").textContent = st.registered ? "Set up again" : "Handle nxm:// links";
-  const ask = nexusUser && !nexusUser.is_premium && !st.registered && !loadPref("nxmPromptDismissed", false);
-  $("#nxm-prompt").classList.toggle("hidden", !ask);
+  renderNexusNote(st);
   return st;
+}
+
+// Free accounts: one line on how downloads work, with the nxm:// handler
+// button while browser downloads don't reach the app. "Hide" keeps it hidden.
+function renderNexusNote(st) {
+  const note = $("#nexus-note");
+  if (!note) return;
+  const show = nexusUser && !nexusUser.is_premium && !loadPref("nexusNoteHidden", false);
+  note.classList.toggle("hidden", !show);
+  if (!show) return;
+  const nxm = !st.registered;
+  note.replaceChildren(...[
+    el("span", { class: "muted" }, "Free account: “Get from Nexus” opens the file page in a CPMX2077 window; "
+      + "“Slow download” there starts the download, check and install."
+      + (nxm ? " Downloads started in the system browser are not sent to CPMX2077." : "")),
+    nxm ? el("button", { onclick: (e) => busy(e.target, registerNxm) }, "Send Nexus downloads to CPMX2077") : null,
+    el("button", { class: "link", title: "Hide this note", onclick: () => {
+      savePref("nexusNoteHidden", true);
+      note.classList.add("hidden");
+    } }, "Hide"),
+  ].filter(Boolean));
 }
 
 async function registerNxm() {
   const st = await invoke("register_nxm_handler");
-  savePref("nxmPromptDismissed", false);
   await refreshNxmStatus();
   if (!st.registered) throw `Your desktop still sends nxm:// links to ${st.handler || "no app"}. Set CPMX2077 as their handler in your desktop's default-apps settings.`;
   toast("Nexus downloads from your browser now come to CPMX2077");
 }
 
 $("#register-nxm").addEventListener("click", (e) => busy(e.target, registerNxm));
-$("#nxm-prompt-yes").addEventListener("click", (e) => busy(e.target, registerNxm));
-$("#nxm-prompt-no").addEventListener("click", () => {
-  savePref("nxmPromptDismissed", true);
-  $("#nxm-prompt").classList.add("hidden");
-});
 
 // Free accounts: the file's Nexus page in a CPMX2077 window, which catches
 // the nxm:// link itself.
@@ -2646,12 +2661,19 @@ async function runChoices() {
   runChoices();
 }
 
+// A Nexus mod's state in the download queue ("failed: …"), or "".
+function queueNote(modId) {
+  const it = [...queue.items].reverse().find((q) => q.kind === "nexus" && q.modId === modId);
+  return it ? `${Q_LABEL[it.state]}${it.note ? `: ${it.note}` : ""}` : "";
+}
+
 let queueClearTimer = null;
 function finishItem(it, state, note = "") {
   it.state = state;
   it.note = note || "";
   it.progress = null;
   renderQueue();
+  window.collectionQueueTick?.();
   runChoices();
   if (queue.items.length && queue.items.every((q) => FINISHED.has(q.state))) {
     const c = (s) => queue.items.filter((q) => q.state === s).length;

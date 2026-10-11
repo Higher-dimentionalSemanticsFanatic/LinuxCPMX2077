@@ -439,10 +439,16 @@ connected Nexus account for collections.
     collection lists;
   - **Follow** tracks the collection without installing anything;
     **Open on nexusmods.com** opens its page.
+  While queued mods download and install, each missing mod's row shows its
+  queue state (*downloading*, *waiting for FOMOD selections*, *failed: …*)
+  and the list updates as each one finishes.
   Mods the collection lists from outside Nexus are named so you can get them
   by hand. Collection load order and bundled settings files are not applied
   yet.
 - **Collections you follow**: installing from a collection follows it.
+  **N required missing** opens the list of required mods not installed,
+  each with its queue state or *not installed* (a failed install shows the
+  reason).
   **Check for updates** asks Nexus for new revisions; **See what changed**
   shows what a revision adds, changes and drops, with one button to update.
   **Stop following** leaves its mods installed.
@@ -515,7 +521,9 @@ files or mods installed by hand.
 
 How your mods connect: mods, the frameworks they need, game classes, tweak
 records and resources they touch, and the base game. Clashes are drawn in
-red.
+red. A framework you installed through the app (CET, RED4ext, redscript,
+ArchiveXL, TweakXL, Codeware, matched by Nexus id or GitHub repository) is
+one *Framework* node, not a mod node plus a framework node.
 
 - **Layout**: *Web* (force layout) or *Flowchart* (left to right).
 - **Group by** gathers nodes into groups: *Node type* (mods, frameworks, game
@@ -613,8 +621,15 @@ Browse and download mods. The switch at the top right picks the source:
 
 ### Nexus Mods
 
-- **Connect**: paste your API key (stored in the system keyring only), or
-  **Sign in with Nexus Mods** once Nexus has registered the app.
+- **Connect with an API key**: paste your API key and click **Connect**
+  (stored in the system keyring only). **Open Nexus API keys page** opens
+  the page on nexusmods.com where the key is listed. **Sign in with Nexus
+  Mods** (browser sign-in) only appears once a Nexus application slug is set
+  in Settings.
+- With a free account, one line under your name says how downloads work
+  (**Get from Nexus**, then **Slow download**). While downloads started in
+  your normal browser don't reach the app, it also has **Send Nexus
+  downloads to CPMX2077**. **Hide** removes the line.
 - **Browse**: search by name, filter by category, sort by best match,
   trending, endorsements, downloads or date. Quick lists: **Trending** (most
   downloaded of the mods added in the last two weeks), **Latest added**,
