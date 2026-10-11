@@ -237,6 +237,29 @@ pub fn plan(files: &[String], mod_name: &str) -> Result<Plan> {
     Err(Error::Other(not_a_game_mod(files)))
 }
 
+/// ReShade presets are `.ini` files too: one planned for the engine config
+/// or the game root (a preset-only archive, or a FOMOD without a folder) is
+/// moved next to the game exe, where ReShade reads presets. Decided by the
+/// file's content (a `Techniques=` line), since the names are arbitrary.
+fn presets_next_to_exe(staged: &Path, plan: &mut Plan) {
+    let mut moved = 0;
+    for f in &mut plan.files {
+        let dir = f.target.rsplit_once('/').map(|(d, _)| d).unwrap_or("");
+        if lower_ext(&f.target) != "ini" || !(dir.is_empty() || dir.eq_ignore_ascii_case(ENGINE_CONFIG_DIR)) {
+            continue;
+        }
+        let path = staged.join(&f.staged);
+        let small = std::fs::metadata(&path).is_ok_and(|m| m.len() <= 1 << 20);
+        if small && std::fs::read(&path).is_ok_and(|b| crate::reshade::is_preset(&String::from_utf8_lossy(&b))) {
+            f.target = format!("bin/x64/{}", file_name(&f.target));
+            moved += 1;
+        }
+    }
+    if moved > 0 && moved == plan.files.len() && plan.layout == "engine-config" {
+        plan.layout = "reshade".into();
+    }
+}
+
 /// Why an archive has nothing to install, in words the user can act on.
 fn not_a_game_mod(files: &[String]) -> String {
     // The shallowest match names the program itself, not a helper tool.
@@ -537,6 +560,12 @@ impl Installer<'_> {
     /// Work out where every file goes, answering FOMOD questions with
     /// `choices` (or the installer's defaults).
     pub fn plan_prepared(&self, game: &GameRow, p: &Prepared, name: &str, choices: Option<&fomod::Selections>) -> Result<Plan> {
+        let mut out = self.plan_prepared_by_name(game, p, name, choices)?;
+        presets_next_to_exe(&p.dir.join("files"), &mut out);
+        Ok(out)
+    }
+
+    fn plan_prepared_by_name(&self, game: &GameRow, p: &Prepared, name: &str, choices: Option<&fomod::Selections>) -> Result<Plan> {
         let Some(fm) = &p.fomod else { return plan(&p.files, name) };
         if fm.variants {
             let sel = choices.unwrap_or(&fm.defaults);

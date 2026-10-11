@@ -549,6 +549,24 @@ impl Client {
         Ok(Commit { sha: sha.to_ascii_lowercase(), date })
     }
 
+    /// Every file path in the repository at commit `sha`.
+    pub fn tree_files(&self, owner: &str, repo: &str, sha: &str) -> Result<Vec<String>> {
+        let (owner, repo) = checked(owner, repo)?;
+        if !is_sha(sha) {
+            return Err(Error::Other(format!("not a commit id: {sha}")));
+        }
+        let v = self.get(&format!("/repos/{owner}/{repo}/git/trees/{sha}"), &[("recursive", "1".into())])?;
+        Ok(v.get("tree")
+            .and_then(Value::as_array)
+            .map(|t| {
+                t.iter()
+                    .filter(|e| e.get("type").and_then(Value::as_str) == Some("blob"))
+                    .filter_map(|e| e.get("path").and_then(Value::as_str).map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default())
+    }
+
     /// Download the source archive (zip) of commit `sha` into `dest_dir`.
     /// GitHub publishes no checksum for these; the commit pins the content.
     pub fn download_commit(&self, owner: &str, repo: &str, sha: &str, dest_dir: &Path, progress: &mut dyn FnMut(u64, u64)) -> Result<Downloaded> {

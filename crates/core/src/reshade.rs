@@ -672,6 +672,33 @@ pub fn install_pack(
     result
 }
 
+/// The listed packs that ship an effect file.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct EffectSource {
+    pub file: String,
+    /// Pack ids; empty when no listed pack has it.
+    pub packs: Vec<&'static str>,
+}
+
+/// Which packs ship each of `files`, given each pack's repository file list
+/// (only files [`install_pack`] would install count).
+pub fn effect_sources(files: &[String], lists: &[(&'static Pack, Vec<String>)]) -> Vec<EffectSource> {
+    let shipped: Vec<(&'static str, std::collections::HashSet<String>)> = lists
+        .iter()
+        .map(|(p, paths)| {
+            let names = pack_layout(paths, p.id).into_iter().map(|(_, t)| file_name_of(&t).to_ascii_lowercase()).collect();
+            (p.id, names)
+        })
+        .collect();
+    files
+        .iter()
+        .map(|f| {
+            let key = file_name_of(f).to_ascii_lowercase();
+            EffectSource { file: f.clone(), packs: shipped.iter().filter(|(_, n)| n.contains(&key)).map(|(id, _)| *id).collect() }
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct PackState {
     #[serde(flatten)]
@@ -747,8 +774,51 @@ fn preset_techniques(text: &str) -> Option<(usize, Vec<String>)> {
     Some((entries.len(), files))
 }
 
+/// Whether an `.ini` file's text is a ReShade preset.
+pub fn is_preset(text: &str) -> bool {
+    preset_techniques(text).is_some()
+}
+
 fn file_name_of(path: &str) -> &str {
     path.rsplit(['/', '\\']).next().unwrap_or(path)
+}
+
+/// Folders under `bin/x64` that never hold presets (and can be large).
+const NOT_PRESET_DIRS: &[&str] = &["reshade-shaders", "plugins", "d3d12", "global_ini"];
+
+/// Preset files: `.ini` files in `bin/x64` and its direct subfolders (some
+/// preset mods use `bin/x64/reshade-presets/`), as paths relative to
+/// `bin/x64` with `/`.
+fn preset_candidates(bin: &Path) -> Vec<(String, PathBuf)> {
+    let mut out = Vec::new();
+    let Ok(rd) = std::fs::read_dir(bin) else { return out };
+    for e in rd.flatten() {
+        let name = e.file_name().to_string_lossy().into_owned();
+        let Ok(t) = e.file_type() else { continue };
+        if t.is_file() && ext_of(&name) == "ini" && !name.eq_ignore_ascii_case(INI) {
+            out.push((name, e.path()));
+        } else if t.is_dir() && !NOT_PRESET_DIRS.iter().any(|d| d.eq_ignore_ascii_case(&name)) {
+            for sub in std::fs::read_dir(e.path()).into_iter().flatten().flatten() {
+                let sname = sub.file_name().to_string_lossy().into_owned();
+                if ext_of(&sname) == "ini" && sub.file_type().is_ok_and(|t| t.is_file()) {
+                    out.push((format!("{name}/{sname}"), sub.path()));
+                }
+            }
+        }
+    }
+    out
+}
+
+/// A `PresetPath` value as a path relative to `bin/x64` with `/`, lower
+/// case, for comparing. ReShade writes it relative (`.\Night.ini`) or, when
+/// chosen in its overlay, sometimes absolute (`Z:\...\bin\x64\Night.ini`).
+fn preset_key(path: &str) -> String {
+    let p = path.trim().replace('\\', "/").to_ascii_lowercase();
+    let p = match p.rfind("/bin/x64/") {
+        Some(i) => p[i + "/bin/x64/".len()..].to_string(),
+        None => p,
+    };
+    p.strip_prefix("./").unwrap_or(&p).to_string()
 }
 
 pub fn presets(db: &Db, game: &GameRow) -> Result<Vec<Preset>> {
@@ -760,28 +830,20 @@ pub fn presets(db: &Db, game: &GameRow) -> Result<Vec<Preset>> {
         .filter(|e| e.file_type().is_file())
         .map(|e| e.file_name().to_string_lossy().to_ascii_lowercase())
         .collect();
-    let active = std::fs::read_to_string(bin.join(INI))
-        .ok()
-        .and_then(|ini| ini_value(&ini, "GENERAL", "PresetPath"))
-        .map(|p| file_name_of(&p).to_ascii_lowercase());
+    let active = std::fs::read_to_string(bin.join(INI)).ok().and_then(|ini| ini_value(&ini, "GENERAL", "PresetPath")).map(|p| preset_key(&p));
     let mut out = Vec::new();
-    let Ok(rd) = std::fs::read_dir(&bin) else { return Ok(out) };
-    for e in rd.flatten() {
-        let name = e.file_name().to_string_lossy().into_owned();
-        if ext_of(&name) != "ini" || name.eq_ignore_ascii_case(INI) || !e.file_type().is_ok_and(|t| t.is_file()) {
+    for (rel, path) in preset_candidates(&bin) {
+        if std::fs::metadata(&path).map(|m| m.len()).unwrap_or(u64::MAX) > MAX_PRESET {
             continue;
         }
-        if e.metadata().map(|m| m.len()).unwrap_or(u64::MAX) > MAX_PRESET {
-            continue;
-        }
-        let Ok(bytes) = std::fs::read(e.path()) else { continue };
+        let Ok(bytes) = std::fs::read(&path) else { continue };
         let Some((techniques, files)) = preset_techniques(&String::from_utf8_lossy(&bytes)) else { continue };
         let missing = files.into_iter().filter(|f| !effects.contains(&file_name_of(f).to_ascii_lowercase())).collect();
-        let owner = db.owners_of(game.id, &format!("{BIN}/{name}"), -1)?.first().map(|f| f.mod_id);
+        let owner = db.owners_of(game.id, &format!("{BIN}/{rel}"), -1)?.first().map(|f| f.mod_id);
         out.push(Preset {
-            active: active.as_deref() == Some(name.to_ascii_lowercase().as_str()),
+            active: active.as_deref() == Some(rel.to_ascii_lowercase().as_str()),
             mod_name: owner.map(|id| db.get_mod(id).map(|m| m.name)).transpose()?,
-            file: name,
+            file: rel,
             techniques,
             missing,
         });
@@ -826,7 +888,7 @@ pub fn set_active_preset(db: &Db, game: &GameRow, file: &str) -> Result<()> {
     }
     let ini_path = bin_file(Path::new(&game.path), INI);
     let ini = std::fs::read_to_string(&ini_path).unwrap_or_else(|_| DEFAULT_INI.to_string());
-    let new = set_ini_value(&ini, "GENERAL", "PresetPath", &format!(".\\{file}"));
+    let new = set_ini_value(&ini, "GENERAL", "PresetPath", &format!(".\\{}", file.replace('/', "\\")));
     let tmp = ini_path.with_extension("ini.cpmx-tmp");
     std::fs::write(&tmp, new)?;
     std::fs::rename(&tmp, &ini_path)?;
@@ -1092,6 +1154,60 @@ pub(crate) mod tests {
 
         let none = zip_at("c.zip", &[("r/readme.md", "x")]);
         assert!(install_pack(&inst, &game, pk, &none, &c2).unwrap_err().to_string().contains("no .fx effects"));
+    }
+
+    #[test]
+    fn finds_presets_from_mods_and_which_pack_has_a_missing_effect() {
+        let (dir, db, game) = setup_game();
+        let gdir = PathBuf::from(&game.path);
+        let inst = installer(&db, dir.path());
+        // A preset-only download: just the .ini and a screenshot.
+        let zip = dir.path().join("preset.zip");
+        {
+            let mut z = zip::ZipWriter::new(std::fs::File::create(&zip).unwrap());
+            let o = zip::write::SimpleFileOptions::default();
+            z.start_file("Night City Nights.ini", o).unwrap();
+            z.write_all(b"PreprocessorDefinitions=\nTechniques=MXAO@qUINT_mxao.fx,Vibrance@Vibrance.fx\nTechniqueSorting=MXAO@qUINT_mxao.fx\n").unwrap();
+            z.start_file("preview.png", o).unwrap();
+            z.write_all(b"png").unwrap();
+            z.finish().unwrap();
+        }
+        let r = inst.install(&game, &zip, InstallOptions { meta: NewMod { name: "Night City Nights".into(), source: "manual".into(), ..Default::default() }, ..Default::default() }).unwrap();
+        assert_eq!(r.layout, "reshade");
+        assert!(gdir.join("bin/x64/Night City Nights.ini").is_file(), "next to the exe, not in engine/config");
+        // A preset in a subfolder, made active by ReShade with an absolute path.
+        std::fs::create_dir_all(gdir.join("bin/x64/reshade-presets")).unwrap();
+        std::fs::write(gdir.join("bin/x64/reshade-presets/Clean.ini"), "Techniques=SMAA@SMAA.fx\n").unwrap();
+        std::fs::write(gdir.join("bin/x64/ReShade.ini"), "[GENERAL]\nPresetPath=Z:\\Games\\Cyberpunk 2077\\bin\\x64\\reshade-presets\\Clean.ini\n").unwrap();
+        let ps = presets(&db, &game).unwrap();
+        assert_eq!(ps.iter().map(|p| p.file.as_str()).collect::<Vec<_>>(), ["Night City Nights.ini", "reshade-presets/Clean.ini"]);
+        assert_eq!(ps[0].mod_name.as_deref(), Some("Night City Nights"));
+        assert_eq!(ps[0].missing, ["qUINT_mxao.fx", "Vibrance.fx"]);
+        assert!(ps[1].active);
+        set_active_preset(&db, &game, "Night City Nights.ini").unwrap();
+        set_active_preset(&db, &game, "reshade-presets/Clean.ini").unwrap();
+        assert!(std::fs::read_to_string(gdir.join("bin/x64/ReShade.ini")).unwrap().contains("PresetPath=.\\reshade-presets\\Clean.ini"));
+        assert!(presets(&db, &game).unwrap()[1].active);
+
+        let lists = vec![
+            (pack("qUINT").unwrap(), vec!["qUINT-x/Shaders/qUINT_mxao.fx".to_string(), "qUINT-x/README.md".to_string()]),
+            (pack("Standard").unwrap(), vec!["s/Shaders/Vibrance.fx".to_string(), "s/Shaders/SMAA.fx".to_string()]),
+            (pack("SweetFX").unwrap(), vec!["s/Shaders/SweetFX/Vibrance.fx".to_string()]),
+        ];
+        let found = effect_sources(&ps[0].missing, &lists);
+        assert_eq!(found[0].packs, ["qUINT"]);
+        assert_eq!(found[1].packs, ["Standard", "SweetFX"]);
+        assert!(effect_sources(&["Nope.fx".into()], &lists)[0].packs.is_empty());
+        // An engine config tweak still goes to engine/config.
+        let cfg = dir.path().join("cfg.zip");
+        {
+            let mut z = zip::ZipWriter::new(std::fs::File::create(&cfg).unwrap());
+            z.start_file("user.ini", zip::write::SimpleFileOptions::default()).unwrap();
+            z.write_all(b"[Rendering]\nFoo = true\n").unwrap();
+            z.finish().unwrap();
+        }
+        let r = inst.install(&game, &cfg, InstallOptions { meta: NewMod { name: "cfg".into(), source: "manual".into(), ..Default::default() }, ..Default::default() }).unwrap();
+        assert_eq!(r.layout, "engine-config");
     }
 
     #[test]

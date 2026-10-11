@@ -86,16 +86,42 @@ function reshadePacks(packs) {
   })));
 }
 
-function reshadePresets(presets) {
+// Preset file → { found: [{ file, packs }], errors } from Find shader packs.
+let reshadeEffectSources = {};
+
+function reshadeMissing(p, packs) {
+  const res = reshadeEffectSources[p.file];
+  if (!res) {
+    return [el("div", { class: "muted small" }, p.missing.join(", ")),
+      el("button", { title: "Look up which listed shader packs ship these effect files (reads each pack's file list on GitHub)",
+        onclick: (e) => busy(e.target, async () => {
+          reshadeEffectSources[p.file] = await invoke("reshade_find_packs", { files: p.missing });
+          loadReShade();
+        }) }, "Find shader packs")];
+  }
+  const byId = Object.fromEntries(packs.map((x) => [x.id, x]));
+  const want = [...new Set(res.found.flatMap((f) => f.packs.slice(0, 1)))].map((id) => byId[id]).filter((x) => x && !x.mod_id);
+  return [
+    el("ul", { class: "small" }, ...res.found.map((f) => el("li", {}, `${f.file}: `,
+      f.packs.length ? f.packs.map((id) => byId[id]?.name || id).join(" or ") : el("span", { class: "muted" }, "not in a listed pack; see the preset's mod page")))),
+    res.errors.length ? el("div", { class: "muted small" }, `File lists not read: ${res.errors.join("; ")}`) : null,
+    ...want.map((x) => el("button", { onclick: (e) => busy(e.target, async () => {
+      await reshadePackInstall(x);
+      delete reshadeEffectSources[p.file];
+    }) }, `Install ${x.name}`)),
+  ];
+}
+
+function reshadePresets(presets, packs) {
   if (!presets.length) {
-    return el("p", { class: "muted small" }, "No presets in bin/x64. ReShade saves one there (ReShadePreset.ini) the first time you change effects in its overlay; preset mods from Nexus install there too.");
+    return el("p", { class: "muted small" }, "No presets in bin/x64 or its subfolders. ReShade saves one there (ReShadePreset.ini) the first time you change effects in its overlay; preset mods install there too.");
   }
   return el("table", { class: "req-table" }, el("tbody", {}, ...presets.map((p) => el("tr", {},
     el("td", {}, p.file, p.mod_name ? el("div", { class: "muted small" }, `from ${p.mod_name}`) : null),
     el("td", {}, `${p.techniques} technique${p.techniques === 1 ? "" : "s"}`),
     el("td", {}, p.missing.length
       ? [el("span", { class: "badge bad" }, `${p.missing.length} effect file${p.missing.length === 1 ? "" : "s"} missing`),
-        el("div", { class: "muted small" }, p.missing.join(", "))]
+        ...reshadeMissing(p, packs)]
       : el("span", { class: "badge ok" }, "all effect files found")),
     el("td", { class: "actions" }, p.active ? el("span", { class: "badge ok" }, "active")
       : el("button", { title: "Set PresetPath in ReShade.ini; ReShade loads it at the next game start",
@@ -186,7 +212,7 @@ function renderReShade(s, launch, packs, presets) {
       "From each author's GitHub repository, pinned to the newest commit. Only shader (.fx, .fxh) and texture files are installed, each pack in its own folder under bin/x64/reshade-shaders. GitHub publishes no checksums for these archives."),
     reshadePacks(packs),
     el("h3", {}, "Presets"),
-    reshadePresets(presets));
+    reshadePresets(presets, packs));
   $("#reshade").replaceChildren(details);
 }
 

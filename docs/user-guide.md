@@ -49,7 +49,7 @@ authors describe, and remembers every file it put there.
      `mods/`;
    - loose `.archive`, `.xl`, `.reds` and tweak files go to their usual
      folders, loose `.ini` files to `engine/config/platform/pc/`, and ReShade
-     presets to `bin/x64/`;
+     presets (an `.ini` with a `Techniques=` line) to `bin/x64/`;
    - an archive holding alternative packs (for example several presets)
      asks which one you want in a **Versions** step;
    - readmes and screenshots are skipped, and downloads that are not game
@@ -439,15 +439,29 @@ with the commit date and id as its version, and **Disable**, **Enable** and
 **Uninstall** next to it. GitHub publishes no checksums for these archives;
 the commit id pins what was installed.
 
-**Presets** lists the ReShade presets in `bin/x64` (`.ini` files with a
-`Techniques=` line), with the mod that installed each one. *N effect files
-missing* names the effect files a preset uses that aren't under
-`reshade-shaders/Shaders`; install the pack that has them (the file names
-usually give it away, for example `qUINT_mxao.fx` is in qUINT). *active* marks
-the preset ReShade loads; **Use** makes another one active by setting
-`PresetPath` in `ReShade.ini`, from the next game start. Preset mods from
-Nexus install their `.ini` into `bin/x64` and their shaders into
-`bin/x64/reshade-shaders`, so they show up here.
+**Presets** lists the ReShade presets in `bin/x64` and its direct subfolders
+(such as `bin/x64/reshade-presets/`): `.ini` files with a `Techniques=`
+line, with the mod that installed each one. *active* marks the preset ReShade
+loads, whether you picked it here or in ReShade's overlay; **Use** makes
+another one active by setting `PresetPath` in `ReShade.ini`, from the next
+game start.
+
+*N effect files missing* names the effect files a preset uses that aren't
+under `reshade-shaders/Shaders`. **Find shader packs** reads each listed
+pack's file list on GitHub and shows which pack has each missing file, with
+an **Install** button for a pack you don't have yet. Files no listed pack
+ships show *not in a listed pack*; the preset's mod page says where to get
+them.
+
+Preset mods install like any other mod. Their `.ini` goes to `bin/x64` and
+their shaders to `bin/x64/reshade-shaders`, so they show up here. A download
+that is only a preset `.ini` (no folders) is recognised by its `Techniques=`
+line and goes to `bin/x64`, not to the engine config folder like other loose
+`.ini` files. A preset mod that bundles its own ReShade (`dxgi.dll`)
+clashes with the ReShade installed here: the install stops and names the
+file, and **Allow overwriting other mods** lets the mod's copy win. A
+`ReShade.ini` in a preset mod replaces the one in the game folder; the old one
+is backed up and comes back when you uninstall the preset mod.
 
 In game, the Home key opens ReShade's overlay.
 

@@ -159,3 +159,30 @@ pub async fn reshade_set_preset(app: AppHandle, game_id: i64, file: String) -> R
     })
     .await
 }
+
+#[derive(Serialize)]
+pub struct EffectSearch {
+    found: Vec<reshade::EffectSource>,
+    /// Packs whose file list couldn't be read.
+    errors: Vec<String>,
+}
+
+/// Which listed shader packs ship the given effect files (a preset's missing
+/// ones), from each pack's file list on GitHub at its newest commit.
+#[tauri::command]
+pub async fn reshade_find_packs(files: Vec<String>) -> Result<EffectSearch> {
+    blocking(move || {
+        let gh = github()?;
+        let mut lists = Vec::new();
+        let mut errors = Vec::new();
+        for p in reshade::PACKS {
+            let (owner, repo) = p.repo.split_once('/').unwrap_or_default();
+            match gh.latest_commit(owner, repo, p.branch).and_then(|c| gh.tree_files(owner, repo, &c.sha)) {
+                Ok(paths) => lists.push((p, paths)),
+                Err(e) => errors.push(format!("{}: {e}", p.name)),
+            }
+        }
+        Ok(EffectSearch { found: reshade::effect_sources(&files, &lists), errors })
+    })
+    .await
+}
