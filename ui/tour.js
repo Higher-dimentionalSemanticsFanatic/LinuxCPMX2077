@@ -95,6 +95,19 @@ function tourSteps() {
       ],
     },
     {
+      title: "Mod profiles per game version",
+      tab: "mods",
+      target: () => visible("#version-ribbon") ? "#version-ribbon" : "#tab-mods > header",
+      body: [
+        "Game version and profiles: one column per game version seen, oldest on the left. A profile is a named list of enabled mods plus the archive load order, filed as a chip under the game version it was saved on.",
+        el("ul", {},
+          el("li", {}, el("b", {}, "+ Profile"), ": saves the enabled mods and the load order under the current game version."),
+          el("li", {}, el("b", {}, "Profile chip"), ": Apply enables its mods, disables every other installed mod and restores its load order. Also Update from enabled mods, Rename, Delete. A green dot marks the profile that matches the enabled mods."),
+          el("li", {}, el("b", {}, "Stock chip"), " (current version, “stock · no mods”): Apply disables every mod and resets the load order. Enabled mods that match no profile are offered as a Before stock profile first.")),
+        "After a game update, profiles stay under the old version and can still be applied; the confirmation names both versions, since mods may need updates.",
+      ],
+    },
+    {
       title: "Netrunner",
       target: () => '#sidebar nav button[data-tab="netrunner"]',
       body: [
@@ -192,7 +205,7 @@ function onTourMove() {
 }
 
 // Outline the step's element, dim the rest with four blockers around it, and
-// put the card next to it (right, below, above, or centred if it won't fit).
+// put the card next to it (right, below, above, or over its right end).
 // `reveal`: scroll the element into view (on a new step, not after a user
 // scroll, which would undo it).
 function placeTour(reveal = false) {
@@ -232,7 +245,8 @@ function placeTour(reveal = false) {
   if (x1 + gap + cw <= W - 16) { x = x1 + gap; y = clampY(y0); }
   else if (y1 + gap + ch <= H - 16) { x = clampX(x0); y = y1 + gap; }
   else if (y0 - gap - ch >= 16) { x = clampX(x0); y = y0 - gap - ch; }
-  else { x = clampX((W - cw) / 2); y = clampY((H - ch) / 2); }
+  // No room beside it: overlap its right end (lists and the ribbon start left).
+  else { x = W - cw - 16; y = clampY(y1 - ch); }
   card.style.left = `${x}px`;
   card.style.top = `${y}px`;
 }

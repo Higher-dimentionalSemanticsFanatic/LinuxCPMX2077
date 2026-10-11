@@ -31,7 +31,8 @@ When a newer release is out, a notice at the top of the window links to it
 
 On the first start an **introduction tour** opens: a few steps that outline
 the Game panel, the tabs, the Nexus account box, **Install missing
-frameworks** and (on Linux) the setup fixes. **Next** and **Back** step
+frameworks**, (on Linux) the setup fixes and the mod profiles under each
+game version. **Next** and **Back** step
 through it (or the arrow keys); **Skip tour** or Esc closes it. It opens
 once; **Settings → Introduction tour → Start tour** shows it again. This
 guide covers the same steps in more detail.
