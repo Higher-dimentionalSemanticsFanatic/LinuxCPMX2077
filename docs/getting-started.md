@@ -60,7 +60,9 @@ the Proton prefix.
 
 Under **Frameworks** you see which of CET, RED4ext, redscript, ArchiveXL,
 TweakXL, Codeware and REDmod are already in the game folder. Highlighted
-names are installed.
+names are installed. The switch next to **REDmod** enables or disables
+REDmod mods (Steam, with Steam closed), so you never need CD Projekt's
+launcher and its Enable mods setting.
 
 The **First setup** checklist at the top of **Installed mods** lists the
 next steps (frameworks, Linux setup, Nexus account), each with its button,
@@ -107,11 +109,11 @@ each with a button that fixes it and, once fixed, an **Undo** button:
 | Item (button) | What the fix does |
 |---|---|
 | **Visual C++ runtime** (*Install vcrun2022*) | Installs `vcrun2022` into the game's prefix with protontricks (or winetricks with the game's own Proton). CET and RED4ext do not start without it. This can take a few minutes. |
-| **Steam launch options** (*Set launch options*) | Sets `WINEDLLOVERRIDES="winmm,version=n,b" %command%` (plus `-modded` if you use REDmod mods). **Close Steam first**: Steam overwrites the setting while it runs. |
+| **Steam launch options** (*Set launch options*) | Sets `WINEDLLOVERRIDES="winmm,version=n,b" %command% --launcher-skip` (plus `-modded` if you use REDmod mods and the REDmod switch is on). `--launcher-skip` starts the game without the REDprelauncher window. **Close Steam first**: Steam overwrites the setting while it runs. |
 | **Shader compiler for ReShade** (*Install d3dcompiler_47*) | Only listed once ReShade is installed. Installs Microsoft's shader compiler into the prefix, which many ReShade effects need to compile. |
 | **DLL overrides**, Heroic only (*Set overrides*) | Sets the same `winmm` and `version` overrides in the Heroic prefix. |
 | **Folder names** (*Merge folders*) | Merges mod folders that exist under two spellings, such as `Mods` and `mods`. |
-| **HDR** (*Set HDR launch options*) | Only listed when a connected display supports HDR10. Lists what HDR needs (Wayland session, desktop HDR enabled, Mesa 25.1+ or NVIDIA 595+, GE-Proton 10+ or gamescope) and adds `PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1` (or a `gamescope --hdr-enabled` wrapper) to the launch options. Marked as a problem while the desktop runs the display in HDR; with desktop HDR off it shows as fine. **Close Steam first**. |
+| **HDR** (*Set HDR launch options*) | Only listed when a connected display supports HDR10. Lists what HDR needs (Wayland session, desktop HDR enabled, Mesa 25.1+ or NVIDIA 595+, GE-Proton 10+ or gamescope) and adds `PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1` (or a `gamescope --hdr-enabled --force-grab-cursor` wrapper, which keeps the mouse captured) to the launch options. Marked as a problem while the desktop runs the display in HDR; with desktop HDR off it shows as fine. **Close Steam first**. |
 
 Accept the fixes. If Steam is open, the launch options fix waits; close
 Steam, then click **Set launch options** in the Game panel. **Copy** next to

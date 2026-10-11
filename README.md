@@ -64,8 +64,8 @@ Screenshots show sample data, with file locations blurred.
   fixes it after one confirmation, each with an Undo: installs the Visual C++
   2015-2022 runtime into the prefix (`vcrun2022` via protontricks, or
   winetricks with the game's own Proton/Wine build), sets Steam's launch
-  options (`WINEDLLOVERRIDES="winmm,version=n,b" %command%`, plus `-modded`
-  for REDmod; only while Steam is closed), sets the same DLL overrides in a
+  options (`WINEDLLOVERRIDES="winmm,version=n,b" %command% --launcher-skip`,
+  plus `-modded` for REDmod; only while Steam is closed), sets the same DLL overrides in a
   Heroic prefix, and merges mod folders that exist under two spellings.
   With an HDR10 display it checks what the game needs to offer HDR under
   Proton (Wayland session, desktop HDR, driver version, a Proton build with
@@ -87,7 +87,9 @@ Screenshots show sample data, with file locations blurred.
   - Standalone CET mod folders (with `init.lua`) go to
     `bin/x64/plugins/cyber_engine_tweaks/mods/`.
   - REDmod folders (`info.json` + `archives/`, `scripts/`, …) go to `mods/`,
-    with `-modded` added to the launch options by the Linux setup.
+    with `-modded` added to the launch options by the Linux setup. A switch
+    next to REDmod in the Game panel enables or disables REDmod mods, and
+    `--launcher-skip` keeps CD Projekt's REDprelauncher from opening.
   - Loose `.archive` / `.xl` / `.reds` / tweak files.
 - **Conflicts**: refuses to overwrite another mod's files unless you allow it;
   uninstalling the winner restores the loser's copy, and original game files

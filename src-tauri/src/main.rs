@@ -642,6 +642,24 @@ async fn setup_undo(app: AppHandle, game_id: i64, id: String) -> Result<String> 
     .await
 }
 
+/// The REDmod switch next to REDmod in the Game panel; `None` without REDmod.
+#[tauri::command]
+async fn redmod_state(app: AppHandle, game_id: i64) -> Result<Option<linux_setup::Redmod>> {
+    blocking(move || with_setup(&app, game_id, |ctx| Ok(linux_setup::redmod(ctx)))).await
+}
+
+/// Enable or disable REDmod mods (`-modded` in Steam's launch options).
+#[tauri::command]
+async fn set_redmod(app: AppHandle, game_id: i64, on: bool) -> Result<String> {
+    blocking(move || {
+        activity::record(activity::Kind::Setup, format!("{} REDmod mods", if on { "Enabling" } else { "Disabling" }));
+        let out = with_setup(&app, game_id, |ctx| linux_setup::set_redmod(ctx, on));
+        log_outcome(&out);
+        out
+    })
+    .await
+}
+
 /// The end of one log from the Crashes & logs list, by its display name.
 #[tauri::command]
 async fn read_log(app: AppHandle, game_id: i64, name: String) -> Result<String> {
@@ -1603,6 +1621,8 @@ fn main() {
             setup_checks,
             setup_fix,
             setup_undo,
+            redmod_state,
+            set_redmod,
             list_mods,
             list_downloads,
             list_download_groups,

@@ -324,6 +324,10 @@ pub fn runner(path: &Path) -> Runner {
 
 // ---- Plan ------------------------------------------------------------------------
 
+/// Keeps the mouse captured inside gamescope. Without it the camera stops
+/// turning once the cursor reaches the edge of the gamescope window.
+pub const GRAB_CURSOR: &str = "--force-grab-cursor";
+
 /// What the launch options need for HDR.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Plan {
@@ -428,7 +432,7 @@ pub fn status(p: &Probe, runner: Option<&Runner>, steam: bool) -> Option<Status>
         Some(r) if p.gamescope && steam => {
             found.push(format!("{} (no Wine Wayland driver), gamescope installed", r.name));
             let (w, h) = display.mode.unwrap_or((3840, 2160));
-            Some(Plan { env: vec![("DXVK_HDR", "1")], gamescope: Some(format!("gamescope -W {w} -H {h} -f --hdr-enabled --")) })
+            Some(Plan { env: vec![("DXVK_HDR", "1")], gamescope: Some(format!("gamescope -W {w} -H {h} -f --hdr-enabled {GRAB_CURSOR} --")) })
         }
         Some(r) => {
             found.push(format!("{} (no Wine Wayland driver)", r.name));
@@ -454,7 +458,9 @@ fn key_of(token: &str) -> Option<&str> {
 pub fn has_plan(opts: &str, plan: &Plan) -> bool {
     let toks: Vec<&str> = opts.split_whitespace().collect();
     plan.env.iter().all(|(k, v)| toks.contains(&format!("{k}={v}").as_str()))
-        && plan.gamescope.as_ref().is_none_or(|_| toks.contains(&"gamescope") && toks.contains(&"--hdr-enabled"))
+        && plan.gamescope.as_ref().is_none_or(|g| {
+            toks.contains(&"gamescope") && toks.contains(&"--hdr-enabled") && (!g.contains(GRAB_CURSOR) || toks.contains(&GRAB_CURSOR))
+        })
 }
 
 /// The launch options with `plan` added, keeping everything else. Bare
@@ -462,10 +468,14 @@ pub fn has_plan(opts: &str, plan: &Plan) -> bool {
 pub fn merge(opts: &str, plan: &Plan) -> String {
     let opts = opts.trim();
     let mut s = if opts.contains("%command%") { opts.to_string() } else { format!("%command% {opts}").trim().to_string() };
-    if let Some(g) = &plan.gamescope
-        && !s.split_whitespace().any(|t| t == "gamescope")
-    {
-        s = s.replacen("%command%", &format!("{g} %command%"), 1);
+    if let Some(g) = &plan.gamescope {
+        let toks: Vec<&str> = s.split_whitespace().collect();
+        if !toks.contains(&"gamescope") {
+            s = s.replacen("%command%", &format!("{g} %command%"), 1);
+        } else if g.contains(GRAB_CURSOR) && toks.contains(&"--hdr-enabled") && !toks.contains(&GRAB_CURSOR) {
+            // Our wrapper from before the cursor grab was added.
+            s = s.replacen("--hdr-enabled", &format!("--hdr-enabled {GRAB_CURSOR}"), 1);
+        }
     }
     let have: Vec<String> = s.split_whitespace().map(String::from).collect();
     let add: Vec<String> = plan
@@ -618,7 +628,7 @@ mod tests {
         let s = status(&probe(), Some(&valve), true).unwrap();
         assert!(s.plan.is_none() && s.missing.iter().any(|m| m.contains("GE-Proton 10")));
         let s = status(&Probe { gamescope: true, ..probe() }, Some(&valve), true).unwrap();
-        assert_eq!(s.plan.unwrap().line(), "DXVK_HDR=1 gamescope -W 3440 -H 1440 -f --hdr-enabled --");
+        assert_eq!(s.plan.unwrap().line(), "DXVK_HDR=1 gamescope -W 3440 -H 1440 -f --hdr-enabled --force-grab-cursor --");
         let s = status(&Probe { gamescope: true, ..probe() }, Some(&valve), false).unwrap();
         assert!(s.plan.is_none(), "gamescope wrapper only through Steam launch options");
 
@@ -629,7 +639,7 @@ mod tests {
     #[test]
     fn merges_and_strips_launch_options() {
         let wl = Plan { env: vec![("PROTON_ENABLE_WAYLAND", "1"), ("DXVK_HDR", "1")], gamescope: None };
-        let gs = Plan { env: vec![("DXVK_HDR", "1")], gamescope: Some("gamescope -W 3840 -H 2160 -f --hdr-enabled --".into()) };
+        let gs = Plan { env: vec![("DXVK_HDR", "1")], gamescope: Some("gamescope -W 3840 -H 2160 -f --hdr-enabled --force-grab-cursor --".into()) };
         let mods = "WINEDLLOVERRIDES=\"winmm,version=n,b\" %command% -modded";
 
         let m = merge(mods, &wl);
@@ -644,9 +654,12 @@ mod tests {
         assert_eq!(merge("DXVK_HDR=0 %command%", &wl), "PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1 %command%");
 
         let g = merge(mods, &gs);
-        assert_eq!(g, "DXVK_HDR=1 WINEDLLOVERRIDES=\"winmm,version=n,b\" gamescope -W 3840 -H 2160 -f --hdr-enabled -- %command% -modded");
+        assert_eq!(g, "DXVK_HDR=1 WINEDLLOVERRIDES=\"winmm,version=n,b\" gamescope -W 3840 -H 2160 -f --hdr-enabled --force-grab-cursor -- %command% -modded");
         assert!(has_plan(&g, &gs));
         assert_eq!(strip(&g), mods);
+        let old = "DXVK_HDR=1 gamescope -W 3840 -H 2160 -f --hdr-enabled -- %command% -modded";
+        assert!(!has_plan(old, &gs), "wrapper without the cursor grab needs updating");
+        assert_eq!(merge(old, &gs), "DXVK_HDR=1 gamescope -W 3840 -H 2160 -f --hdr-enabled --force-grab-cursor -- %command% -modded");
         assert_eq!(strip("gamescope -f -- %command%"), "gamescope -f -- %command%", "the user's own gamescope stays");
     }
 }

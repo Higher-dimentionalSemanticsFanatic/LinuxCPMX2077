@@ -68,6 +68,18 @@ mod imp {
         Some(dirs::data_local_dir()?.join(r"REDEngine\ReportQueue"))
     }
 
+    /// A process with this image name (`steam.exe`) is running, from
+    /// `tasklist`.
+    pub fn process_running(image: &str) -> bool {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        std::process::Command::new("tasklist")
+            .args(["/FI", &format!("IMAGENAME eq {image}"), "/NH", "/FO", "CSV"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+            .is_ok_and(|o| String::from_utf8_lossy(&o.stdout).to_ascii_lowercase().contains(&format!("\"{}\"", image.to_ascii_lowercase())))
+    }
+
     /// The command `nxm://` links start for this user, if any.
     pub fn nxm_command() -> Option<String> {
         let key = RegKey::predef(HKEY_CURRENT_USER)
@@ -114,6 +126,10 @@ mod imp {
 
     pub fn crash_report_queue() -> Option<PathBuf> {
         None
+    }
+
+    pub fn process_running(_image: &str) -> bool {
+        false
     }
 
     pub fn nxm_command() -> Option<String> {

@@ -1,7 +1,8 @@
 //! What the game needs on Linux before mods load, checked and fixed in
 //! place: the Visual C++ runtime in the Wine/Proton prefix, the `winmm` and
 //! `version` DLL overrides that let CET and RED4ext load, ReShade's DLL
-//! override and Microsoft's shader compiler, `-modded` for REDmod, mod
+//! override and Microsoft's shader compiler, `-modded` for REDmod and
+//! `--launcher-skip` (with the REDmod switch that replaces the REDprelauncher), mod
 //! folders that exist twice with different capitalisation, and what HDR
 //! needs (see [`crate::hdr`]).
 //!
@@ -103,7 +104,7 @@ impl Probe {
             ok.then_some(Tricks::ProtontricksFlatpak)
         });
         Probe {
-            steam_running: procs.iter().any(|(comm, _)| comm == "steam"),
+            steam_running: procs.iter().any(|(comm, _)| comm == "steam") || crate::winsys::process_running("steam.exe"),
             game_running: procs.iter().any(|(_, cmd)| cmd.to_ascii_lowercase().contains("cyberpunk2077.exe")),
             protontricks,
             winetricks: which("winetricks"),
@@ -329,12 +330,48 @@ pub fn has_overrides(opts: &str, dlls: &[&str]) -> bool {
     dlls.iter().all(|d| modes.get(&dll_key(d)).is_some_and(|m| m.starts_with('n')))
 }
 
+/// Game argument that makes the game deploy and load REDmod mods.
+pub const MODDED: &str = "-modded";
+/// Launcher argument that starts the game without CD Projekt's REDprelauncher
+/// window (wiki: "Additional launch parameters for use from game launchers").
+pub const LAUNCHER_SKIP: &str = "--launcher-skip";
+
+fn has_arg(opts: &str, arg: &str) -> bool {
+    opts.split_whitespace().any(|o| o.eq_ignore_ascii_case(arg))
+}
+
 pub fn has_modded(opts: &str) -> bool {
-    opts.split_whitespace().any(|o| o.eq_ignore_ascii_case("-modded"))
+    has_arg(opts, MODDED)
+}
+
+pub fn has_launcher_skip(opts: &str) -> bool {
+    has_arg(opts, LAUNCHER_SKIP)
+}
+
+/// `arg` right after `%command%` (or at the end when there is none), unless
+/// it is already there.
+fn add_arg(s: &str, arg: &str) -> String {
+    if has_arg(s, arg) {
+        return s.to_string();
+    }
+    match s.find("%command%") {
+        Some(i) => format!("{} {arg}{}", &s[..i + "%command%".len()], &s[i + "%command%".len()..]),
+        None => format!("{s} {arg}").trim().to_string(),
+    }
+}
+
+/// The launch options without `arg`; `%command%` alone is the same as empty.
+fn remove_arg(s: &str, arg: &str) -> String {
+    let s = s.split(' ').filter(|t| !t.eq_ignore_ascii_case(arg)).collect::<Vec<_>>().join(" ");
+    let s = s.split_whitespace().collect::<Vec<_>>().join(" ");
+    if s == "%command%" { String::new() } else { s }
 }
 
 /// The user's launch options with what mods need added, keeping everything
-/// else (other variables, other DLL overrides, game arguments).
+/// else (other variables, other DLL overrides, game arguments). Always skips
+/// the REDprelauncher: it opens a window before the game (full screen under
+/// gamescope), and its one setting mods need, Enable mods, is `-modded`,
+/// which the app sets itself (see [`set_redmod`]).
 pub fn merge_launch_options(existing: &str, dlls: &[&str], need_modded: bool) -> String {
     let mut s = existing.trim().to_string();
     if !has_overrides(&s, dlls) {
@@ -363,11 +400,14 @@ pub fn merge_launch_options(existing: &str, dlls: &[&str], need_modded: bool) ->
             s = format!("WINEDLLOVERRIDES=\"{ours}\" %command% {s}").trim().to_string();
         }
     }
-    if need_modded && !has_modded(&s) {
-        s = match s.find("%command%") {
-            Some(i) => format!("{} -modded{}", &s[..i + "%command%".len()], &s[i + "%command%".len()..]),
-            None => format!("{s} -modded"),
-        };
+    if !has_launcher_skip(&s) {
+        if !s.contains("%command%") {
+            s = format!("%command% {s}").trim().to_string();
+        }
+        s = add_arg(&s, LAUNCHER_SKIP);
+    }
+    if need_modded {
+        s = add_arg(&s, MODDED);
     }
     s.trim().to_string()
 }
@@ -766,47 +806,48 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
         });
     }
 
-    // DLL overrides and -modded.
+    // DLL overrides, -modded and skipping the REDprelauncher.
     if g.store == Store::Steam {
-        let rec = load_record(ctx, FIX_LAUNCH).is_some();
-        if !dlls.is_empty() || redmods || rec {
-            let cur = g.launch_options.clone().unwrap_or_default();
-            let want = merge_launch_options(&cur, &dlls, redmods);
-            let ok = want == cur.trim();
-            let mut missing = Vec::new();
-            if !has_overrides(&cur, &dlls) {
-                missing.push(format!("WINEDLLOVERRIDES=\"{}\" so {for_whom} load", override_value(&dlls)));
-            }
-            if redmods && !has_modded(&cur) {
-                missing.push("-modded so REDmod mods load".into());
-            }
-            let steam_block = if ctx.probe.steam_running { Some(CLOSE_STEAM) } else { None };
-            let no_config = localconfigs(ctx.home).is_empty().then_some("Steam has no settings for this game yet. Start it once from Steam, then try again.");
-            out.push(Check {
-                id: FIX_LAUNCH.into(),
-                title: "Steam launch options".into(),
-                state: if ok { State::Ok } else { State::Problem },
-                detail: if ok {
-                    format!("Launch options are set: {cur}")
-                } else {
-                    format!("Steam's launch options need {}.", missing.join(" and "))
-                },
-                fix: if ok {
-                    None
-                } else {
-                    action(
-                        "Set launch options",
-                        format!(
-                            "Set Cyberpunk 2077's Steam launch options to:\n\n{want}\n\nNow: {}\n\nUndo puts the old ones back.",
-                            if cur.trim().is_empty() { "(empty)" } else { cur.trim() }
-                        ),
-                        steam_block.or(no_config),
-                    )
-                },
-                undo: undo_action(ctx, FIX_LAUNCH, "the previous launch options", steam_block),
-                copy: (!ok).then_some(want),
-            });
+        let modded = redmods && redmod_wanted(ctx);
+        let cur = g.launch_options.clone().unwrap_or_default();
+        let want = merge_launch_options(&cur, &dlls, modded);
+        let ok = want == cur.trim();
+        let mut missing = Vec::new();
+        if !has_overrides(&cur, &dlls) {
+            missing.push(format!("WINEDLLOVERRIDES=\"{}\" so {for_whom} load", override_value(&dlls)));
         }
+        if modded && !has_modded(&cur) {
+            missing.push("-modded so REDmod mods load".into());
+        }
+        if !has_launcher_skip(&cur) {
+            missing.push(format!("{LAUNCHER_SKIP} so the game starts without the REDprelauncher window"));
+        }
+        let steam_block = if ctx.probe.steam_running { Some(CLOSE_STEAM) } else { None };
+        let no_config = localconfigs(ctx.home).is_empty().then_some("Steam has no settings for this game yet. Start it once from Steam, then try again.");
+        out.push(Check {
+            id: FIX_LAUNCH.into(),
+            title: "Steam launch options".into(),
+            state: if ok { State::Ok } else { State::Problem },
+            detail: if ok {
+                format!("Launch options are set: {cur}")
+            } else {
+                format!("Steam's launch options need {}.", missing.join(" and "))
+            },
+            fix: if ok {
+                None
+            } else {
+                action(
+                    "Set launch options",
+                    format!(
+                        "Set Cyberpunk 2077's Steam launch options to:\n\n{want}\n\nNow: {}\n\nUndo puts the old ones back.",
+                        if cur.trim().is_empty() { "(empty)" } else { cur.trim() }
+                    ),
+                    steam_block.or(no_config),
+                )
+            },
+            undo: undo_action(ctx, FIX_LAUNCH, "the previous launch options", steam_block),
+            copy: (!ok).then_some(want),
+        });
     } else if let Some(prefix) = &g.proton_prefix {
         let rec = load_record(ctx, FIX_OVERRIDES).is_some();
         if !dlls.is_empty() || rec {
@@ -956,12 +997,117 @@ pub fn reshade_launch(g: &GameInstall) -> Option<ReShadeLaunch> {
     let compiler = g.proton_prefix.as_deref().map(compiler_ok);
     Some(if g.store == Store::Steam {
         let cur = g.launch_options.clone().unwrap_or_default();
-        ReShadeLaunch { line: merge_launch_options(&cur, &dlls, game::has_redmods(&g.path)), steam: true, ok: has_overrides(&cur, &ours), compiler }
+        ReShadeLaunch { line: merge_launch_options(&cur, &dlls, has_modded(&cur)), steam: true, ok: has_overrides(&cur, &ours), compiler }
     } else {
         let reg = g.proton_prefix.as_ref().and_then(|p| std::fs::read_to_string(p.join("user.reg")).ok()).unwrap_or_default();
         let o = read_overrides(&reg);
         let ok = ours.iter().all(|d| o.get(*d).is_some_and(|v| v.starts_with('n')));
         ReShadeLaunch { line: format!("WINEDLLOVERRIDES=\"{}\"", override_value(&dlls)), steam: false, ok, compiler }
+    })
+}
+
+// ---- REDmod on/off -------------------------------------------------------------
+
+/// The user's choice for REDmod mods, kept so Set launch options doesn't
+/// add `-modded` back after they turned REDmod off.
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct RedmodPref {
+    enabled: bool,
+}
+
+const REDMOD_PREF: &str = "redmod";
+
+/// REDmod mods should load: on unless the user switched them off.
+fn redmod_wanted(ctx: &Ctx) -> bool {
+    let p = ctx.state_dir.join(format!("{REDMOD_PREF}.json"));
+    std::fs::read_to_string(p)
+        .ok()
+        .and_then(|s| serde_json::from_str::<RedmodPref>(&s).ok())
+        .is_none_or(|p| p.enabled)
+}
+
+/// The REDmod switch in the Game panel: replaces the REDprelauncher's
+/// Enable mods setting, which only adds `-modded` to the game's arguments.
+#[derive(Debug, Clone, Serialize)]
+pub struct Redmod {
+    /// `-modded` is in Steam's launch options.
+    pub enabled: bool,
+    /// `mods/<folder>/info.json` folders in the game.
+    pub mods: usize,
+    /// The switch writes Steam's launch options; elsewhere `copy` says what
+    /// to set by hand.
+    pub steam: bool,
+    pub blocked: Option<String>,
+    pub copy: Option<String>,
+}
+
+fn redmod_count(game_dir: &Path) -> usize {
+    let Ok(rd) = std::fs::read_dir(game_dir.join("mods")) else { return 0 };
+    rd.flatten().filter(|e| e.path().join("info.json").is_file()).count()
+}
+
+/// `None` when the game has no REDmod tool (`tools/redmod`).
+pub fn redmod(ctx: &Ctx) -> Option<Redmod> {
+    let g = ctx.game;
+    if !game::exists_ci(&g.path, "tools/redmod/bin/redMod.exe") {
+        return None;
+    }
+    let steam = g.store == Store::Steam;
+    let cur = g.launch_options.clone().unwrap_or_default();
+    let blocked = if !steam {
+        None
+    } else if ctx.probe.steam_running {
+        Some(CLOSE_STEAM.to_string())
+    } else if localconfigs(ctx.home).is_empty() {
+        Some("Steam has no settings for this game yet. Start it once from Steam, then try again.".into())
+    } else {
+        None
+    };
+    Some(Redmod {
+        enabled: steam && has_modded(&cur),
+        mods: redmod_count(&g.path),
+        steam,
+        blocked,
+        copy: (!steam).then(|| format!("{MODDED} {LAUNCHER_SKIP}")),
+    })
+}
+
+/// Switch REDmod mods on or off: adds or removes `-modded` in every Steam
+/// account's launch options for the game, adds `--launcher-skip`, and keeps
+/// the choice. With `-modded` the game deploys changed REDmods itself at
+/// start (wiki: Launch parameters, "Triggers REDMod recompilation on start").
+pub fn set_redmod(ctx: &Ctx, on: bool) -> Result<String> {
+    let state = redmod(ctx).ok_or_else(|| Error::Other("REDmod is not installed (tools/redmod/bin/redMod.exe not found)".into()))?;
+    if !state.steam {
+        return Err(Error::Other(format!("Launch options are only written for Steam. Add {MODDED} {LAUNCHER_SKIP} to the game arguments in your launcher.")));
+    }
+    if let Some(b) = state.blocked {
+        return Err(Error::Other(b));
+    }
+    let mut set = None;
+    for cfg in localconfigs(ctx.home) {
+        let src = std::fs::read_to_string(&cfg)?;
+        let before = launch_in(&src).unwrap_or_default();
+        let base = match before.trim() {
+            "" => "%command%".to_string(),
+            b if b.contains("%command%") => b.to_string(),
+            b => format!("%command% {b}"),
+        };
+        let want = add_arg(&base, LAUNCHER_SKIP);
+        let want = if on { add_arg(&want, MODDED) } else { remove_arg(&want, MODDED) };
+        if want != before {
+            let new = vdf::set_value(&src, LAUNCH_PATH, &want, 2).ok_or_else(|| Error::Other(format!("could not edit {}", cfg.display())))?;
+            write_atomic(&cfg, &new)?;
+        }
+        set = Some(want);
+    }
+    std::fs::create_dir_all(&ctx.state_dir)?;
+    std::fs::write(ctx.state_dir.join(format!("{REDMOD_PREF}.json")), serde_json::to_vec(&RedmodPref { enabled: on })?)?;
+    let set = set.unwrap_or_default();
+    Ok(if on {
+        format!("REDmod mods enabled. Launch options: {set}")
+    } else {
+        format!("REDmod mods disabled. Launch options: {set}")
     })
 }
 
@@ -984,7 +1130,7 @@ pub fn apply(ctx: &Ctx, id: &str) -> Result<String> {
         FIX_VC | FIX_D3DCOMPILER => apply_tricks(ctx, id),
         FIX_LAUNCH => {
             let dlls = override_dlls(g);
-            let redmods = game::has_redmods(&g.path);
+            let redmods = game::has_redmods(&g.path) && redmod_wanted(ctx);
             let mut rec = load_record(ctx, FIX_LAUNCH).unwrap_or_default();
             let first = rec.launch.is_empty();
             let mut set = String::new();
@@ -1312,7 +1458,7 @@ mod tests {
         let pfx = tempfile::tempdir().unwrap();
         let home = tempfile::tempdir().unwrap();
         let state = tempfile::tempdir().unwrap();
-        let g = install(gdir.path(), Store::Steam, Some(pfx.path().to_path_buf()), Some("WINEDLLOVERRIDES=\"winmm,version=n,b\" %command%"));
+        let g = install(gdir.path(), Store::Steam, Some(pfx.path().to_path_buf()), Some("WINEDLLOVERRIDES=\"winmm,version=n,b\" %command% --launcher-skip"));
         let ctx = Ctx { home: home.path(), game: &g, state_dir: state.path().to_path_buf(), probe: Probe::default() };
         assert!(checks(&ctx).iter().all(|c| c.id != FIX_D3DCOMPILER), "no ReShade, no compiler check");
         assert_eq!(checks(&ctx).iter().find(|c| c.id == FIX_LAUNCH).unwrap().state, State::Ok);
@@ -1343,9 +1489,12 @@ mod tests {
         const FW: &[&str] = &["winmm", "version"];
         let o = OVERRIDE_VALUE;
         assert_eq!(override_value(FW), o);
-        assert_eq!(merge_launch_options("", FW, false), format!("WINEDLLOVERRIDES=\"{o}\" %command%"));
-        assert_eq!(merge_launch_options("", FW, true), format!("WINEDLLOVERRIDES=\"{o}\" %command% -modded"));
-        assert_eq!(merge_launch_options("-skipStartScreen", FW, false), format!("WINEDLLOVERRIDES=\"{o}\" %command% -skipStartScreen"));
+        assert_eq!(merge_launch_options("", FW, false), format!("WINEDLLOVERRIDES=\"{o}\" %command% --launcher-skip"));
+        assert_eq!(merge_launch_options("", FW, true), format!("WINEDLLOVERRIDES=\"{o}\" %command% -modded --launcher-skip"));
+        assert_eq!(
+            merge_launch_options("-skipStartScreen", FW, false),
+            format!("WINEDLLOVERRIDES=\"{o}\" %command% --launcher-skip -skipStartScreen")
+        );
         assert_eq!(
             merge_launch_options("PROTON_LOG=1 %command% --launcher-skip", FW, true),
             format!("WINEDLLOVERRIDES=\"{o}\" PROTON_LOG=1 %command% -modded --launcher-skip")
@@ -1353,10 +1502,13 @@ mod tests {
         // An existing override list keeps its other DLLs.
         assert_eq!(
             merge_launch_options("WINEDLLOVERRIDES=\"dxgi=n;winmm=b\" %command%", FW, false),
-            format!("WINEDLLOVERRIDES=\"{o};dxgi=n\" %command%")
+            format!("WINEDLLOVERRIDES=\"{o};dxgi=n\" %command% --launcher-skip")
         );
-        assert_eq!(merge_launch_options("WINEDLLOVERRIDES=d3d11=n %command%", FW, false), format!("WINEDLLOVERRIDES=\"{o};d3d11=n\" %command%"));
-        let done = format!("WINEDLLOVERRIDES=\"{o}\" %command% -modded");
+        assert_eq!(
+            merge_launch_options("WINEDLLOVERRIDES=d3d11=n %command%", FW, false),
+            format!("WINEDLLOVERRIDES=\"{o};d3d11=n\" %command% --launcher-skip")
+        );
+        let done = format!("WINEDLLOVERRIDES=\"{o}\" %command% -modded --launcher-skip");
         assert_eq!(merge_launch_options(&done, FW, true), done, "already right: unchanged");
 
         // ReShade adds its DLL and the shader compiler to the same list, and
@@ -1364,13 +1516,16 @@ mod tests {
         let all = &["winmm", "version", "dxgi", "d3dcompiler_47"];
         assert_eq!(
             merge_launch_options("WINEDLLOVERRIDES=\"dxgi=b;d3d11=n\" %command%", all, false),
-            "WINEDLLOVERRIDES=\"winmm,version,dxgi,d3dcompiler_47=n,b;d3d11=n\" %command%"
+            "WINEDLLOVERRIDES=\"winmm,version,dxgi,d3dcompiler_47=n,b;d3d11=n\" %command% --launcher-skip"
         );
         assert!(has_overrides("WINEDLLOVERRIDES=\"winmm,version=n,b;dxgi=n;d3dcompiler_47.dll=native\" %command%", all));
         assert!(!has_overrides("WINEDLLOVERRIDES=\"winmm,version=n,b;dxgi=b\" %command%", &["dxgi"]));
         assert!(!has_overrides("%command%", &["dxgi"]));
         assert!(has_overrides("%command%", &[]));
-        assert_eq!(merge_launch_options("-skipStartScreen", &[], false), "-skipStartScreen", "nothing needed: unchanged");
+        assert_eq!(merge_launch_options("-skipStartScreen", &[], false), "%command% --launcher-skip -skipStartScreen");
+        assert_eq!(merge_launch_options("%command% --LAUNCHER-SKIP", &[], false), "%command% --LAUNCHER-SKIP", "already skipped: unchanged");
+        assert_eq!(remove_arg("A=1 %command% -modded --launcher-skip", MODDED), "A=1 %command% --launcher-skip");
+        assert_eq!(remove_arg("%command% -modded", MODDED), "");
     }
 
     #[test]
@@ -1428,7 +1583,7 @@ mod tests {
         ctx.probe.steam_running = false;
         apply(&ctx, FIX_LAUNCH).unwrap();
         let now = launch_in(&std::fs::read_to_string(&cfg).unwrap()).unwrap();
-        assert_eq!(now, format!("WINEDLLOVERRIDES=\"{OVERRIDE_VALUE}\" %command% -skipStartScreen"));
+        assert_eq!(now, format!("WINEDLLOVERRIDES=\"{OVERRIDE_VALUE}\" %command% --launcher-skip -skipStartScreen"));
 
         let g2 = GameInstall { launch_options: Some(now), ..g.clone() };
         let ctx2 = Ctx { game: &g2, ..ctx };
@@ -1486,6 +1641,56 @@ mod tests {
         assert!(c.fix.is_none() && c.undo.is_some());
         undo(&ctx2, FIX_HDR).unwrap();
         assert_eq!(launch_in(&std::fs::read_to_string(&cfg).unwrap()).unwrap(), before);
+    }
+
+    #[test]
+    fn redmod_switch_sets_modded_and_skips_the_launcher() {
+        let home = tempfile::tempdir().unwrap();
+        let root = home.path().join(".local/share/Steam");
+        std::fs::create_dir_all(root.join("steamapps")).unwrap();
+        let cfg = root.join("userdata/123/config/localconfig.vdf");
+        let vdf_with = |opts: &str| {
+            format!("\"UserLocalConfigStore\"\n{{\n\t\"Software\"\n\t{{\n\t\t\"Valve\"\n\t\t{{\n\t\t\t\"Steam\"\n\t\t\t{{\n\t\t\t\t\"apps\"\n\t\t\t\t{{\n\t\t\t\t\t\"1091500\"\n\t\t\t\t\t{{\n\t\t\t\t\t\t\"LaunchOptions\"\t\t\"{opts}\"\n\t\t\t\t\t}}\n\t\t\t\t}}\n\t\t\t}}\n\t\t}}\n\t}}\n}}\n")
+        };
+        touch(&cfg, vdf_with("DXVK_HDR=1 %command%").as_bytes());
+        let gdir = tempfile::tempdir().unwrap();
+        let state = tempfile::tempdir().unwrap();
+        let g = install(gdir.path(), Store::Steam, None, Some("DXVK_HDR=1 %command%"));
+        let mut ctx = Ctx { home: home.path(), game: &g, state_dir: state.path().to_path_buf(), probe: Probe::default() };
+        assert!(redmod(&ctx).is_none(), "no REDmod tool, no switch");
+
+        touch(&gdir.path().join("tools/redmod/bin/redMod.exe"), b"x");
+        touch(&gdir.path().join("mods/a/info.json"), b"{}");
+        let r = redmod(&ctx).unwrap();
+        assert!(!r.enabled && r.steam && r.mods == 1 && r.blocked.is_none());
+
+        ctx.probe.steam_running = true;
+        assert!(redmod(&ctx).unwrap().blocked.is_some());
+        assert!(set_redmod(&ctx, true).is_err(), "never while Steam runs");
+        ctx.probe.steam_running = false;
+
+        set_redmod(&ctx, true).unwrap();
+        let on = launch_in(&std::fs::read_to_string(&cfg).unwrap()).unwrap();
+        assert_eq!(on, "DXVK_HDR=1 %command% -modded --launcher-skip");
+        assert!(redmod_wanted(&ctx));
+
+        set_redmod(&ctx, false).unwrap();
+        let off = launch_in(&std::fs::read_to_string(&cfg).unwrap()).unwrap();
+        assert_eq!(off, "DXVK_HDR=1 %command% --launcher-skip");
+        assert!(!redmod_wanted(&ctx), "off is kept");
+        if cfg!(not(windows)) {
+            // Set launch options no longer asks for -modded once REDmod is off.
+            let g2 = GameInstall { launch_options: Some(off), frameworks: vec![], ..g.clone() };
+            let ctx2 = Ctx { game: &g2, ..ctx };
+            let c = checks(&ctx2).into_iter().find(|c| c.id == FIX_LAUNCH).unwrap();
+            assert_eq!(c.state, State::Ok, "{}", c.detail);
+        }
+
+        let gog = install(gdir.path(), Store::Gog, None, None);
+        let ctx3 = Ctx { home: home.path(), game: &gog, state_dir: state.path().to_path_buf(), probe: Probe::default() };
+        let r = redmod(&ctx3).unwrap();
+        assert!(!r.steam && r.copy.as_deref() == Some("-modded --launcher-skip"));
+        assert!(set_redmod(&ctx3, true).is_err());
     }
 
     #[test]

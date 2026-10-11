@@ -236,10 +236,51 @@ function renderGame(withSetup = true) {
   ].filter(Boolean));
   renderWarnings();
   $("#frameworks").replaceChildren(...g.frameworks.map((f) =>
-    el("li", { class: f.installed ? "on" : "" }, f.name)));
+    el("li", { class: f.installed ? "on" : "", "data-id": f.id }, f.name)));
   $("#side-frameworks").classList.toggle("hidden", !coreMissing().length);
+  renderRedmod();
+  loadRedmod();
   renderChecklist();
   if (withSetup) loadSetup().catch(() => {});
+}
+
+// ---- REDmod switch (Game panel, next to REDmod) ------------------------------
+// Replaces the REDprelauncher's Enable mods setting, which only adds -modded
+// to the game's arguments. The app writes -modded into Steam's launch options
+// (with --launcher-skip, so the REDprelauncher window is not shown).
+let redmodState = null; // { game, ...state } of the last read
+
+async function loadRedmod() {
+  if (!currentGame) return;
+  const id = currentGame.id;
+  const r = await invoke("redmod_state", { gameId: id }).catch(() => null);
+  if (currentGame?.id !== id) return;
+  redmodState = r && { ...r, game: id };
+  renderRedmod();
+}
+
+function renderRedmod() {
+  const li = $("#frameworks li[data-id=redmod]");
+  if (!li) return;
+  li.querySelector(".redmod-switch")?.remove();
+  const r = redmodState;
+  if (!r || r.game !== currentGame.id) return;
+  const count = `${r.mods} REDmod mod${r.mods === 1 ? "" : "s"} in mods/`;
+  const sw = el("input", { type: "checkbox", class: "switch", "aria-label": "REDmod mods" });
+  sw.checked = r.enabled;
+  sw.disabled = !r.steam;
+  const title = !r.steam
+    ? `Launch options are written for Steam only. Add ${r.copy} to the game arguments in your launcher. ${count}.`
+    : `${r.enabled ? "Enabled: -modded is in Steam's launch options" : "Disabled: no -modded in Steam's launch options"}. ${count}. `
+      + "Click to switch. Requires Steam closed. Also sets --launcher-skip (no REDprelauncher window).";
+  sw.addEventListener("change", () => {
+    busy(sw, async () => {
+      toast(await invoke("set_redmod", { gameId: currentGame.id, on: sw.checked }));
+      await refreshGame();
+    }).finally(loadRedmod);
+  });
+  li.append(el("label", { class: "redmod-switch", title }, sw,
+    el("span", { class: "muted small" }, r.steam ? (r.enabled ? "enabled" : "disabled") : "not Steam")));
 }
 
 // ---- Linux setup (runtime, DLL overrides, -modded, folder spellings) -----

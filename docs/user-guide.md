@@ -102,10 +102,13 @@ it), the left and right arrow keys also resize it.
   - *Visual C++ runtime* → **Install vcrun2022** (protontricks, Flatpak
     protontricks, or winetricks with the game's own Proton).
   - *Steam launch options* → **Set launch options** writes
-    `WINEDLLOVERRIDES="winmm,version=n,b" %command%` (plus `-modded` when
-    REDmod mods are installed). With ReShade in the game, its DLL and
+    `WINEDLLOVERRIDES="winmm,version=n,b" %command% --launcher-skip` (plus
+    `-modded` when REDmod mods are installed and the REDmod switch is not
+    off). `--launcher-skip` starts the game without CD Projekt's
+    REDprelauncher window; its Enable mods setting is replaced by the REDmod
+    switch under **Frameworks**. With ReShade in the game, its DLL and
     `d3dcompiler_47` join the list:
-    `WINEDLLOVERRIDES="winmm,version,dxgi,d3dcompiler_47=n,b" %command%`.
+    `WINEDLLOVERRIDES="winmm,version,dxgi,d3dcompiler_47=n,b" %command% --launcher-skip`.
     Other variables and overrides already in your launch options are kept.
     Only works while Steam is closed. **Copy** copies the whole line to paste
     yourself.
@@ -133,8 +136,12 @@ it), the left and right arrow keys also resize it.
     - GE-Proton 10 or newer, or proton-cachyos: the button adds
       `PROTON_ENABLE_WAYLAND=1 DXVK_HDR=1`. Valve's Proton has no Wine
       Wayland driver; with `gamescope` installed the button adds
-      `DXVK_HDR=1 gamescope -W <width> -H <height> -f --hdr-enabled -- `
+      `DXVK_HDR=1 gamescope -W <width> -H <height> -f --hdr-enabled --force-grab-cursor -- `
       before `%command%` instead (size from the display's preferred mode).
+      `--force-grab-cursor` keeps the mouse captured in gamescope; without
+      it the camera stops turning at the window edge. A wrapper set by an
+      earlier version without it is marked as a problem, and the button adds
+      it.
       Without either: select GE-Proton in Steam › Properties › Compatibility.
     Other launch options are kept; **Undo** removes only the HDR variables
     and the HDR `gamescope` wrapper. Only works while Steam is closed. With
@@ -151,6 +158,16 @@ it), the left and right arrow keys also resize it.
   list queues them from GitHub, each after what it needs (REDmod ships with
   the game). Framework problems such as *ArchiveXL is installed but
   RED4ext is missing* are listed above with the same button.
+- **REDmod switch** (next to *REDmod*, when `tools/redmod` is in the game
+  folder): enables or disables REDmod mods (folders in `mods/`) without
+  the REDprelauncher. *enabled* means `-modded` is in Steam's launch
+  options; the game then deploys changed REDmods itself at start. Switching
+  adds or removes `-modded`, always adds `--launcher-skip`, and is kept:
+  **Set launch options** does not add `-modded` back while the switch is
+  off. Only works while Steam is closed (Linux and Windows). Hover for the
+  number of REDmod mods found. For GOG, Epic and Heroic the switch is
+  greyed out (*not Steam*): add `-modded --launcher-skip` to the game
+  arguments in that launcher.
 
 ## Installed mods
 
@@ -1002,7 +1019,17 @@ version, a Proton build with the Wine Wayland driver, or the launch
 options). No *HDR* item means no connected display lists HDR10 in its EDID.
 
 **Set launch options says Steam is running.** Steam overwrites its settings
-while it runs. Quit Steam completely and click the button again.
+while it runs. Quit Steam completely and click the button again. The same
+applies to the REDmod switch.
+
+**The REDprelauncher window opens before the game.** Steam's launch options
+lack `--launcher-skip`. Click **Set launch options** (Steam closed), or flip
+the REDmod switch, which adds it.
+
+**The camera stops turning in game (HDR with gamescope).** The mouse
+reaches the edge of the gamescope window. The *HDR* item marks a gamescope
+wrapper without `--force-grab-cursor` as a problem; click **Set HDR launch
+options** with Steam closed.
 
 **The game isn't found.** Use **Add path…** (Game panel, or Settings → Game installs) and pick the folder holding
 `bin/x64/Cyberpunk2077.exe`. Run the game once through Steam or Heroic first
