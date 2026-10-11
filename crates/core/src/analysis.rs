@@ -686,8 +686,8 @@ pub fn build_graph(mods: &[ModIndex], base: &BTreeSet<u64>, installed_frameworks
 pub struct ModIndex<'a> {
     pub mod_id: i64,
     pub name: &'a str,
-    /// Archive file names in load order matter for resources; ArchiveXL and
-    /// the game load `archive/pc/mod` alphabetically.
+    /// For resources the archive file's place in the load order decides the
+    /// winner (see `load_order`).
     pub touches: &'a [Touch],
 }
 
@@ -707,6 +707,12 @@ fn framework_name(id: &str) -> &str {
 /// Cross-reference all mods' touches.
 /// `installed_frameworks` are framework ids present in the game folder.
 pub fn analyze(mods: &[ModIndex], base: &BTreeSet<u64>, installed_frameworks: &BTreeSet<String>) -> Report {
+    analyze_ordered(mods, base, installed_frameworks, None)
+}
+
+/// `analyze`, with the archive order taken from `modlist` (the file names in
+/// `archive/pc/mod/modlist.txt`) when the game has one.
+pub fn analyze_ordered(mods: &[ModIndex], base: &BTreeSet<u64>, installed_frameworks: &BTreeSet<String>, modlist: Option<&[String]>) -> Report {
     let names: HashMap<i64, &str> = mods.iter().map(|m| (m.mod_id, m.name)).collect();
     // (kind, key) -> [(mod, file)]
     let mut by_key: BTreeMap<(Kind, String), Vec<(i64, String)>> = BTreeMap::new();
@@ -823,11 +829,17 @@ pub fn analyze(mods: &[ModIndex], base: &BTreeSet<u64>, installed_frameworks: &B
     }
     for (ids, (count, files, groups)) in shared_resources {
         let owners: Vec<(i64, String)> = ids.iter().map(|i| (*i, String::new())).collect();
-        // The game loads archive/pc/mod alphabetically; the first file
-        // containing a resource wins.
-        let mut sorted = files.clone();
-        sorted.sort_by_key(|f| f.rsplit('/').next().unwrap_or(f).to_lowercase());
+        // The first archive in load order containing a resource wins.
+        let sorted = crate::load_order::sort(&files, modlist);
         let winner = sorted.first().map(|f| f.rsplit('/').next().unwrap_or(f).to_string()).unwrap_or_default();
+        let order = if modlist.is_some() { "in modlist.txt order" } else { "by file name" };
+        let redmod_note = if sorted.first().and_then(|f| crate::load_order::source_of(f)) == Some(crate::load_order::Source::Archive)
+            && sorted.iter().any(|f| crate::load_order::source_of(f) == Some(crate::load_order::Source::Redmod))
+        {
+            " REDmod archives load after all archive/pc/mod archives; REDmod order does not change this."
+        } else {
+            ""
+        };
         findings.push(Finding {
             severity: Severity::Warning,
             kind: Kind::Resource,
@@ -835,7 +847,7 @@ pub fn analyze(mods: &[ModIndex], base: &BTreeSet<u64>, installed_frameworks: &B
             affected: groups.into_iter().map(|((id, f), items)| Affected::new(format!("{} · {f}", names[&id]), items)).collect(),
             mod_ids: ids,
             message: format!(
-                "{} {} replace the same {count} game resource{}; {winner} loads first and wins.",
+                "{} {} replace the same {count} game resource{}; {winner} loads first ({order}) and wins.{redmod_note}",
                 list(&owners),
                 all(&owners),
                 if count == 1 { "" } else { "s" }
@@ -961,7 +973,8 @@ fn build_report(game_dir: &Path, base: &BTreeSet<u64>, indexes: &[(i64, String, 
     let frameworks: BTreeSet<String> =
         crate::game::detect_frameworks(game_dir).into_iter().filter(|f| f.installed).map(|f| f.id).collect();
     let views: Vec<ModIndex> = indexes.iter().map(|(id, name, t)| ModIndex { mod_id: *id, name, touches: t }).collect();
-    let mut report = analyze(&views, base, &frameworks);
+    let modlist = crate::load_order::read_modlist(game_dir);
+    let mut report = analyze_ordered(&views, base, &frameworks, modlist.as_deref());
     merge_framework_nodes(&mut report.graph, fw_mods);
     report
 }

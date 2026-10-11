@@ -515,6 +515,30 @@ once; the other mods stay collapsed. **Find a file or mod…** lists every file 
 matches. The map only shows files CPMX2077 installed, not the game's own
 files or mods installed by hand.
 
+**Load order** (column and view). The game reads `.archive` files in a fixed
+order, and when two archives contain the same resource, the one loaded
+first is used:
+
+- Archives in `archive/pc/mod` load first, sorted by file name in byte
+  order (`!` and `_` and uppercase letters before lowercase), or in the
+  order of `archive/pc/mod/modlist.txt` when that file exists (archives it
+  doesn't list follow, by name).
+- REDmod archives (`mods/<name>/archives`) load after all of them, so an
+  archive mod always beats a REDmod on a shared resource.
+
+The **Load order** column shows each loaded archive's position (**#3**),
+counted over every archive in those folders, including ones not installed
+by CPMX2077. **REDmod** marks REDmod archives. **wins N / loses M** counts
+the resources the archive shares with other mods' archives that it wins
+(loads first) and loses; click it for the archives involved, each with its
+position and which one is used (needs **Check again** to have run). In **By
+mod**, a mod's archive positions show next to its name (**#3**, or
+**#3–#5** for several archives). **Sort: load order** sorts folders, mods
+and files by position instead of name. The **Load order** view lists every
+mod archive in load order and says how the order is decided (file name or
+`modlist.txt`). Positions are shown, not changed: renaming archives breaks
+update matching, so CPMX2077 doesn't do it.
+
 ### Graph
 
 ![The graph in the Flowchart (left to right) layout](images/graph.png)
@@ -559,7 +583,8 @@ Lists, by severity:
   replacing the same redscript method, or a framework a mod needs that isn't
   installed.
 - **Overlaps to check**: resources or tweak values several mods change, with
-  which archive wins the load order.
+  which archive wins the load order (by file name or `modlist.txt`, REDmod
+  archives after all others; see [Load order](#file-map)).
 - **Shared hooks (chained, all run)**: several mods hook the same function.
   Hooks are chained, so every one runs; they only clash if they change the
   same return value.

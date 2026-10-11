@@ -411,6 +411,7 @@ table.tree td.actions { white-space: nowrap; }
 }
 #tab-netrunner .diag-section > h3::before, #tab-netrunner .diag-section > header h3::before { content: "// "; color: var(--net-red); }
 #net-files header input { max-width: 280px; }
+#net-files header select { width: auto; flex: 0 0 auto; }
 #net-address {
   display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 6px 10px; margin-bottom: 0;
   background: #0a0a10; border: 1px solid var(--cyan); border-bottom: 0; color: var(--cyan);
@@ -461,6 +462,11 @@ table.tree td.actions { white-space: nowrap; }
 #net-list tr:hover td { background: rgba(0, 240, 255, .05); }
 #net-list tr.net-file.disabled td { opacity: .55; }
 #net-empty { padding: 8px 10px; margin: 0; }
+.net-pos { color: var(--yellow); font-size: 11px; padding-left: 8px; font-family: ui-monospace, "JetBrains Mono", monospace; }
+.net-load { display: inline-flex; gap: 6px; align-items: center; }
+#net-list td .link.net-contest { color: var(--green); font-size: 11px; }
+#net-list td .link.net-contest.loses { color: var(--yellow); }
+.net-order-info { padding: 0 10px; font-size: 12px; }
 .net-state { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 11px; white-space: nowrap; }
 .net-state::before { content: "■ "; }
 .net-state.active { color: var(--green); }

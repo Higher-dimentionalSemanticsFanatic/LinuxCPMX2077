@@ -163,7 +163,9 @@ Screenshots show sample data, with file locations blurred.
 - **File map**: a registry-editor style tree of every file mods installed,
   by game folder or by mod, showing which mod owns each file, where it is
   installed and whether it is in use, overridden by a newer mod, missing or
-  switched off. “Show in graph” next to a
+  switched off. A **Load order** view and column give each `.archive` its
+  load position (file name or `modlist.txt`, REDmods last) and how many
+  shared resources it wins or loses. “Show in graph” next to a
   finding or a crash suspect lights up the mods involved and what they share.
 - **Compatibility check** (no AI needed): every enabled mod is indexed for
   what it touches: game resources inside `.archive` files (and which of them
@@ -336,7 +338,7 @@ and the Windows installer as a release with a SHA256SUMS file.
 
 ## Roadmap
 
-- Load order for `.archive` files
+- Changing the `.archive` load order (shown today, not editable)
 - Applying a collection's own load order and settings files
 - Full Windows support
 

@@ -44,6 +44,14 @@ pub struct TreeFile {
     pub state: FileState,
     /// The mod whose copy is in use, when this one is overridden.
     pub overridden_by: Option<i64>,
+    /// For a loaded `.archive`: its 1-based place in the load order.
+    pub load_pos: Option<usize>,
+    /// A REDmod archive (loads after every `archive/pc/mod` archive).
+    pub redmod: bool,
+    /// Resources this archive shares with other archives that it wins
+    /// (loads first) and loses, from the analysis index.
+    pub wins: usize,
+    pub loses: usize,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -75,6 +83,8 @@ pub struct TreeMod {
 #[derive(Debug, Clone, Serialize)]
 pub struct FileTree {
     pub game_path: String,
+    /// How the archive load order is decided.
+    pub load_order: crate::load_order::Via,
     pub mods: Vec<TreeMod>,
     pub root: TreeNode,
 }
@@ -103,6 +113,15 @@ pub fn build(db: &Db, game: &GameRow, group: Group) -> Result<FileTree> {
         }
     }
 
+    // Archive load order and who wins shared resources.
+    let order = crate::load_order::effective(game_dir);
+    let pos = order.positions();
+    let mut resource_touches = Vec::new();
+    for m in mods.iter().filter(|m| m.enabled()) {
+        resource_touches.extend(db.touches(m.id)?.into_iter().filter(|t| t.kind == crate::analysis::Kind::Resource));
+    }
+    let contests = crate::load_order::contests(resource_touches.iter().map(|t| (t.file.as_str(), t.key.as_str())), &pos);
+
     let entries: Vec<TreeFile> = files
         .iter()
         .map(|(m, path, size)| {
@@ -120,6 +139,10 @@ pub fn build(db: &Db, game: &GameRow, group: Group) -> Result<FileTree> {
                 path: path.clone(),
                 mod_id: m.id,
                 size: *size,
+                load_pos: if m.enabled() { pos.get(&path.to_lowercase()).copied() } else { None },
+                redmod: crate::load_order::source_of(path) == Some(crate::load_order::Source::Redmod),
+                wins: contests.get(&path.to_lowercase()).map_or(0, |c| c.0),
+                loses: contests.get(&path.to_lowercase()).map_or(0, |c| c.1),
                 state,
                 overridden_by,
             }
@@ -150,6 +173,7 @@ pub fn build(db: &Db, game: &GameRow, group: Group) -> Result<FileTree> {
 
     Ok(FileTree {
         game_path: game.path.clone(),
+        load_order: order.via,
         mods: mods
             .iter()
             .map(|m| TreeMod { id: m.id, name: m.name.clone(), version: m.version.clone(), enabled: m.enabled() })
@@ -316,6 +340,35 @@ mod tests {
         assert_eq!(find(&t.root.folders[0], "r6").folders.len(), 2);
         assert_eq!(t.root.file_count, 3);
         assert_eq!(t.mods.len(), 3);
+    }
+
+    #[test]
+    fn archives_carry_load_position_and_contests() {
+        use crate::analysis::{Kind, Touch};
+        let (_dir, db, game) = setup();
+        let a = add(&db, &game, "Alpha", &["archive/pc/mod/b_alpha.archive"], true);
+        let b = add(&db, &game, "Beta", &["archive/pc/mod/a_beta.archive"], true);
+        let r = add(&db, &game, "Red", &["mods/red/archives/0.archive", "mods/red/info.json"], true);
+        let res = |file: &str, key: &str| Touch { kind: Kind::Resource, key: key.into(), file: file.into() };
+        db.set_touches(a, 1, &[res("archive/pc/mod/b_alpha.archive", "1"), res("archive/pc/mod/b_alpha.archive", "2")]).unwrap();
+        db.set_touches(b, 1, &[res("archive/pc/mod/a_beta.archive", "1")]).unwrap();
+        db.set_touches(r, 1, &[res("mods/red/archives/0.archive", "2")]).unwrap();
+
+        let t = build(&db, &game, Group::Location).unwrap();
+        assert_eq!(t.load_order, crate::load_order::Via::Alphabetical);
+        let mut all = Vec::new();
+        fn walk<'a>(n: &'a TreeNode, out: &mut Vec<&'a TreeFile>) {
+            out.extend(&n.files);
+            for c in &n.folders {
+                walk(c, out);
+            }
+        }
+        walk(&t.root, &mut all);
+        let f = |name: &str| all.iter().find(|f| f.name == name).unwrap();
+        assert_eq!((f("a_beta.archive").load_pos, f("a_beta.archive").wins, f("a_beta.archive").loses), (Some(1), 1, 0));
+        assert_eq!((f("b_alpha.archive").load_pos, f("b_alpha.archive").wins, f("b_alpha.archive").loses), (Some(2), 1, 1));
+        assert_eq!((f("0.archive").load_pos, f("0.archive").redmod, f("0.archive").loses), (Some(3), true, 1));
+        assert_eq!(f("info.json").load_pos, None);
     }
 
     #[test]

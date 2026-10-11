@@ -7,11 +7,13 @@
   const ROW_LIMIT = 500;
   let tree = null;
   let group = loadPref("netrunner.group", "location");
+  let sortBy = loadPref("netrunner.sort", "name");
   let selected = "";
-  const expanded = { location: new Set([""]), mod: new Set([""]) };
+  const expanded = { location: new Set([""]), mod: new Set([""]), order: new Set([""]) };
   let byKey = new Map();
   let modNames = new Map();
   let gameId = null;
+  let archives = []; // loaded archives from mods, in load order
 
   // Keys are unique per node: the folder path, prefixed by the mod in the
   // "by mod" view where the same folder appears under several mods.
@@ -20,7 +22,31 @@
     node.key = node.mod_id != null ? base : (base ? `${base}:${node.path}` : node.path);
     node.parent = parent;
     byKey.set(node.key, node);
-    for (const c of node.folders) index(c, node, base);
+    // Lowest and highest load position of the archives below.
+    node.posMin = Infinity;
+    node.posMax = -Infinity;
+    for (const f of node.files) if (f.load_pos != null) { node.posMin = Math.min(node.posMin, f.load_pos); node.posMax = Math.max(node.posMax, f.load_pos); }
+    for (const c of node.folders) {
+      index(c, node, base);
+      node.posMin = Math.min(node.posMin, c.posMin);
+      node.posMax = Math.max(node.posMax, c.posMax);
+    }
+  }
+
+  function posRange(node) {
+    if (!Number.isFinite(node.posMin)) return "";
+    return node.posMin === node.posMax ? `#${node.posMin}` : `#${node.posMin}–#${node.posMax}`;
+  }
+
+  // Name order, or load order (things without a load position last).
+  const byName = (a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+  function sortFolders(list) {
+    if (sortBy !== "load") return list;
+    return [...list].sort((a, b) => (a.posMin - b.posMin) || byName(a, b));
+  }
+  function sortFiles(list) {
+    if (sortBy !== "load") return list;
+    return [...list].sort((a, b) => ((a.load_pos ?? Infinity) - (b.load_pos ?? Infinity)) || byName(a, b));
   }
 
   async function load() {
@@ -30,7 +56,7 @@
       selected = "";
     }
     try {
-      tree = await invoke("mod_file_tree", { gameId: currentGame.id, group });
+      tree = await invoke("mod_file_tree", { gameId: currentGame.id, group: group === "mod" ? "mod" : "location" });
     } catch (e) {
       tree = null;
       $("#net-tree").replaceChildren(el("p", { class: "muted" }, `Couldn't read the file list: ${e}`));
@@ -40,6 +66,9 @@
     byKey = new Map();
     modNames = new Map(tree.mods.map((m) => [m.id, m.name]));
     tree.root.name = group === "mod" ? "All mods" : "Game folder";
+    archives = [];
+    collect(tree.root, (f) => f.load_pos != null, archives);
+    archives.sort((a, b) => a.load_pos - b.load_pos);
     index(tree.root, null, "");
     if (!byKey.has(selected)) selected = "";
     render();
@@ -54,6 +83,19 @@
   // ---- left pane: folders ---------------------------------------------
   function renderTree() {
     const box = $("#net-tree");
+    $("#net-sort").classList.toggle("hidden", group === "order");
+    if (group === "order") {
+      const redmods = archives.filter((f) => f.redmod).length;
+      box.replaceChildren(el("div", { class: "net-order-info" },
+        el("p", {}, el("b", {}, "Order: "), tree.load_order === "modlist"
+          ? "archive/pc/mod/modlist.txt (not written by CPMX2077), then unlisted archives by file name."
+          : "file name, byte order (! and _ and uppercase before lowercase). Game default."),
+        el("p", {}, `${archives.length - redmods} archive${archives.length - redmods === 1 ? "" : "s"} in archive/pc/mod`,
+          redmods ? `, then ${redmods} REDmod archive${redmods === 1 ? "" : "s"} (loaded after all archive/pc/mod archives)` : "", "."),
+        el("p", { class: "muted" }, "First loaded wins: when two archives contain the same resource, the lower number is used. "
+          + "Win and lose counts come from the compatibility index; click one for the archives involved.")));
+      return;
+    }
     if (!tree.root.file_count) {
       box.replaceChildren(el("p", { class: "muted" }, "No mod files installed yet."));
       return;
@@ -73,13 +115,14 @@
     }, caret,
       el("span", { class: "net-icon", "aria-hidden": "true" }, node.mod_id != null ? "◆" : open && hasKids ? "▤" : "▣"),
       el("span", { class: "net-name" }, node.name),
+      node.mod_id != null && posRange(node) ? el("span", { class: "net-pos", title: "Load position of this mod's archives" }, posRange(node)) : null,
       el("span", { class: "net-count" }, node.file_count),
       node.problems ? el("span", { class: "net-warn", title: `${node.problems} missing or overridden` }, "!") : null);
     label.addEventListener("click", () => select(node));
     label.addEventListener("dblclick", () => toggle(node));
     label.addEventListener("keydown", (e) => keyNav(e, node));
     const wrap = el("div", { class: "net-branch" }, label);
-    if (open) for (const c of node.folders) wrap.append(treeItem(c, depth + 1));
+    if (open) for (const c of sortFolders(node.folders)) wrap.append(treeItem(c, depth + 1));
     return wrap;
   }
 
@@ -120,11 +163,12 @@
     const rows = [...document.querySelectorAll("#net-tree .net-node")];
     const i = rows.findIndex((r) => r.dataset.key === node.key);
     const go = (r) => { if (r) { e.preventDefault(); select(byKey.get(r.dataset.key), { open: false }); } };
+    const kids = sortFolders(node.folders);
     if (e.key === "ArrowDown") go(rows[i + 1]);
     else if (e.key === "ArrowUp") go(rows[i - 1]);
     else if (e.key === "ArrowRight" && node.folders.length) {
       e.preventDefault();
-      if (!expanded[group].has(node.key)) toggle(node, true); else select(node.folders[0], { open: false });
+      if (!expanded[group].has(node.key)) toggle(node, true); else select(kids[0], { open: false });
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
       if (expanded[group].has(node.key) && node.folders.length) toggle(node, false);
@@ -139,19 +183,23 @@
     setAddress(node, query);
     const rows = [];
     let total;
-    if (query) {
+    if (group === "order") {
+      const hits = query ? archives.filter((f) => f.path.toLowerCase().includes(query) || (modNames.get(f.mod_id) || "").toLowerCase().includes(query)) : archives;
+      total = hits.length;
+      for (const f of hits.slice(0, ROW_LIMIT)) rows.push(fileRow(f));
+    } else if (query) {
       const hits = [];
       collect(tree.root, (f) => f.path.toLowerCase().includes(query) || (modNames.get(f.mod_id) || "").toLowerCase().includes(query), hits);
       total = hits.length;
-      for (const f of hits.slice(0, ROW_LIMIT)) rows.push(fileRow(f));
+      for (const f of sortFiles(hits).slice(0, ROW_LIMIT)) rows.push(fileRow(f));
     } else {
-      for (const c of node.folders) rows.push(folderRow(c));
-      for (const f of node.files.slice(0, ROW_LIMIT)) rows.push(fileRow(f));
+      for (const c of sortFolders(node.folders)) rows.push(folderRow(c));
+      for (const f of sortFiles(node.files).slice(0, ROW_LIMIT)) rows.push(fileRow(f));
       total = node.folders.length + node.files.length;
     }
     $("#net-rows").replaceChildren(...rows);
     const empty = $("#net-empty");
-    if (!total) empty.textContent = query ? "Nothing matches." : "This folder is empty.";
+    if (!total) empty.textContent = query ? "Nothing matches." : group === "order" ? "No enabled mod installs a loaded .archive file." : "This folder is empty.";
     else if (total > rows.length) empty.textContent = `Showing ${rows.length} of ${total}. Open a subfolder or search to narrow it down.`;
     empty.classList.toggle("hidden", !(total === 0 || total > rows.length));
   }
@@ -165,6 +213,11 @@
     const crumbs = [];
     for (let n = node; n; n = n.parent) crumbs.unshift(n);
     const path = $("#net-path");
+    if (group === "order") {
+      path.replaceChildren(query ? `Load order, search: “${query}”` : "Load order: archive/pc/mod, then mods/*/archives");
+      $("#net-open").onclick = () => busy($("#net-open"), () => openFolder("archive/pc/mod"));
+      return;
+    }
     if (query) {
       path.replaceChildren(`Search: “${query}”`);
     } else {
@@ -187,6 +240,7 @@
       el("td", { class: "mono muted" }, node.mod_id != null ? "" : `${gameName()}/${node.path}/`),
       el("td", { class: "muted" }, node.mods.length === 1 ? modNames.get(node.mods[0]) : `${node.mods.length} mods`),
       el("td", {}, node.problems ? el("span", { class: "net-state missing" }, `${node.problems} need attention`) : el("span", { class: "muted" }, node.file_count === 1 ? "1 file" : `${node.file_count} files`)),
+      el("td", { class: "mono" }, posRange(node)),
       el("td", {}, fmtSize(node.size)));
     tr.addEventListener("dblclick", () => select(node));
     return tr;
@@ -213,7 +267,37 @@
         `${gameName()}/${folder ? `${folder}/` : ""}`)),
       el("td", {}, modCell),
       el("td", {}, el("span", { class: `net-state ${f.state}` }, state)),
+      el("td", {}, loadCell(f)),
       el("td", {}, fmtSize(f.size)));
+  }
+
+  // "#3", REDmod marker, and the shared-resource wins/losses.
+  function loadCell(f) {
+    if (f.load_pos == null) return "";
+    const contest = f.wins || f.loses
+      ? el("button", { class: `link net-contest${f.loses ? " loses" : ""}`, title: "Archives sharing resources with this one",
+        onclick: () => showContest(f) }, [f.wins && `wins ${f.wins}`, f.loses && `loses ${f.loses}`].filter(Boolean).join(" / "))
+      : null;
+    return el("span", { class: "net-load" }, el("span", { class: "mono" }, `#${f.load_pos}`),
+      f.redmod ? el("span", { class: "badge", title: "REDmod archives load after every archive/pc/mod archive" }, "REDmod") : null, contest);
+  }
+
+  // The compatibility findings for an archive's shared resources, with each
+  // archive's load position.
+  function showContest(f) {
+    const findings = (lastDiag?.analysis?.findings || []).filter((x) => x.kind === "resource"
+      && x.affected.some((a) => a.title.endsWith(` · ${f.path}`)));
+    const pos = new Map(archives.map((a) => [a.path.toLowerCase(), a]));
+    const text = findings.length ? findings.map((x) => {
+      const lines = x.affected.map((a) => {
+        const [mod, file] = a.title.split(" · ");
+        const p = pos.get((file || "").toLowerCase());
+        return { pos: p?.load_pos ?? Infinity, line: `${p ? `#${p.load_pos}` : "not loaded"}  ${file} (${mod}): ${a.items.length + a.more} resource${a.items.length + a.more === 1 ? "" : "s"}` };
+      }).sort((a, b) => a.pos - b.pos).map((l, i) => `${l.line}${i === 0 ? " (used)" : ""}`);
+      return `${x.message}\n${lines.join("\n")}`;
+    }).join("\n\n")
+      : `${f.name}: wins ${f.wins}, loses ${f.loses} shared resources. Click Check again for the per-archive list.`;
+    dialog.message(text, { title: `Load order: ${f.name}`, kind: "info" });
   }
 
   async function showMod(modId) {
@@ -230,6 +314,12 @@
     document.querySelectorAll("#net-group button").forEach((b) => b.classList.toggle("active", b.dataset.group === g));
   }
 
+  $("#net-sort").value = sortBy;
+  $("#net-sort").addEventListener("change", () => {
+    sortBy = $("#net-sort").value;
+    savePref("netrunner.sort", sortBy);
+    if (tree) render();
+  });
   document.querySelectorAll("#net-group button").forEach((b) => {
     b.classList.toggle("active", b.dataset.group === group);
     b.addEventListener("click", () => { if (b.dataset.group !== group) { setGroup(b.dataset.group); busy(null, load); } });

@@ -21,6 +21,7 @@ pub mod hdr;
 pub mod install;
 pub mod known_issues;
 pub mod linux_setup;
+pub mod load_order;
 pub mod mcp;
 pub mod modpacks;
 pub mod nexus;

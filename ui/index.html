@@ -218,7 +218,12 @@
             <div id="net-group" class="segmented" role="tablist" aria-label="Arrange files">
               <button data-group="location" class="active" role="tab">By folder</button>
               <button data-group="mod" role="tab">By mod</button>
+              <button data-group="order" role="tab">Load order</button>
             </div>
+            <select id="net-sort" aria-label="Sort files">
+              <option value="name">Sort: name</option>
+              <option value="load">Sort: load order</option>
+            </select>
             <input id="net-filter" type="search" placeholder="Find a file or mod…" aria-label="Find a file or mod">
           </div>
         </header>
@@ -228,7 +233,7 @@
           <div id="net-tree" role="tree" aria-label="Folders"></div>
           <div id="net-list">
             <table>
-              <thead><tr><th>Name</th><th>Install location</th><th>Mod</th><th>Status</th><th>Size</th></tr></thead>
+              <thead><tr><th>Name</th><th>Install location</th><th>Mod</th><th>Status</th><th title="Load position of .archive files; the first loaded wins shared resources">Load order</th><th>Size</th></tr></thead>
               <tbody id="net-rows"></tbody>
             </table>
             <p id="net-empty" class="muted hidden"></p>
