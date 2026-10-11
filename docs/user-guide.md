@@ -845,7 +845,8 @@ Every archive you downloaded, grouped by mod with each version under it.
   Frameworks list, the Linux setup items (not on Windows), the Nexus
   account box (API key, Free vs Premium downloads), Installed mods,
   Netrunner, and last the First setup checklist. The outlined
-  element stays clickable; everything else is dimmed. **Next** / **Back**
+  element stays clickable and can be scrolled (the outline and the step
+  card follow it); everything else is dimmed. **Next** / **Back**
   or the arrow keys step through, **Skip tour** or Esc closes it, and the
   last step has **Open getting started guide**. Closing it returns to the
   tab you were on.

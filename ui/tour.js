@@ -9,6 +9,7 @@ const tourOnWindows = /Windows/i.test(navigator.userAgent);
 let tour = null; // { i, steps, tab, source } while open
 let tourWatch = null; // re-places the card while lists and panels fill in
 let tourFrame = 0;
+let tourScrollFrame = 0;
 
 function visible(sel) {
   const e = typeof sel === "string" ? document.querySelector(sel) : sel;
@@ -131,7 +132,9 @@ function startTour() {
     tourWatch.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
   }
   document.addEventListener("keydown", tourKeys, true);
-  window.addEventListener("resize", placeTour);
+  window.addEventListener("resize", onTourMove);
+  // Capture: scrolls of the sidebar and main don't bubble to the document.
+  document.addEventListener("scroll", onTourMove, true);
   showTourStep(0);
 }
 
@@ -143,7 +146,8 @@ function endTour() {
   tourWatch = null;
   $("#tour").classList.add("hidden");
   document.removeEventListener("keydown", tourKeys, true);
-  window.removeEventListener("resize", placeTour);
+  window.removeEventListener("resize", onTourMove);
+  document.removeEventListener("scroll", onTourMove, true);
   // Back to where the user was before the tour switched tabs and sources.
   if (currentSource !== source) busy(null, () => selectSource(source, false));
   showTab(tab);
@@ -176,13 +180,22 @@ function renderTourStep(focus = true) {
   $("#tour-back").classList.toggle("hidden", i === 0);
   $("#tour-skip").classList.toggle("hidden", last);
   $("#tour-next").textContent = last ? "Finish" : "Next";
-  placeTour();
+  placeTour(focus);
   if (focus) $("#tour-next").focus();
+}
+
+// Keep the outline and card on the element while the sidebar or page scrolls
+// (wheel over the outlined element, keyboard) or the window is resized.
+function onTourMove() {
+  if (!tour || tourScrollFrame) return;
+  tourScrollFrame = requestAnimationFrame(() => { tourScrollFrame = 0; placeTour(false); });
 }
 
 // Outline the step's element, dim the rest with four blockers around it, and
 // put the card next to it (right, below, above, or centred if it won't fit).
-function placeTour() {
+// `reveal`: scroll the element into view (on a new step, not after a user
+// scroll, which would undo it).
+function placeTour(reveal = false) {
   if (!tour) return;
   const s = tour.steps[tour.i];
   const target = s.target ? visible(s.target()) : null;
@@ -198,10 +211,13 @@ function placeTour() {
     card.style.top = `${Math.max(16, (H - card.offsetHeight) / 2)}px`;
     return;
   }
-  target.scrollIntoView({ block: "nearest" });
+  // Also when the step's element changes (GitHub list loaded after the step opened).
+  if (reveal || target !== tour.shown) target.scrollIntoView({ block: "nearest" });
+  tour.shown = target;
   const r = target.getBoundingClientRect();
-  const x0 = Math.max(0, r.left - pad), y0 = Math.max(0, r.top - pad);
-  const x1 = Math.min(W, r.right + pad), y1 = Math.min(H, r.bottom + pad);
+  // Clipped to the window; an element scrolled out of view leaves a 0-height hole.
+  const y0 = Math.min(H, Math.max(0, r.top - pad)), y1 = Math.max(y0, Math.min(H, r.bottom + pad));
+  const x0 = Math.min(W, Math.max(0, r.left - pad)), x1 = Math.max(x0, Math.min(W, r.right + pad));
   top.style.cssText = `top:0;left:0;width:${W}px;height:${y0}px`;
   bottom.style.cssText = `top:${y1}px;left:0;width:${W}px;height:${H - y1}px`;
   left.style.cssText = `top:${y0}px;left:0;width:${x0}px;height:${y1 - y0}px`;
