@@ -438,7 +438,10 @@ earlier versions). **Check again** reruns every check. The top of the
 tab summarises what needs attention: game setup problems, where the last
 start went wrong (**Start here**), whether the game crashed in the last
 session, errors from that session, known problem mods, and compatibility
-problems. **Show in
+problems. *Game setup* lists the same items as the Game panel: Linux setup
+fixes still open (each with its fix button, such as **Install vcrun2022**)
+and frameworks that are installed without what they need (with **Install
+missing frameworks**). **Show in
 graph** next to a finding lights up the mods involved. The links under the
 title (**Files**, **Graph**, **Compatibility**, **Crashes & logs**) jump to
 each section.

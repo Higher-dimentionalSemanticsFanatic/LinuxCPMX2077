@@ -204,8 +204,10 @@ let setupGameId = null;
 
 function renderWarnings() {
   const items = setupChecks.map(setupItem);
-  items.push(...currentGame.install.warnings.map((w) => el("li", {}, w)));
+  items.push(...currentGame.install.warnings.map(warningItem));
   $("#game-warnings").replaceChildren(...items);
+  // Netrunner's summary lists the same problems.
+  if (lastDiag && $("#tab-netrunner").classList.contains("active")) renderProblems(lastDiag.analysis, lastDiag.crash);
 }
 
 function setupItem(c) {
@@ -616,9 +618,13 @@ const FRAMEWORK_NAMES = { cet: "CET", red4ext: "RED4ext", redscript: "redscript"
 // attention, the file map, the graph, the compatibility findings and the
 // crash/log check. A finding or a
 // crash suspect can be shown in the graph with the mods it names lit up.
+let lastDiag = null; // { analysis, crash } of the last check, for redrawing the summary
+
 async function runDiagnostics() {
   if (!currentGame) return;
+  lastDiag = null;
   $("#diag-problems").replaceChildren(el("p", { class: "muted" }, "Checking…"));
+  await loadSetup().catch(() => {});
   window.graphPending();
   window.loadFileTree();
   const [analysis, crash] = await Promise.allSettled([
@@ -632,6 +638,7 @@ async function runDiagnostics() {
     window.graphError(String(analysis.reason));
   }
   if (crash.status === "fulfilled") renderCrash(crash.value);
+  lastDiag = { analysis: analysis.value, crash: crash.value };
   renderProblems(analysis.value, crash.value);
   const failed = [analysis, crash].filter((r) => r.status === "rejected").map((r) => String(r.reason));
   if (failed.length) toast(failed.join("\n"), true);
@@ -680,11 +687,23 @@ function suspectIds(crash) {
   return ids;
 }
 
+// A framework problem from game detection ("archivexl is installed but
+// red4ext is missing"), with the button that installs what is missing.
+function warningItem(w) {
+  const named = Object.keys(FRAMEWORK_NAMES).filter((id) => new RegExp(`\\b${id}\\b`, "i").test(w));
+  const text = named.reduce((t, id) => t.replace(new RegExp(`\\b${id}\\b`, "gi"), FRAMEWORK_NAMES[id]), w);
+  return el("li", {}, text, named.length ? el("div", { class: "row" }, el("button", { class: "primary",
+    title: "Download and install every core framework this game is missing, from GitHub",
+    onclick: (e) => busy(e.target, () => installFrameworks()) }, "Install missing frameworks")) : null);
+}
+
 function renderProblems(analysis, crash) {
   const items = [];
-  const warnings = currentGame.install.warnings;
-  if (warnings.length) items.push(el("div", { class: "card finding warning" },
-    el("h3", {}, "Game setup"), el("ul", { class: "warnings plain" }, ...warnings.map(warningItem))));
+  // Linux setup problems (with their fix buttons) and framework problems.
+  const setup = setupChecks.filter((c) => c.state === "problem").map(setupItem);
+  const warnings = currentGame.install.warnings.map(warningItem);
+  if (setup.length || warnings.length) items.push(el("div", { class: "card finding warning" },
+    el("h3", {}, "Game setup"), el("ul", { class: "warnings plain" }, ...setup, ...warnings)));
   if (crash) {
     const errors = crash.issues.filter((i) => i.level === "error" && i.last_session).length;
     const ids = suspectIds(crash);
