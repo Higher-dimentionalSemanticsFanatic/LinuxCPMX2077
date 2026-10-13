@@ -75,6 +75,7 @@
         <button id="queue-clear" class="hidden">Clear</button>
         <button id="queue-toggle" class="link">Show list</button>
       </div>
+      <div id="transfers" class="transfers" aria-label="Files downloading"></div>
       <div class="queue-track"><div id="queue-bar"></div></div>
       <ul id="queue-items" class="hidden"></ul>
     </section>
@@ -324,7 +325,6 @@
           <button data-source="nexus" class="active" role="tab">Nexus Mods</button>
         </div>
       </header>
-      <div id="nexus-progress" class="progress hidden"><div class="progress-bar"></div><span class="progress-text"></span></div>
       <div id="source-nexus">
       <div id="nexus-login" class="card">
         <h3>Connect with an API key</h3>
@@ -457,6 +457,7 @@
       <header>
         <h2>Downloads</h2>
         <div class="row">
+          <input id="downloads-filter" type="search" class="inline" placeholder="Filter by mod, file or version" aria-label="Filter downloads" maxlength="100">
           <select id="downloads-channel" class="inline" aria-label="Release channel">
             <option value="">Stable, beta and nightly</option>
             <option value="stable">Stable only</option>
@@ -467,14 +468,13 @@
       </header>
       <p class="muted small">Saved in <span id="downloads-where" class="mono"></span>, one folder per mod.
         <button class="link inline" data-goto="settings">Change</button></p>
-      <div id="progress" class="progress hidden"><div class="progress-bar"></div><span class="progress-text"></span></div>
       <div id="downloads-bulk" class="bulk-bar hidden">
         <span id="downloads-bulk-count"></span>
         <button id="downloads-bulk-delete" class="danger" title="Delete the selected archives; installed mods stay installed">Delete</button>
         <button id="downloads-bulk-clear" class="link">Clear selection</button>
       </div>
       <table class="tree">
-        <thead><tr><th class="pick-col"><input type="checkbox" id="downloads-select-all" class="pick" aria-label="Select all shown downloads" title="Select all shown downloads"></th><th>Mod</th><th>Version</th><th>Game version</th><th>Source</th><th>Size</th><th>Verified</th><th></th></tr></thead>
+        <thead><tr><th class="pick-col"><input type="checkbox" id="downloads-select-all" class="pick" aria-label="Select all shown downloads" title="Select all shown downloads"></th><th class="sortable" data-sort="name">Mod</th><th class="sortable" data-sort="version">Version</th><th class="sortable" data-sort="game_version">Game version</th><th class="sortable" data-sort="source">Source</th><th class="sortable" data-sort="size">Size</th><th class="sortable" data-sort="downloaded" title="When the archive was downloaded">Downloaded</th><th class="sortable" data-sort="installed" title="When this archive was installed into the selected game">Installed</th><th>Verified</th><th></th></tr></thead>
         <tbody id="downloads-body"></tbody>
       </table>
       <p id="downloads-empty" class="muted">Nothing downloaded yet.</p>

@@ -220,7 +220,8 @@ Screenshots show sample data, with file locations blurred.
   offers to register itself as the `nxm://` handler first (also in
   Settings). Pasting a mod URL, ID or `nxm://` link still works. The ⬇ button
   on a mod's card offers its two newest main files, and the download's
-  progress shows right in Get mods. A file you already downloaded is never
+  progress shows on the card, on its row in Downloads and in a panel at the
+  top with one bar per file, side by side. A file you already downloaded is never
   fetched twice: the app installs the copy you have.
 - **GitHub as a second source**: the core frameworks (CET, RED4ext,
   redscript, ArchiveXL, TweakXL, Codeware) and many mods ship as GitHub
@@ -241,8 +242,9 @@ Screenshots show sample data, with file locations blurred.
   menu and in the queue panel. Update all uses the same queue.
 - **Tags, versions and updates**: the Installed tab can be filtered by tag
   or Nexus category and sorted by name, tag/category, version or source. Downloads show
-  the mod version, the game version they were downloaded on, the source and
-  how the file was verified. “Check for updates” (also run at start-up) asks
+  the mod version, the game version they were downloaded on, the source, the
+  download and install dates and how the file was verified, with a search box
+  and sorting by any column. “Check for updates” (also run at start-up) asks
   Nexus and GitHub for newer files; outdated mods get an Update button in the
   Installed and Downloads tabs, and an update replaces the old version in
   place.

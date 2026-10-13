@@ -2072,18 +2072,23 @@ function fileRow(modId, f, highlightFile, downloaded = false) {
 
 async function download(modId, fileId, key = null, expires = null, replaces = null) {
   if (!currentGame) throw "Select a game first";
+  const tk = nexusKey(modId, fileId);
+  transferStart(tk);
+  let end = "failed";
   try {
     const r = await invoke("nexus_download", {
       modId, fileId, key, expires, installTo: currentGame.id, overwrite: $("#overwrite").checked, replaces,
     });
+    end = r.already_had ? "had" : "done";
+    transferEnd(tk, end);
     const note = [r.already_had ? ALREADY_HAD : null,
       r.download.verified ? null : "Nexus' checksum lookup was unreachable, so the file is unverified."].filter(Boolean).join("\n") || null;
     if (r.install) await handleOutcome(r.install, note);
     else if (note) toast(note, !r.already_had);
     if (replaces && updatesByMod.delete(replaces)) updatesChanged();
   } finally {
-    endCardBar(`${modId}:${fileId}`);
-    hideProgress();
+    transferEnd(tk, end);
+    endCardBar(tk);
     loadDownloads().catch(() => {});
     loadMods().catch(() => {});
   }
@@ -2109,22 +2114,112 @@ async function handleNxm(url) {
 
 const ALREADY_HAD = "Already in your downloads, so the copy you have was used instead of downloading it again.";
 
-// The bars at the top of Downloads and Get mods (and on a mod's card).
-function showProgress(done, total, label = "Downloading", cardKey = null) {
-  const text = `${label} ${fmtSize(done)}${total ? " of " + fmtSize(total) : ""}`;
-  const bars = [$("#progress"), $("#nexus-progress"), cardKey && cardBars.get(cardKey)].filter(Boolean);
-  for (const p of bars) {
-    p.classList.remove("hidden");
-    p.querySelector(".progress-bar").style.width = total ? `${(100 * done) / total}%` : "0";
-    p.querySelector(".progress-text").textContent = p.classList.contains("card-progress")
-      ? `${total ? Math.round((100 * done) / total) + "% · " : ""}${fmtSize(done)}${total ? " of " + fmtSize(total) : ""}` : text;
-  }
+// ---- files downloading ----------------------------------------------------
+// One entry per file in flight, keyed "modId:fileId" for Nexus (the same key
+// as the mod card's bar) and "source:id:fileId" for other sources. Each gets
+// a bar in the popup at the top (side by side), on its row in Downloads and
+// on its mod card in Get mods.
+const transfers = new Map(); // key -> { key, name, file, done, total, state }
+const transferBars = new Map(); // key -> bar in the popup
+const transferRows = new Map(); // key -> row in Downloads
+let transfersClearTimer = null;
+let transfersFrame = 0;
+
+const nexusKey = (modId, fileId) => `${modId}:${fileId}`;
+const sourceKey = (source, id, fileId) => `${source}:${id}:${fileId}`;
+const transfersActive = () => [...transfers.values()].some((t) => t.state === "downloading");
+
+function transferStart(key, name = "", file = "") {
+  clearTimeout(transfersClearTimer);
+  const t = transfers.get(key);
+  if (t?.state === "downloading") return t;
+  // A key that finished earlier keeps its place in the row of bars.
+  const n = { key, name: name || t?.name || "", file: file || t?.file || "", done: 0, total: 0, state: "downloading" };
+  transfers.set(key, n);
+  transfersChanged();
+  return n;
 }
 
-function hideProgress() {
-  $("#progress").classList.add("hidden");
-  $("#nexus-progress").classList.add("hidden");
+function transferProgress(key, done, total, name, file) {
+  const t = transfers.get(key) || transferStart(key);
+  if (t.state !== "downloading") return;
+  Object.assign(t, { done, total });
+  if (name) t.name = name;
+  if (file) t.file = file;
+  if (!transfersFrame) transfersFrame = requestAnimationFrame(() => { transfersFrame = 0; renderTransfers(); });
 }
+
+// state: "done", "had" (already in the downloads) or "failed".
+function transferEnd(key, state) {
+  const t = transfers.get(key);
+  if (!t || t.state !== "downloading") return;
+  t.state = state;
+  if (state === "done" && t.total) t.done = t.total;
+  // Finished bars stay in place until every file is finished, so the
+  // running ones don't move; then they clear together.
+  if (!transfersActive()) {
+    clearTimeout(transfersClearTimer);
+    transfersClearTimer = setTimeout(() => {
+      if (transfersActive()) return;
+      transfers.clear();
+      transfersChanged();
+    }, 8000);
+  }
+  transfersChanged();
+}
+
+// A file started or finished: rows in Downloads and the popup change.
+function transfersChanged() {
+  for (const [k, b] of transferBars) if (!transfers.has(k)) { b.remove(); transferBars.delete(k); }
+  renderTransfers();
+  renderDownloads();
+  renderQueue();
+}
+
+function transferText(t) {
+  if (t.state === "done") return t.total ? `downloaded · ${fmtSize(t.total)}` : "downloaded";
+  if (t.state === "had") return "already in downloads";
+  if (t.state === "failed") return "failed";
+  if (!t.done) return "starting";
+  return `${t.total ? Math.round((100 * t.done) / t.total) + "% · " : ""}${fmtSize(t.done)}${t.total ? " of " + fmtSize(t.total) : ""}`;
+}
+
+const transferWidth = (t) => t.state === "downloading" ? (t.total ? `${(100 * t.done) / t.total}%` : "0") : "100%";
+const transferName = (t) => t.name || t.file || `File ${t.key}`;
+
+function renderTransfers() {
+  const strip = $("#transfers");
+  strip.querySelector(".transfers-none")?.remove();
+  for (const t of transfers.values()) {
+    let b = transferBars.get(t.key);
+    if (!b) {
+      b = el("div", { class: "transfer" }, el("div", { class: "progress-bar" }),
+        el("span", { class: "transfer-name" }), el("span", { class: "transfer-state" }));
+      transferBars.set(t.key, b);
+      strip.append(b);
+    }
+    b.className = `transfer ${t.state}`;
+    b.querySelector(".progress-bar").style.width = transferWidth(t);
+    b.querySelector(".transfer-name").textContent = transferName(t);
+    b.querySelector(".transfer-state").textContent = transferText(t);
+    b.title = [t.name, t.file, transferText(t)].filter(Boolean).join("\n");
+    const row = transferRows.get(t.key);
+    if (row) {
+      row.querySelector(".progress-bar").style.width = transferWidth(t);
+      row.querySelector(".progress-text").textContent = transferText(t);
+      row.querySelector(".transfer-row-name").textContent = transferName(t);
+      row.querySelector(".transfer-row-file").textContent = t.name ? t.file : "";
+    }
+    const card = cardBars.get(t.key);
+    if (card && t.state === "downloading") {
+      card.querySelector(".progress-bar").style.width = transferWidth(t);
+      card.querySelector(".progress-text").textContent = transferText(t);
+    }
+  }
+  // The strip keeps its height with no file in flight (queue waiting on a click).
+  if (!transfers.size) strip.append(el("span", { class: "transfers-none muted small" }, "No file downloading"));
+}
+renderTransfers();
 
 listen("nxm-link", (e) => busy(null, async () => {
   const ref = await invoke("nexus_resolve", { input: e.payload });
@@ -2136,13 +2231,13 @@ listen("nxm-link", (e) => busy(null, async () => {
   await handleNxm(e.payload);
 }));
 listen("download-progress", (e) => {
-  const { mod_id, file_id, done, total } = e.payload;
-  showProgress(done, total, "Downloading", `${mod_id}:${file_id}`);
+  const { mod_id, file_id, name, file_name, done, total } = e.payload;
+  transferProgress(nexusKey(mod_id, file_id), done, total, name, file_name);
   queueProgress((q) => q.kind === "nexus" && q.modId === mod_id && q.fileId === file_id, done, total);
 });
 listen("source-progress", (e) => {
-  const { source, id, file_id, done, total } = e.payload;
-  showProgress(done, total, `Downloading ${id}:`);
+  const { source, id, file_id, name, file_name, done, total } = e.payload;
+  transferProgress(sourceKey(source, id, file_id), done, total, name, file_name);
   queueProgress((q) => q.kind === "source" && q.source === source && q.ref === id && q.file?.id === file_id, done, total);
 });
 
@@ -2351,17 +2446,22 @@ function sourceFileRow(info, l, f, replacing) {
 
 async function sourceDownload(source, id, f, replaces = null, install = true) {
   if (install && !currentGame) throw "Select a game first";
+  const tk = sourceKey(source, id, f.id);
+  transferStart(tk, "", f.file_name);
+  let end = "failed";
   try {
     const r = await invoke("source_download", {
       source, id, fileId: f.id, installTo: install ? currentGame.id : null, overwrite: $("#overwrite").checked, replaces,
     });
+    end = r.already_had ? "had" : "done";
+    transferEnd(tk, end);
     const note = [r.already_had ? ALREADY_HAD : null, r.download.verified ? null : `${r.download.check}, so the file is unverified.`]
       .filter(Boolean).join("\n") || null;
     if (r.install) await handleOutcome(r.install, note);
     else toast([r.already_had ? null : `Downloaded ${r.download.file_name}`, note].filter(Boolean).join("\n"));
     if (replaces && updatesByMod.delete(replaces)) updatesChanged();
   } finally {
-    hideProgress();
+    transferEnd(tk, end);
     loadDownloads().catch(() => {});
     loadMods().catch(() => {});
   }
@@ -2633,18 +2733,22 @@ async function runDownload(it) {
   if (it.state !== "ready-download") return;
   it.state = "downloading";
   renderQueue();
+  const tk = it.kind === "nexus" ? nexusKey(it.modId, it.fileId) : sourceKey(it.source, it.ref, it.file.id);
+  transferStart(tk, it.name, it.kind === "nexus" ? "" : it.file.file_name);
+  let end = "failed";
   try {
     const r = it.kind === "nexus"
       ? await invoke("nexus_download", { modId: it.modId, fileId: it.fileId, key: it.link?.key ?? null, expires: it.link?.expires ?? null,
         installTo: null, overwrite: false, replaces: null })
       : await invoke("source_download", { source: it.source, id: it.ref, fileId: it.file.id, installTo: null, overwrite: false, replaces: null });
     it.downloadId = r.download_id;
+    end = r.already_had ? "had" : "done";
     if (r.already_had) it.note = "already downloaded";
     if (!r.download.verified) it.note = it.kind === "nexus" ? "unverified: Nexus checksum lookup failed" : r.download.check;
   } catch (e) {
     return finishItem(it, "failed", String(e));
   } finally {
-    hideProgress();
+    transferEnd(tk, end);
     loadDownloads().catch(() => {});
   }
   if (it.kind === "source" && !it.file.installable) return finishItem(it, "downloaded", it.note);
@@ -2787,10 +2891,41 @@ function queueProgress(match, done, total) {
   if (!progressFrame) progressFrame = requestAnimationFrame(() => { progressFrame = 0; renderQueue(); });
 }
 
+// Show or hide the popup at the top. While the page is scrolled, the scroll
+// position absorbs its height, so what's on screen stays where it is.
+function setPopupShown(show) {
+  const pop = $("#queue");
+  if (pop.classList.contains("hidden") !== show) return;
+  const main = $("main");
+  const ref = document.querySelector("main > .tab.active");
+  const y0 = ref?.getBoundingClientRect().top;
+  const scrolled = main.scrollTop > 0;
+  pop.classList.toggle("hidden", !show);
+  if (ref && scrolled) main.scrollTop += ref.getBoundingClientRect().top - y0;
+}
+
+// The popup when only single downloads run (no queue).
+function renderTransfersOnly() {
+  const all = [...transfers.values()];
+  const running = all.filter((t) => t.state === "downloading").length;
+  const failed = all.filter((t) => t.state === "failed").length;
+  $("#queue-title").textContent = running
+    ? `Downloading ${running} file${running === 1 ? "" : "s"}`
+    : `Downloads finished: ${all.length - failed} done${failed ? `, ${failed} failed` : ""}`;
+  $("#queue-now").textContent = "";
+  $("#queue-bar").style.width = `${(100 * (all.length - running)) / all.length}%`;
+  for (const id of ["#queue-show", "#queue-skip", "#queue-cancel", "#queue-toggle", "#queue-items"]) $(id).classList.add("hidden");
+  $("#queue-clear").classList.toggle("hidden", !!running);
+}
+
 function renderQueue() {
   const items = queue.items;
-  $("#queue").classList.toggle("hidden", !items.length);
-  if (!items.length) return;
+  setPopupShown(items.length > 0 || transfers.size > 0);
+  if (!items.length) {
+    if (transfers.size) renderTransfersOnly();
+    return;
+  }
+  $("#queue-toggle").classList.remove("hidden");
   const finished = items.filter((q) => FINISHED.has(q.state)).length;
   const active = finished < items.length;
   const c = queue.clickItem;
@@ -2820,7 +2955,13 @@ function renderQueue() {
 
 $("#queue-skip").addEventListener("click", queueSkip);
 $("#queue-cancel").addEventListener("click", queueCancel);
-$("#queue-clear").addEventListener("click", () => { clearTimeout(queueClearTimer); queue.items = []; renderQueue(); });
+$("#queue-clear").addEventListener("click", () => {
+  clearTimeout(queueClearTimer);
+  queue.items = [];
+  // Finished bars go too; files still downloading keep theirs.
+  for (const [k, t] of transfers) if (t.state !== "downloading") transfers.delete(k);
+  transfersChanged();
+});
 $("#queue-toggle").addEventListener("click", () => { queue.showList = !queue.showList; renderQueue(); });
 $("#queue-show").addEventListener("click", (e) => busy(e.target, async () => {
   if (queue.paused) {
@@ -2866,20 +3007,82 @@ async function loadDownloads() {
   renderDownloads();
 }
 
+// SQLite datetime('now') text (UTC) as local date and time.
+function fmtDbTime(s) {
+  if (!s) return "—";
+  const d = new Date(s.includes("T") ? s : `${s.replace(" ", "T")}Z`);
+  return isNaN(d) ? s : d.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
+}
+
+const dateCell = (s) => el("td", { class: "date", title: s ? `${s} UTC` : "" }, fmtDbTime(s));
+
+// Sorting: a column's value for one download. Folders sort by their newest
+// version, by the latest date, or by their total size.
+let dlSort = loadPref("downloadsSort", { key: "downloaded", dir: -1 });
+const DL_SORT = {
+  name: (d) => d.mod_name || d.file_name,
+  version: (d) => d.version || "",
+  game_version: (d) => d.game_version || "",
+  source: (d) => sourceLabel({ ...d, source: d.source || "nexus" }),
+  size: (d) => d.size,
+  downloaded: (d) => d.downloaded_at || "",
+  installed: (d) => installedFor(d)?.installed_at || "",
+};
+// Columns that start newest or largest first.
+const DL_DESC_FIRST = new Set(["size", "downloaded", "installed"]);
+
+function groupSortValue(g, entries) {
+  const key = DL_SORT[dlSort.key] || DL_SORT.downloaded;
+  if (dlSort.key === "name") return g.name;
+  if (dlSort.key === "size") return entries.reduce((n, e) => n + e.size, 0);
+  if (dlSort.key === "downloaded" || dlSort.key === "installed") return entries.map(key).sort().pop() || "";
+  return key(entries[0]);
+}
+
+function downloadMatches(d, q) {
+  return [d.mod_name, d.file_name, d.version, d.game_version, d.channel, sourceLabel({ ...d, source: d.source || "nexus" })]
+    .filter(Boolean).join(" ").toLowerCase().includes(q);
+}
+
+// A file still downloading: a row with its progress bar on top of the list.
+function transferRow(t) {
+  const row = el("tr", { class: "downloading" },
+    el("td", {}),
+    el("td", {}, el("b", { class: "transfer-row-name" }, transferName(t)), el("div", { class: "muted mono transfer-row-file" }, t.name ? t.file : "")),
+    el("td", { colspan: 8 }, el("div", { class: "progress row-progress" },
+      el("div", { class: "progress-bar", style: `width: ${transferWidth(t)}` }), el("span", { class: "progress-text" }, transferText(t)))));
+  transferRows.set(t.key, row);
+  return row;
+}
+
 function renderDownloads() {
   const rows = [];
   const shownIds = [];
   let shownAny = false;
+  const q = $("#downloads-filter").value.trim().toLowerCase();
+  transferRows.clear();
+  for (const t of transfers.values()) if (t.state === "downloading") rows.push(transferRow(t));
+  const shown = [];
   for (const g of downloadGroups) {
-    const entries = g.entries.filter((e) => channelShown(e.channel));
-    if (!entries.length) continue;
+    let entries = g.entries.filter((e) => channelShown(e.channel));
+    if (q && !g.name.toLowerCase().includes(q)) entries = entries.filter((e) => downloadMatches(e, q));
+    if (entries.length) shown.push({ g, entries, v: groupSortValue(g, entries) });
+  }
+  const cmp = (a, b) => typeof a === "number" ? a - b : a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+  shown.sort((a, b) => {
+    // Downloads without a value stay at the bottom either way.
+    if (!a.v !== !b.v) return a.v ? -1 : 1;
+    return dlSort.dir * cmp(a.v, b.v) || cmp(a.g.name, b.g.name);
+  });
+  for (const { g, entries } of shown) {
     shownAny = true;
     shownIds.push(...entries.map((e) => e.id));
     if (entries.length === 1) {
       rows.push(downloadRow(entries[0], 0));
       continue;
     }
-    const open = openFolders.has(g.key);
+    // A search opens the folders it found something in.
+    const open = openFolders.has(g.key) || !!q;
     const installedEntry = entries.find((e) => installedFor(e));
     const newest = entries[0];
     const toggle = () => {
@@ -2901,12 +3104,18 @@ function renderDownloads() {
       el("td", {}, [...new Set(entries.map((e) => e.game_version).filter(Boolean))].join(", ") || "—"),
       el("td", {}, el("span", { class: "badge" }, sourceLabel({ ...newest, source: newest.source || "nexus" }))),
       el("td", {}, fmtSize(entries.reduce((n, e) => n + e.size, 0))),
+      dateCell(entries.map((e) => e.downloaded_at).sort().pop()),
+      dateCell(installedEntry && installedFor(installedEntry).installed_at),
       el("td", {}),
       el("td", {})));
     if (open) rows.push(...entries.map((e) => downloadRow(e, 1)));
   }
   $("#downloads-empty").textContent = downloadGroups.length ? "Nothing matches this filter." : "Nothing downloaded yet.";
-  $("#downloads-empty").classList.toggle("hidden", shownAny);
+  $("#downloads-empty").classList.toggle("hidden", shownAny || transferRows.size > 0);
+  document.querySelectorAll("#tab-downloads th.sortable").forEach((th) => {
+    th.classList.toggle("asc", th.dataset.sort === dlSort.key && dlSort.dir > 0);
+    th.classList.toggle("desc", th.dataset.sort === dlSort.key && dlSort.dir < 0);
+  });
   $("#downloads-body").replaceChildren(...rows);
   dlSel.render(shownIds);
 }
@@ -2931,6 +3140,8 @@ function downloadRow(d, depth) {
     el("td", {}, d.game_version || "—"),
     el("td", {}, depth ? null : el("span", { class: "badge" }, sourceLabel({ ...d, source: d.source || "nexus" }))),
     el("td", {}, fmtSize(d.size)),
+    dateCell(d.downloaded_at),
+    dateCell(m?.installed_at),
     el("td", {}, el("span", { class: d.verified ? "badge ok" : "badge bad", title: `SHA-256 ${d.sha256}` }, checked)),
     el("td", { class: "actions" },
       up ? el("button", {
@@ -2999,6 +3210,13 @@ $("#downloads-bulk-delete").addEventListener("click", (e) => busy(e.target, asyn
 }).finally(() => loadDownloads().catch(() => {})));
 $("#downloads-bulk-clear").addEventListener("click", () => dlSel.clear());
 
+document.querySelectorAll("#tab-downloads th.sortable").forEach((th) => th.addEventListener("click", () => {
+  const key = th.dataset.sort;
+  dlSort = { key, dir: dlSort.key === key ? -dlSort.dir : DL_DESC_FIRST.has(key) ? -1 : 1 };
+  savePref("downloadsSort", dlSort);
+  renderDownloads();
+}));
+$("#downloads-filter").addEventListener("input", renderDownloads);
 $("#downloads-channel").value = loadPref("downloadsChannel", "");
 $("#downloads-channel").addEventListener("change", () => {
   savePref("downloadsChannel", $("#downloads-channel").value);

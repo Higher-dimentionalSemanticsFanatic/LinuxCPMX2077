@@ -248,7 +248,24 @@ button.update { border-color: var(--cyan); color: var(--cyan); }
 
 /* Download queue and picking several mods. */
 #queue { position: sticky; top: -20px; z-index: 5; border-left: 3px solid var(--yellow); box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
-#queue-now { overflow-wrap: anywhere; }
+/* One line, so the popup keeps its height whatever it says or shows. */
+#queue > .row { flex-wrap: nowrap; min-height: 36px; }
+#queue-title { white-space: nowrap; }
+#queue-now { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Files downloading, side by side; finished ones keep their place. */
+.transfers { display: flex; gap: 6px; margin-top: 10px; height: 40px; align-items: stretch; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.transfers-none { align-self: center; }
+.transfer { position: relative; flex: 1 1 0; min-width: 140px; max-width: 340px; border: 1px solid var(--border); background: var(--bg); overflow: hidden; }
+.transfer .progress-bar { position: absolute; inset: 0 auto 0 0; opacity: .3; }
+.transfer-name, .transfer-state, .row-progress .progress-text { text-shadow: 0 0 3px #000, 0 0 2px #000; }
+.transfer-name, .transfer-state { position: relative; display: block; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.transfer-name { font-size: 12px; font-weight: 600; line-height: 20px; }
+.transfer-state { font-size: 11px; line-height: 16px; color: var(--muted); }
+.transfer.done .transfer-state { color: var(--green); }
+.transfer.failed .transfer-state { color: var(--red); }
+.transfer.failed .progress-bar { opacity: .15; }
+.progress.row-progress { margin: 0; }
+#downloads-body td.date { white-space: nowrap; font-size: 12px; }
 .queue-track { height: 4px; background: var(--panel-2); border-radius: 2px; margin-top: 10px; overflow: hidden; }
 #queue-bar { height: 100%; width: 0; background: var(--yellow); transition: width .3s; }
 #queue-items { list-style: none; margin: 10px 0 0; padding: 0; max-height: 240px; overflow-y: auto; }
