@@ -48,9 +48,12 @@ struct DetectedGame {
 }
 
 #[derive(Serialize, Clone)]
-struct Progress {
+struct Progress<'a> {
     mod_id: i64,
     file_id: i64,
+    /// Mod and file names for the progress bars, when Nexus returned them.
+    name: Option<&'a str>,
+    file_name: Option<&'a str>,
     done: u64,
     total: u64,
 }
@@ -1276,8 +1279,9 @@ fn run_download(
     let file = c.file_info(mod_id, file_id).ok();
     let name = info.as_ref().and_then(|i| i.name.clone());
     let dest = download_dir(app, &DownloadRow { nexus_mod_id: Some(mod_id), mod_name: name.clone(), ..Default::default() })?;
+    let file_name = file.as_ref().map(|f| f.file_name.as_str());
     let mut dl = c.download(mod_id, file_id, key.as_deref(), expires, &dest, |done, total| {
-        let _ = app.emit("download-progress", Progress { mod_id, file_id, done, total });
+        let _ = app.emit("download-progress", Progress { mod_id, file_id, name: name.as_deref(), file_name, done, total });
     })?;
     let already_had = match keep_one_copy(app, &dl.sha256, &dl.path)? {
         Some(old) => {
@@ -1339,10 +1343,12 @@ fn run_download(
 }
 
 #[derive(Serialize, Clone)]
-struct SourceProgress {
-    source: String,
-    id: String,
-    file_id: String,
+struct SourceProgress<'a> {
+    source: &'a str,
+    id: &'a str,
+    file_id: &'a str,
+    name: &'a str,
+    file_name: &'a str,
     done: u64,
     total: u64,
 }
@@ -1459,7 +1465,7 @@ async fn source_download(
         let mut progress = |done, total| {
             let _ = app.emit(
                 "source-progress",
-                SourceProgress { source: source.clone(), id: id.clone(), file_id: file_id.clone(), done, total },
+                SourceProgress { source: &source, id: &id, file_id: &file_id, name: &details.listing.name, file_name: &file.file_name, done, total },
             );
         };
         let dest = download_dir(

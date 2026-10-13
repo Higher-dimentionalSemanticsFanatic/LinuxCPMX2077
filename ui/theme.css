@@ -187,8 +187,8 @@ table.tree tr.folder:hover { background: rgba(79, 227, 208, .06); }
 .badge.channel.beta, .badge.channel.nightly { border-color: transparent; }
 code, .mono { color: #c9efe9; }
 pre, .description, .bbcode, .requirements { border-radius: 0; background: rgba(10, 12, 14, .7); }
-#progress, .progress { border-radius: 0; background: var(--bg); border-color: var(--line); }
-#progress-bar, .progress-bar, .card-progress .progress-bar { background: repeating-linear-gradient(90deg, var(--cyan) 0 6px, transparent 6px 8px); opacity: .55; }
+.progress { border-radius: 0; background: var(--bg); border-color: var(--line); }
+.progress-bar, .card-progress .progress-bar { background: repeating-linear-gradient(90deg, var(--cyan) 0 6px, transparent 6px 8px); opacity: .55; }
 .queue-track { border-radius: 0; background: rgba(79, 227, 208, .12); }
 #queue-bar { background: var(--yellow); box-shadow: 0 0 8px rgba(246, 207, 60, .6); }
 #toast { --fill: var(--panel-solid); --frame: var(--line); border-left: 3px solid var(--cyan); border-radius: 0; }

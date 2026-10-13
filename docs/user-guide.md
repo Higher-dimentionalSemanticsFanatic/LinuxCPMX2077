@@ -833,9 +833,9 @@ Browse and download mods. The switch at the top right picks the source:
     link, closes the Nexus window, downloads, verifies and installs. *or use your browser* opens the
     page in your normal browser instead (the app offers to become the
     `nxm://` handler first).
-  - You stay on **Get mods** while it downloads: a progress bar shows at the
-    top of the page, and on the mod's card when you started from the card.
-    The Downloads tab has the same bar.
+  - You stay on **Get mods** while it downloads. Progress shows on the mod's
+    card when you started from the card, on the file's row in **Downloads**,
+    and in the [downloads panel](#downloads-panel) at the top of the window.
 - **No duplicate downloads**: a file that is already in your downloads (same
   Nexus or GitHub file, still on disk and complete) is not downloaded again.
   The app installs the copy you have and says so. Files in your downloads
@@ -870,13 +870,24 @@ The core frameworks and many mods ship as GitHub releases.
 - Release lists are cached for 10 minutes (GitHub allows 60 requests an hour
   without a token), so a brand-new release can take that long to show.
 
+### Downloads panel
+
+A panel at the top of the window appears while files download: one bar per
+file, side by side, each with the mod name, percentage and size. A finished
+bar stays where it is, marked *downloaded*, *already in downloads* or
+*failed*, so the running bars don't move. The panel keeps the same height
+while it is open; when you have scrolled down, the page keeps its place when
+the panel opens or closes. Once every file is finished the bars clear after 8
+seconds, or at once with **Clear**. The download queue shares this panel.
+
 ### Download queue
 
 **Select several**, click mods, then **Download all**. GitHub and Premium
 downloads run straight through. For a free account one Nexus window steps
 through the file pages ("Mod 3 of 12"): click the download button on each
 page and the app installs that mod in the background while it moves on.
-The queue bar at the top shows progress, with **Show Nexus window**,
+The [downloads panel](#downloads-panel) shows the queue's progress and the
+files downloading, with **Show Nexus window**,
 **Skip this mod**, **Cancel** and **Show list**. Closing the Nexus window
 pauses the queue; **Resume** carries on. Skip and Cancel are also in the
 window's *Download queue* menu.
@@ -897,8 +908,20 @@ window's *Download queue* menu.
 
 Every archive you downloaded, grouped by mod with each version under it.
 
-- Columns: version, the game version it was downloaded on, source, size and
-  how it was verified.
+- Columns: version, the game version it was downloaded on, source, size,
+  **Downloaded** (date and time the archive was downloaded), **Installed**
+  (when that archive was installed into the selected game; *—* when it isn't
+  installed there) and how it was verified. Dates are in local time.
+- **Sorting**: click a column header to sort by it; click again to reverse.
+  Newest download first is the default. Dates and size start newest or
+  largest first. A folder sorts by its newest version, its latest date or
+  its total size; the versions inside stay newest first. The order is kept
+  between sessions.
+- **Filter by mod, file or version**: the search box in the header matches
+  mod names, file names, versions, game versions, channels and sources.
+  Folders with a match open and show only the matching versions.
+- **Files downloading** are listed on top of the list with their own
+  progress bar, and replaced by the finished download.
 - **Channel filter**: stable, beta and nightly; stable only; or beta and
   nightly only. The channel comes from the version and file name and from
   GitHub's pre-release flag.
@@ -907,7 +930,7 @@ Every archive you downloaded, grouped by mod with each version under it.
   installed; only the archive goes.
 - **Deleting several**: tick the box in the first column of each download.
   A folder's box selects all its versions, **Shift**-click selects a range and
-  the header box selects everything the channel filter shows. The bar above
+  the header box selects everything the channel filter and search show. The bar above
   the list shows the count and total size; **Delete** lists the files in one
   confirmation and deletes them.
 - Each file is kept once: downloading the same file again uses this copy
