@@ -9,12 +9,12 @@ ARCHIVE…); this guide writes them in normal case (**Install from
 archive…**). The selected tab is the amber one in the left menu.
 
 Two tabs have sections listed under them in the left menu: **Installed
-mods** (**Mod list**, **ReShade**, **Radio stations**, **Ultra+
+mods** (**Mod list**, **ReShade**, **RadioEXT**, **Ultra+
 recommendations**, **Patch-note check**) and **Get mods** (**Browse mods**,
 **Modpacks**). **▾** next to the tab shows or hides its sections; the choice
 is kept. A section shows in the menu once it applies: ReShade and Patch-note
 check once a mod is installed, Ultra+ recommendations once Ultra+ is in the
-game. Radio stations shows whenever a game is selected.
+game. RadioEXT shows whenever a game is selected.
 
 - [How it works](#how-it-works)
 - [Game panel](#game-panel)
@@ -466,9 +466,9 @@ is backed up and comes back when you uninstall the preset mod.
 
 In game, the Home key opens ReShade's overlay.
 
-### Radio stations
+### RadioEXT
 
-The **Radio stations** section (under Installed mods in the menu) lists
+The **RadioEXT** section (under Installed mods in the menu) lists
 the custom stations of [radioExt](https://github.com/justarandomguyintheinternet/CP77_radioExt)
 and creates new ones from your own music. radioExt needs CET and RED4ext.
 Each station is a folder in

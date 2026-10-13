@@ -144,7 +144,7 @@ Screenshots show sample data, with file locations blurred.
   only, one folder per pack. The preset list shows which preset is active,
   switches between them, and names effect files a preset needs but that
   aren't installed.
-- **Radio stations**: a section under Installed mods lists radioExt's custom
+- **RadioEXT**: a section under Installed mods lists radioExt's custom
   stations and creates new ones from your music files (name, FM number,
   volume, icon, web stream, play order, song names from ID3/FLAC/Ogg tags).
   Song files are copied after a content check against their format; each

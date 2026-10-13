@@ -1,4 +1,4 @@
-// Radio stations section of Installed mods: radioExt's stations in the game,
+// RadioEXT section of Installed mods: radioExt's stations in the game,
 // and an editor to create stations from the user's music files or change the
 // ones made here. A station made here is a tracked mod, so Enable/Disable and
 // Delete reuse the mod table's actions. Loaded after app.js and built from

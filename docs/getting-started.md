@@ -198,7 +198,7 @@ sidebar. **Pop out** moves it to its own window.
   **Install ReShade**. On Linux, accept the launch options and
   d3dcompiler_47 fixes the app offers afterwards (close Steam first). See
   [ReShade](user-guide.md#reshade) in the user guide.
-- Want your own radio station? Open **Radio stations** under **Installed
+- Want your own radio station? Open **RadioEXT** under **Installed
   mods**, click **Install radioExt** if it's missing, then **New station**
-  and **Add songs…**. See [Radio stations](user-guide.md#radio-stations).
+  and **Add songs…**. See [RadioEXT](user-guide.md#radioext).
 - Read the [user guide](user-guide.md) for everything else.
