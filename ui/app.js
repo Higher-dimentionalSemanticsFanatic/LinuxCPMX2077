@@ -121,10 +121,11 @@ function fmtSize(n) {
 }
 
 // ---- tabs ---------------------------------------------------------------
-// Installed mods has sections (mod list, ReShade, Ultra+, patch notes) and
-// Get mods holds Modpacks, each a collapsible submenu in the sidebar.
+// Installed mods has sections (mod list, ReShade, radio stations, Ultra+,
+// patch notes) and Get mods holds Modpacks, each a collapsible submenu in
+// the sidebar.
 let modsSub = "list";
-const MODS_TITLES = { list: "Installed mods", reshade: "ReShade", ultraplus: "Ultra+ recommendations", patchnotes: "Patch-note check" };
+const MODS_TITLES = { list: "Installed mods", reshade: "ReShade", radio: "Radio stations", ultraplus: "Ultra+ recommendations", patchnotes: "Patch-note check" };
 document.querySelectorAll("nav button[data-tab]").forEach((b) =>
   b.addEventListener("click", () => showTab(b.dataset.tab, b.dataset.sub)));
 const navOpen = loadPref("navOpen", { mods: true, nexus: true });
@@ -147,7 +148,7 @@ function showModsSub(sub) {
 
 // A section's menu entry shows once its card has something to show.
 function syncModsSubs() {
-  const shown = { reshade: mods.length > 0, ultraplus: !$("#ultraplus").classList.contains("hidden"), patchnotes: mods.length > 0 };
+  const shown = { reshade: mods.length > 0, radio: !!currentGame, ultraplus: !$("#ultraplus").classList.contains("hidden"), patchnotes: mods.length > 0 };
   for (const [sub, on] of Object.entries(shown)) $(`#nav-sub-mods [data-sub="${sub}"]`).classList.toggle("hidden", !on);
   $("#tab-mods .ultraplus-none").classList.toggle("hidden", shown.ultraplus);
 }
@@ -425,6 +426,7 @@ const NO_CATEGORY = "__none__";
 function sourceLabel(m) {
   if (m.source === "nexus" && m.nexus_mod_id) return `Nexus #${m.nexus_mod_id}`;
   if (m.source === "reshade") return "reshade.me";
+  if (m.source === "radioext") return "Radio station";
   const info = sourceInfos.find((s) => s.id === m.source);
   if (info) return m.source_ref ? `${info.label} ${m.source_ref}` : info.label;
   return "Manual";
@@ -461,6 +463,7 @@ async function loadMods() {
   loadUltraPlus().catch(() => {});
   loadPatchNotes().catch(() => {});
   loadReShade().catch(() => {});
+  loadRadio().catch(() => {});
   refreshGame().catch(() => {});
 }
 

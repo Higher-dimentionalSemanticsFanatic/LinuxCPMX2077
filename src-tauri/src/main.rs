@@ -28,6 +28,7 @@ use tauri_plugin_deep_link::DeepLinkExt;
 mod app_update_cmd;
 mod modpacks_cmd;
 mod patch_notes_cmd;
+mod radio_cmd;
 mod reshade_cmd;
 mod ultraplus_cmd;
 
@@ -1731,6 +1732,9 @@ fn main() {
             app_update_cmd::set_app_update_on_startup,
             app_update_cmd::app_update_dismiss,
             app_update_cmd::app_update_check,
+            radio_cmd::radio_status,
+            radio_cmd::radio_song_info,
+            radio_cmd::radio_save,
             reshade_cmd::reshade_status,
             reshade_cmd::reshade_latest,
             reshade_cmd::reshade_launch,

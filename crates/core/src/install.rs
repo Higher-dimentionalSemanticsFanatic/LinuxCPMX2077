@@ -167,6 +167,13 @@ pub fn plan(files: &[String], mod_name: &str) -> Result<Plan> {
         return Ok(out);
     }
 
+    // 3b. radioExt stations packaged without the game path: folders with a
+    // metadata.json next to songs (or inside a `radios` folder) go into
+    // radioExt's `radios` folder, one station per folder.
+    if let Some(out) = radio_stations(files, mod_name) {
+        return Ok(out);
+    }
+
     // 4. ReShade presets: shaders and preset .ini files go next to the
     // game exe, where ReShade looks for them (not into the engine config).
     let is_reshade_dir = |d: &str| d.eq_ignore_ascii_case("reshade-shaders");
@@ -235,6 +242,48 @@ pub fn plan(files: &[String], mod_name: &str) -> Result<Plan> {
         return Ok(out);
     }
     Err(Error::Other(not_a_game_mod(files)))
+}
+
+/// The station folders of an archive of radioExt stations, laid out in
+/// radioExt's `radios` folder. A station is a folder with `metadata.json`
+/// and at least one song radioExt plays, or with `metadata.json` inside a
+/// folder named `radios` (a web-stream station has no songs). `None` when
+/// the archive has no station.
+fn radio_stations(files: &[String], mod_name: &str) -> Option<Plan> {
+    let dir_of = |f: &str| f.rsplit_once('/').map(|(d, _)| d.to_string()).unwrap_or_default();
+    let mut stations: Vec<String> = files
+        .iter()
+        .filter(|f| file_name(f).eq_ignore_ascii_case(crate::radioext::METADATA))
+        .map(|f| dir_of(f))
+        .filter(|d| {
+            let in_radios = d.rsplit_once('/').map_or("", |(p, _)| p).rsplit('/').next().is_some_and(|p| p.eq_ignore_ascii_case("radios"));
+            in_radios || files.iter().any(|o| dir_of(o) == *d && crate::radioext::is_audio(o))
+        })
+        .collect();
+    // A station inside another station's folder isn't one.
+    stations.sort_by_key(|d| d.matches('/').count());
+    let mut kept: Vec<String> = Vec::new();
+    for d in stations {
+        if !kept.iter().any(|k| k.is_empty() || d.starts_with(&format!("{k}/"))) {
+            kept.push(d);
+        }
+    }
+    if kept.is_empty() {
+        return None;
+    }
+    let mut out = Plan { files: vec![], skipped: vec![], layout: "radioext-station".into() };
+    for f in files {
+        let station = kept.iter().find(|d| d.is_empty() || f.starts_with(&format!("{d}/")));
+        match station {
+            Some(d) => {
+                let folder = if d.is_empty() { sanitize_folder(mod_name) } else { file_name(d).to_string() };
+                let rest = if d.is_empty() { f.as_str() } else { &f[d.len() + 1..] };
+                out.files.push(PlannedFile { staged: f.clone(), target: format!("{}/{folder}/{rest}", crate::radioext::RADIOS) });
+            }
+            None => out.skipped.push(f.clone()),
+        }
+    }
+    Some(out)
 }
 
 /// ReShade presets are `.ini` files too: one planned for the engine config
@@ -1014,6 +1063,21 @@ mod tests {
 
     fn s(v: &[&str]) -> Vec<String> {
         v.iter().map(|x| x.to_string()).collect()
+    }
+
+    #[test]
+    fn plans_radio_stations_without_game_path() {
+        let r = crate::radioext::RADIOS;
+        let p = plan(&s(&["Pack/radios/A FM/metadata.json", "Pack/radios/A FM/x.mp3", "Pack/radios/Web/metadata.json", "Pack/readme.txt"]), "Pack").unwrap();
+        assert_eq!(p.layout, "radioext-station");
+        let t: Vec<&str> = p.files.iter().map(|f| f.target.as_str()).collect();
+        assert_eq!(t, [format!("{r}/A FM/metadata.json"), format!("{r}/A FM/x.mp3"), format!("{r}/Web/metadata.json")]);
+        assert_eq!(p.skipped, s(&["Pack/readme.txt"]));
+        // Loose at the root: the mod name is the folder.
+        let p = plan(&s(&["metadata.json", "song.ogg", "cover/icon.png"]), "Lo Fi").unwrap();
+        assert_eq!(p.files[2].target, format!("{r}/Lo Fi/cover/icon.png"));
+        // metadata.json without songs outside a radios folder isn't a station.
+        assert!(plan(&s(&["Thing/metadata.json", "Thing/notes.txt"]), "Thing").is_err());
     }
 
     #[test]

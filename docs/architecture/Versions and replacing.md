@@ -10,7 +10,7 @@ Code: `Installer::finish_auto`, `Installer::previous_version`,
 
 `finish_auto` plans the archive first, then asks `previous_version` whether an
 installed mod (enabled or not) is an older version of it. Callers that already
-know (Downloads **Switch to this**, **Update**, ReShade) pass `replaces` and
+know (Downloads **Switch to this**, **Update**, ReShade, radio stations) pass `replaces` and
 call `finish_replacing` directly.
 
 ## Same mod or not

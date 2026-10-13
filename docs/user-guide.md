@@ -9,11 +9,12 @@ ARCHIVE…); this guide writes them in normal case (**Install from
 archive…**). The selected tab is the amber one in the left menu.
 
 Two tabs have sections listed under them in the left menu: **Installed
-mods** (**Mod list**, **ReShade**, **Ultra+ recommendations**, **Patch-note
-check**) and **Get mods** (**Browse mods**, **Modpacks**). **▾** next to the
-tab shows or hides its sections; the choice is kept. A section shows in
-the menu once it applies: ReShade and Patch-note check once a mod is
-installed, Ultra+ recommendations once Ultra+ is in the game.
+mods** (**Mod list**, **ReShade**, **Radio stations**, **Ultra+
+recommendations**, **Patch-note check**) and **Get mods** (**Browse mods**,
+**Modpacks**). **▾** next to the tab shows or hides its sections; the choice
+is kept. A section shows in the menu once it applies: ReShade and Patch-note
+check once a mod is installed, Ultra+ recommendations once Ultra+ is in the
+game. Radio stations shows whenever a game is selected.
 
 - [How it works](#how-it-works)
 - [Game panel](#game-panel)
@@ -464,6 +465,78 @@ file, and **Allow overwriting other mods** lets the mod's copy win. A
 is backed up and comes back when you uninstall the preset mod.
 
 In game, the Home key opens ReShade's overlay.
+
+### Radio stations
+
+The **Radio stations** section (under Installed mods in the menu) lists
+the custom stations of [radioExt](https://github.com/justarandomguyintheinternet/CP77_radioExt)
+and creates new ones from your own music. radioExt needs CET and RED4ext.
+Each station is a folder in
+`bin/x64/plugins/cyber_engine_tweaks/mods/radioExt/radios/` holding a
+`metadata.json` (name, FM number, volume, icon, stream, play order) and the
+song files. radioExt shows each song under its file name.
+
+The top rows show whether radioExt's CET part (`init.lua`) and RED4ext part
+(`red4ext/plugins/RadioExt/RadioExt.dll`) are in the game. While either is
+missing, **Install radioExt** queues radioExt's newest release from GitHub.
+
+The station table, sorted by FM number:
+
+| Column | What it shows |
+|---|---|
+| **FM** / **Station** | The FM number and in-game name, with the folder name and where the station comes from: *made in CPMX2077*, *from &lt;mod&gt;* (installed with a mod), or *not tracked* (copied in by hand). Red badges name what radioExt would report in its CET console: no `metadata.json`, an unreadable `metadata.json`, no songs on a station that isn't a stream, or a play order naming a missing file. |
+| **Songs** | Number of song files, *stream* for a web-stream station, *fixed order* when a play order is set. |
+| **Icon** | The UIIcon record, or the `.inkatlas` part for a custom icon. |
+| **State** | *enabled*, or *disabled* for a station switched off here. |
+
+Buttons per station:
+
+- **Edit** opens the editor. Shown for stations made here and for
+  *not tracked* folders. Saving a *not tracked* folder installs it as a
+  station made here: from then on it is tracked like any mod.
+- **Open folder** opens the station's folder.
+- **Disable** / **Enable** and **Delete** (stations made here): the same
+  as the mod list's **On** switch and **Uninstall**.
+
+Stations installed with another mod aren't edited here; change them through
+that mod. Archives of radioExt stations from Nexus install like any other
+mod. An archive with station folders but without the game path
+(`StationName/metadata.json` plus songs, or a `radios/` folder) goes into
+radioExt's `radios` folder, one folder per station.
+
+**New station** opens an empty editor:
+
+- **Station name**: shown in game. radioExt's convention puts the FM number
+  first (*99.9 Night City Nights*); a leading number follows the **FM**
+  field.
+- **FM**: sorts the station into the radio list (0.1–999.9).
+- **Volume**: multiplier for the whole station (1.0 = unchanged), to match
+  vanilla stations.
+- **Icon**: a `UIIcon.` record from the game's TweakDB, such as
+  `UIIcon.alcohol_absynth` (radioExt's template). Suggestions list the icons
+  the other stations use. **Custom icon from an .inkatlas** uses a texture
+  from an installed archive mod instead: **inkatlas path** (resource path
+  with backslashes) and **inkatlas part**. `.inkatlas` files are made with
+  WolvenKit.
+- **Web stream**: plays an internet audio stream (**Stream URL**,
+  `http://` or `https://`) instead of song files.
+- **Add songs…** picks files. Accepted: mp3, mp2, flac, ogg, wav, wax, wma,
+  opus, aiff, aif, aifc. Each file's first bytes are checked against its
+  format; a file whose content doesn't match is refused, and one with the
+  wrong extension (a FLAC named `.mp3`) gets the right one. opus and aiff are
+  marked *recent radioExt only*: older radioExt versions skip them. Files are
+  copied; the originals stay where they are.
+- **Name from tags**: names added files *Artist - Title* from their ID3
+  (MP3), FLAC or Ogg tags. Files without tags keep their name. Every name
+  can be edited in the song list.
+- **Play in this order**: writes the list order as radioExt's play order,
+  with **↑** / **↓** to move songs. Off, radioExt plays the songs shuffled.
+- **Remove** takes a song out of the station.
+- **Create station** / **Save station** installs the station. It shows in
+  the mod list with source *Radio station*. Saving changes installs the
+  station again as a new version of the same mod; songs already in it are
+  reused from the stored copy, not copied from the game folder. radioExt
+  reads stations at game start.
 
 ## Modpacks
 

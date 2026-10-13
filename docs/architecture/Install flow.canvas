@@ -3,7 +3,7 @@
 		{
 			"id": "entry",
 			"type": "text",
-			"text": "## Entry points\n**Install from archive…**, Downloads **Install**, **Download & install**, **Get from Nexus** → queue, GitHub, Frameworks **Install**, Modpacks **Install all**, ReShade card\n\n[[Entry points]]",
+			"text": "## Entry points\n**Install from archive…**, Downloads **Install**, **Download & install**, **Get from Nexus** → queue, GitHub, Frameworks **Install**, Modpacks **Install all**, ReShade card, Radio stations **Create/Save station**\n\n[[Entry points]]",
 			"x": 0,
 			"y": 0,
 			"width": 440,
@@ -72,7 +72,7 @@
 		{
 			"id": "plan",
 			"type": "text",
-			"text": "## Layout detection: `install::plan`\nFirst match decides the whole archive:\n1. known root folder → **game-root**\n2. `info.json` + `archives/`… → **redmod**\n3. `init.lua` → **cet-mod**\n4. `reshade-shaders/` → **reshade**\n(any `.exe` → refused)\n5. `.archive .xl .reds .yaml` → **loose**\n6. `.ini` only → **engine-config**\nAnything the rule doesn't place → *Skipped*\n\n[[Layout detection]]",
+			"text": "## Layout detection: `install::plan`\nFirst match decides the whole archive:\n1. known root folder → **game-root**\n2. `info.json` + `archives/`… → **redmod**\n3. `init.lua` → **cet-mod**\n3b. `metadata.json` + songs / in `radios/` → **radioext-station**\n4. `reshade-shaders/` → **reshade**\n(any `.exe` → refused)\n5. `.archive .xl .reds .yaml` → **loose**\n6. `.ini` only → **engine-config**\nAnything the rule doesn't place → *Skipped*\n\n[[Layout detection]]",
 			"x": 0,
 			"y": 1260,
 			"width": 440,

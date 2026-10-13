@@ -64,6 +64,6 @@ flowchart TD
   backed-up game files, and the **first five** skipped files.
 - Every step also lands in the debug terminal through `core::activity`
   (Hashed, Extracting, Copied, Saved the original, Installed … layout).
-- The layout name (`game-root`, `redmod`, `cet-mod`, `reshade`, `loose`,
+- The layout name (`game-root`, `redmod`, `cet-mod`, `radioext-station`, `reshade`, `loose`,
   `engine-config`, `fomod`) is the quickest clue when a mod lands in the wrong
   place. See [[Known gaps]].

@@ -19,7 +19,9 @@ flowchart TD
   r2 -- yes --> rm["redmod<br/>mods/FOLDER/…"]
   r2 -- no --> r3{"3. any init.lua?<br/>(shallowest)"}
   r3 -- yes --> cet["cet-mod<br/>bin/x64/plugins/cyber_engine_tweaks/<br/>mods/FOLDER/…"]
-  r3 -- no --> r4{"4. a reshade-shaders folder?"}
+  r3 -- no --> r3b{"3b. metadata.json next to<br/>radioExt songs, or in radios/ ?"}
+  r3b -- yes --> radio["radioext-station<br/>…/mods/radioExt/radios/FOLDER/…<br/>one folder per station"]
+  r3b -- no --> r4{"4. a reshade-shaders folder?"}
   r4 -- yes --> rs["reshade<br/>reshade-shaders → bin/x64/,<br/>every .ini → bin/x64/"]
   r4 -- no --> exe{"any .exe?"}
   exe -- yes --> refuse1(["refused:<br/>standalone program"])
@@ -37,6 +39,7 @@ flowchart TD
 | `game-root` / `game-root (inside 'X')` | a known root folder at any depth | path below the wrapper prefix, unchanged | skipped, incl. files directly in the prefix and **other wrappers** |
 | `redmod` | `info.json` whose folder has `archives/`, `customsounds/`, `scripts/` or `tweaks/` | `mods/<info.json's folder name or mod name>/…` | skipped if outside that folder |
 | `cet-mod` | shallowest `init.lua` | `bin/x64/plugins/cyber_engine_tweaks/mods/<its folder or mod name>/…` | skipped if outside that folder |
+| `radioext-station` | a folder with `metadata.json` and a song radioExt plays (`radioext::AUDIO_EXTS`), or `metadata.json` in a folder inside `radios/` (stream stations have no songs); `radio_stations` | `bin/x64/plugins/cyber_engine_tweaks/mods/radioExt/radios/<station folder, or mod name at the archive root>/…`; a station inside another station's folder belongs to the outer one | skipped |
 | `reshade` | a `reshade-shaders` folder | `bin/x64/reshade-shaders/…`, any `.ini` → `bin/x64/<name>.ini` | skipped |
 | `loose` | `.archive`, `.xl` | `archive/pc/mod/<file name>` | skipped |
 | | `.reds` | `r6/scripts/<mod name>/<file name>` | |
@@ -52,7 +55,7 @@ space; anything else becomes `_`.
 Checked in this order, on the shallowest match:
 
 1. any `.exe` → "standalone program (X.exe), not a game mod" (e.g. WolvenKit,
-   save editors). Note: only reached when rules 1–4 didn't match.
+   save editors). Note: only reached when rules 1–4 (and 3b) didn't match.
 2. `.bat` `.cmd` `.ps1` `.sh` → "a script (X), not a game mod".
 3. every file is a document or picture → "only has documents or pictures".
 4. otherwise → "unrecognised archive layout … install location can't be

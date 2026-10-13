@@ -31,6 +31,7 @@ pub mod nexus_markup;
 pub mod patch_notes;
 pub mod paths;
 pub mod profiles;
+pub mod radioext;
 pub mod reshade;
 pub mod secrets;
 pub mod sources;

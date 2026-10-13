@@ -24,6 +24,7 @@ flowchart LR
   prep -- no questions --> auto[finish_auto or<br/>finish_replacing]
   pend --> auto
   rsh["ReShade card:<br/>Install / Update"] --> rsi[reshade::install<br/>reshade::install_pack] --> fin[finish / finish_replacing]
+  rad["Radio stations:<br/>Create / Save station"] --> rds[radioext::save] --> fin
 ```
 
 | Entry | Command | Source recorded | Replaces | Notes |
@@ -35,6 +36,7 @@ flowchart LR
 | GitHub **Download & install** | `source_download` | `github` + repo | same repo | SHA-256 checked against GitHub's digest |
 | Frameworks **Install**, Modpacks **Install all** | `enqueue(...)` → queue | per item | | Queue downloads one at a time, then installs one at a time; a FOMOD pauses the queue for the wizard |
 | ReShade card | `reshade_install*`, `reshade_pack_install` | `reshade` / pack repo | previous ReShade / pack | Builds its own staging, skips layout detection and FOMOD |
+| Radio stations **Create station** / **Save station** | `radio_save` | `radioext` + station folder in `source_ref` | the station's earlier version (same folder) | `radioext::save` stages the station laid out from the game root (game-root layout): the user's song files copied after a content check, kept songs hard-linked from the stored copy, `metadata.json` written. A folder no mod owns is renamed aside while it installs, so its files aren't backed up as game files, then removed (put back on failure). |
 
 ## Before an archive reaches the installer
 
