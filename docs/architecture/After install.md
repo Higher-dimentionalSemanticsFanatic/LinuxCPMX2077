@@ -33,6 +33,7 @@ correctly installed mod can still "not work":
 | redscript (`r6/scripts`) | redscript compiles on start; errors in `r6/logs/redscript_rCURRENT.log` | Netrunner → Crashes & logs, startup timeline |
 | TweakXL / ArchiveXL | frameworks installed | dependency check, Compatibility "missing framework" |
 | ReShade | DLL override for `dxgi`/`d3d11` etc. | ReShade card adds it to the launch-options line |
+| OptiScaler | DLL override for its proxy name (`wininet`/`dxgi`); FSR 4.1.1 shader overrides also need `VKD3D_SHADER_OVERRIDE` and AMD's upscaler DLL 4.1.1.2740 | `linux_setup::override_dlls` adds the proxy (`optiscaler_dlls`, from `OptiScaler.ini` plus the DLL on disk); the `fsr4-overrides` check (`fsr4_check`) writes the variable once a variant is picked |
 
 When a mod installs but doesn't load, check the startup timeline and logs in
 Netrunner before suspecting the layout. When it installs to the wrong place,

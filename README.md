@@ -144,6 +144,13 @@ Screenshots show sample data, with file locations blurred.
   only, one folder per pack. The preset list shows which preset is active,
   switches between them, and names effect files a preset needs but that
   aren't installed.
+- **OptiScaler**: a section under Installed mods installs OptiScaler from its
+  GitHub releases as a tracked mod (as `wininet.dll`, clear of CET, RED4ext
+  and ReShade), optionally with AMD's FSR 4.1.1 upscaler DLL (4.1.1.2740,
+  checked against AMD's repository). On Linux it adds OptiScaler's DLL
+  override to the launch options fix and can set up the FSR 4.1.1 shader
+  overrides (exact or lossy) that vkd3d-proton loads through
+  `VKD3D_SHADER_OVERRIDE`.
 - **RadioEXT**: a section under Installed mods lists radioExt's custom
   stations and creates new ones from your music files (name, FM number,
   volume, icon, web stream, play order, song names from ID3/FLAC/Ogg tags).

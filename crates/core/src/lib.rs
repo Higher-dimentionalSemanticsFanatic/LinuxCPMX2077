@@ -28,6 +28,7 @@ pub mod nexus;
 pub mod nexus_browse;
 pub mod nexus_cache;
 pub mod nexus_markup;
+pub mod optiscaler;
 pub mod patch_notes;
 pub mod paths;
 pub mod profiles;

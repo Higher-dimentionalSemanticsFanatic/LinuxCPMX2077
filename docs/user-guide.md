@@ -9,12 +9,12 @@ ARCHIVE…); this guide writes them in normal case (**Install from
 archive…**). The selected tab is the amber one in the left menu.
 
 Two tabs have sections listed under them in the left menu: **Installed
-mods** (**Mod list**, **ReShade**, **RadioEXT**, **Ultra+
+mods** (**Mod list**, **ReShade**, **OptiScaler**, **RadioEXT**, **Ultra+
 recommendations**, **Patch-note check**) and **Get mods** (**Browse mods**,
 **Modpacks**). **▾** next to the tab shows or hides its sections; the choice
 is kept. A section shows in the menu once it applies: ReShade and Patch-note
 check once a mod is installed, Ultra+ recommendations once Ultra+ is in the
-game. RadioEXT shows whenever a game is selected.
+game. OptiScaler and RadioEXT show whenever a game is selected.
 
 - [How it works](#how-it-works)
 - [Game panel](#game-panel)
@@ -110,6 +110,8 @@ it), the left and right arrow keys also resize it.
     switch under **Frameworks**. With ReShade in the game, its DLL and
     `d3dcompiler_47` join the list:
     `WINEDLLOVERRIDES="winmm,version,dxgi,d3dcompiler_47=n,b" %command% --launcher-skip`.
+    With OptiScaler in the game, the name it loads as (`wininet` or `dxgi`)
+    joins the list too.
     Other variables and overrides already in your launch options are kept.
     Only works while Steam is closed. **Copy** copies the whole line to paste
     yourself.
@@ -119,8 +121,16 @@ it), the left and right arrow keys also resize it.
     Mozilla's Firefox installer). Wine's own `d3dcompiler_47` fails to
     compile many ReShade effects.
   - *DLL overrides* (Heroic) → **Set overrides** sets `winmm` and `version`
-    (and ReShade's DLL and `d3dcompiler_47` with ReShade installed) to
-    native-then-builtin in the prefix.
+    (and ReShade's DLL and `d3dcompiler_47` with ReShade installed, and
+    OptiScaler's DLL with OptiScaler installed) to native-then-builtin in the
+    prefix.
+  - *FSR 4 shader overrides* (only after you pick **Exact** or **Lossy** in
+    the [OptiScaler](#optiscaler) section) → **Set launch option** puts
+    `VKD3D_SHADER_OVERRIDE='Z:<folder>'` in front of your launch options,
+    keeping everything else. With **Off** picked while the variable is still
+    set, **Remove launch option** takes it out. Steam closed only; on Heroic,
+    **Copy** gives the variable to add under the game's environment
+    variables.
   - *Folder names* → **Merge folders** joins mod folders that exist under two
     spellings.
   - *HDR* (only when a connected display lists HDR10/PQ in its EDID) →
@@ -465,6 +475,72 @@ file, and **Allow overwriting other mods** lets the mod's copy win. A
 is backed up and comes back when you uninstall the preset mod.
 
 In game, the Home key opens ReShade's overlay.
+
+### OptiScaler
+
+The **OptiScaler** section (under Installed mods in the menu) installs
+[OptiScaler](https://github.com/optiscaler/OptiScaler), which takes the
+game's DLSS, XeSS or FSR 3.1 input and runs another upscaler, FSR 4
+included. Single-player only: OptiScaler's own page warns that anti-cheat
+can ban for it.
+
+- **Install OptiScaler** reads the newest stable release on GitHub
+  (pre-releases and nightlies are skipped), downloads its archive and checks
+  the SHA-256 GitHub publishes for it. Everything next to `OptiScaler.dll`
+  goes to `bin/x64`; the setup scripts (`.bat`, `.sh`) are left out, since
+  the app does their job.
+- **Load as** picks the system DLL name OptiScaler loads under. OptiScaler's
+  wiki lists `wininet.dll` and `dxgi.dll` for Cyberpunk 2077. `wininet.dll`
+  is the default: `winmm.dll` and `version.dll` belong to RED4ext and CET,
+  and ReShade usually has `dxgi.dll`. A name another mod or an untracked file
+  already uses is refused, with the owner named.
+- **Use AMD's FSR 4.1.1 upscaler DLL** (ticked by default) also downloads
+  `amd_fidelityfx_upscaler_dx12.dll` 4.1.1.2740 from AMD's FidelityFX SDK
+  2.3.0 on GitHub (a fixed commit). It must match its git blob id and name
+  version 4.1.1.2740 in its version information, or nothing is installed.
+  It replaces the upscaler DLL in OptiScaler's archive. The shader overrides
+  below need exactly this file.
+- OptiScaler is one mod row (source *GitHub optiscaler/OptiScaler*), so
+  **Disable**, **Uninstall** and **Verify** work as for any mod.
+  **Check for updates** reads the newest stable release; **Update to …**
+  replaces the installed copy.
+- The table shows the version, the DLL name, and *Upscaler DLL*: the
+  version of `bin/x64/amd_fidelityfx_upscaler_dx12.dll` read from the file,
+  marked *AMD 4.1.1.2740* or *not 4.1.1.2740*.
+- On Linux, while Steam's launch options lack OptiScaler's DLL override, the
+  *Steam launch options* item from the Game panel shows here with its
+  **Set launch options** button.
+
+In game: set the game's upscaler (Settings › Graphics › Resolution scaling)
+to FSR 3.1 or XeSS, press Insert and pick FSR 4 in OptiScaler's overlay.
+OptiScaler's wiki reports noise with DLSS input and path tracing on AMD
+cards. The overlay also shows the upscaler time per frame.
+
+**FSR 4.1.1 shader overrides** (Linux only) are faster replacements for
+the shaders in AMD's FSR 4.1.1, from
+[fsr4-shader-performance-overrides](https://github.com/zgauthier2000/fsr4-shader-performance-overrides).
+vkd3d-proton loads them through the `VKD3D_SHADER_OVERRIDE` launch option.
+
+- They match AMD's upscaler DLL 4.1.1.2740 only. With another version in
+  `bin/x64` the section shows *no effect*.
+- They are for Radeon RX 7000 and RX 6000 cards, not RX 9000. The
+  repository measured 15 to 35% less FSR 4 time at 4K on RX 7000 cards in
+  most reports, and little at 1080p on some cards.
+- They were built from Proton's translation on an RX 7800 XT. On some
+  setups the picture comes out wrong (darker); pick **Off** then.
+- **Download shader overrides** reads the repository's newest commit and
+  downloads every `.spv` file in `prebuilt/` and `prebuilt-lossy/`. Each file
+  must match its git blob id from GitHub's file list, or the whole download
+  is discarded and the previous files stay. **Download again** gets the
+  newest commit.
+- **Off**, **Exact** (AMD's picture, byte for byte) or **Lossy** (faster,
+  runs FSR 4's network every other frame, so the picture differs; the app
+  asks first and links the repository's `WARNING.txt`). The choice is per
+  game.
+- After **Exact** or **Lossy**, the *FSR 4 shader overrides* item appears
+  here and in the Game panel with **Set launch option**. OptiScaler keeps
+  showing the FSR version as plain 4.1.1; a lower upscaler time in its
+  overlay shows the overrides apply.
 
 ### RadioEXT
 
@@ -1070,6 +1146,12 @@ part of download links are never shown.
 - ReShade shader packs come only from the listed repositories on GitHub, as
   the source archive of one commit, over HTTPS from GitHub's hosts. Only
   shader and texture files are installed from them.
+- OptiScaler comes only from its GitHub releases, like other GitHub
+  downloads. AMD's FSR 4.1.1 upscaler DLL comes from AMD's FidelityFX SDK
+  repository at a fixed commit and must match a git blob id built into the
+  app and name version 4.1.1.2740. FSR 4 shader overrides come from one
+  listed repository; each file must match the git blob id in GitHub's file
+  list for that commit.
 - ReShade comes only over HTTPS from reshade.me, with no redirects to other
   hosts. The DLL taken out of the setup must be a 64-bit Windows DLL that
   names ReShade in its version information and has the version in the setup's
@@ -1103,6 +1185,8 @@ logs are only readable from a fixed list of known locations.
 | Archive load order set in Netrunner | `archive/pc/mod/modlist.txt` in the game folder; a `modlist.txt` that was there before: `~/.local/share/cp2077-modmanager/backups/modlist-<game id>.txt` |
 | Linux setup records and backups | `~/.local/share/cp2077-modmanager/setup/<game>/` |
 | ReShade setups from reshade.me | `~/.local/share/cp2077-modmanager/reshade/` |
+| AMD's FSR 4.1.1 upscaler DLL (OptiScaler archives are deleted after install) | `~/.local/share/cp2077-modmanager/optiscaler/` |
+| FSR 4 shader overrides | `~/.local/share/cp2077-modmanager/fsr4-shader-overrides/` (`prebuilt/`, `prebuilt-lossy/`) |
 | Saved Nexus pages | `~/.cache/cp2077-modmanager/nexus/` |
 | Refreshed Ultra+ recommendations | In the library database (settings) |
 | Release dates for the patch-note check | In the library database (`release_dates`) |
@@ -1121,6 +1205,9 @@ API key is in Windows Credential Manager.
   Organizer on its own.
 - `.rar` archives are unpacked with the `tar.exe` built into Windows 10
   and 11.
+- The OptiScaler section has no FSR 4.1.1 shader overrides: they are a
+  vkd3d-proton (Proton) feature. OptiScaler and AMD's DLL install the same
+  way.
 
 ## Troubleshooting
 

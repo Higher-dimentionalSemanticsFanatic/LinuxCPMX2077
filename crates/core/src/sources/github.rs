@@ -34,7 +34,11 @@ const DOWNLOAD_HOSTS: &[&str] = &[
     "github-releases.githubusercontent.com",
     // Source archives of a commit (`/zipball/<sha>` redirects here).
     "codeload.github.com",
+    // Single files of a repository at a commit.
+    "raw.githubusercontent.com",
 ];
+/// Where single files of a repository are served from.
+const RAW_BASE: &str = "https://raw.githubusercontent.com";
 /// Largest source archive of a commit the app downloads.
 const MAX_ZIPBALL: u64 = 256 << 20;
 
@@ -551,6 +555,11 @@ impl Client {
 
     /// Every file path in the repository at commit `sha`.
     pub fn tree_files(&self, owner: &str, repo: &str, sha: &str) -> Result<Vec<String>> {
+        Ok(self.tree_blobs(owner, repo, sha)?.into_iter().map(|b| b.path).collect())
+    }
+
+    /// Every file in the repository at commit `sha`, with its git blob id.
+    pub fn tree_blobs(&self, owner: &str, repo: &str, sha: &str) -> Result<Vec<TreeBlob>> {
         let (owner, repo) = checked(owner, repo)?;
         if !is_sha(sha) {
             return Err(Error::Other(format!("not a commit id: {sha}")));
@@ -561,10 +570,49 @@ impl Client {
             .map(|t| {
                 t.iter()
                     .filter(|e| e.get("type").and_then(Value::as_str) == Some("blob"))
-                    .filter_map(|e| e.get("path").and_then(Value::as_str).map(String::from))
+                    .filter_map(|e| {
+                        Some(TreeBlob {
+                            path: e.get("path").and_then(Value::as_str)?.to_string(),
+                            sha: e.get("sha").and_then(Value::as_str).filter(|s| is_sha(s))?.to_ascii_lowercase(),
+                            size: e.get("size").and_then(Value::as_u64).unwrap_or(0),
+                        })
+                    })
                     .collect()
             })
             .unwrap_or_default())
+    }
+
+    /// One file of `owner/repo` at commit `commit`, from
+    /// raw.githubusercontent.com. Kept only when its git blob id is `blob`
+    /// (from [`Client::tree_blobs`] or a pinned value) and it is at most
+    /// `max` bytes.
+    pub fn raw_file(&self, owner: &str, repo: &str, commit: &str, path: &str, blob: &str, max: u64) -> Result<Vec<u8>> {
+        let (owner, repo) = checked(owner, repo)?;
+        if !is_sha(commit) || !is_sha(blob) {
+            return Err(Error::Other(format!("not a commit or blob id: {commit} {blob}")));
+        }
+        let safe_path = !path.is_empty()
+            && path.split('/').all(|c| !c.is_empty() && c != "." && c != "..")
+            && path.chars().all(|c| c.is_ascii_alphanumeric() || "-_./".contains(c));
+        if !safe_path {
+            return Err(Error::Other(format!("unexpected file path {path:?}")));
+        }
+        let base = if self.base == API_BASE { RAW_BASE.to_string() } else { format!("{}/raw", self.base) };
+        let url = format!("{base}/{owner}/{repo}/{commit}/{path}");
+        let mut resp = self.http.get(&url).timeout(Duration::from_secs(120)).send()?;
+        if !resp.status().is_success() {
+            return Err(Error::Other(format!("GitHub: {path}: {}", resp.status())));
+        }
+        let mut bytes = Vec::new();
+        (&mut resp).take(max + 1).read_to_end(&mut bytes)?;
+        if bytes.len() as u64 > max {
+            return Err(Error::Integrity(format!("{path} is larger than {}; discarded", activity::size(max))));
+        }
+        let got = git_blob_sha(&bytes);
+        if got != blob.to_ascii_lowercase() {
+            return Err(Error::Integrity(format!("{path}: git blob {got} is not the expected {blob}; discarded")));
+        }
+        Ok(bytes)
     }
 
     /// Download the source archive (zip) of commit `sha` into `dest_dir`.
@@ -613,6 +661,24 @@ impl Client {
         std::fs::rename(&part_path, &final_path)?;
         Ok(Downloaded { path: final_path, file_name, sha256, md5, size: done, verified: false })
     }
+}
+
+/// A file in a repository's tree.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct TreeBlob {
+    pub path: String,
+    /// Git blob id: SHA-1 of the content, see [`git_blob_sha`].
+    pub sha: String,
+    pub size: u64,
+}
+
+/// Git's id of a file's content: SHA-1 of `blob <length>\0<bytes>`.
+pub fn git_blob_sha(bytes: &[u8]) -> String {
+    use sha1::Digest;
+    let mut h = sha1::Sha1::new();
+    h.update(format!("blob {}\0", bytes.len()).as_bytes());
+    h.update(bytes);
+    hex::encode(h.finalize())
 }
 
 fn is_sha(s: &str) -> bool {

@@ -27,6 +27,7 @@ use tauri_plugin_deep_link::DeepLinkExt;
 
 mod app_update_cmd;
 mod modpacks_cmd;
+mod optiscaler_cmd;
 mod patch_notes_cmd;
 mod radio_cmd;
 mod reshade_cmd;
@@ -1741,6 +1742,12 @@ fn main() {
             radio_cmd::radio_status,
             radio_cmd::radio_song_info,
             radio_cmd::radio_save,
+            optiscaler_cmd::optiscaler_status,
+            optiscaler_cmd::optiscaler_latest,
+            optiscaler_cmd::optiscaler_install,
+            optiscaler_cmd::fsr4_overrides,
+            optiscaler_cmd::fsr4_overrides_download,
+            optiscaler_cmd::fsr4_overrides_choose,
             reshade_cmd::reshade_status,
             reshade_cmd::reshade_latest,
             reshade_cmd::reshade_launch,

@@ -15,12 +15,12 @@ flowchart LR
     app[app.js<br/>Installed mods, Get mods,<br/>Downloads, Settings, queue, FOMOD wizard]
     mp[modpacks.js]
     nr[netrunner.js + graph.js]
-    rs[reshade.js / radio.js /<br/>ultraplus.js]
+    rs[reshade.js / optiscaler.js /<br/>radio.js / ultraplus.js]
     dbg[debug.html + debug.js]
   end
   subgraph Shell["src-tauri (thin shell)"]
     main[main.rs<br/>AppState: Db mutex, pending FOMOD installs,<br/>in-flight downloads]
-    cmds[modpacks_cmd.rs<br/>reshade_cmd.rs<br/>radio_cmd.rs<br/>ultraplus_cmd.rs]
+    cmds[modpacks_cmd.rs<br/>reshade_cmd.rs<br/>optiscaler_cmd.rs<br/>radio_cmd.rs<br/>ultraplus_cmd.rs]
     mcpbin["--mcp mode<br/>(same binary, no window)"]
   end
   subgraph Core["crates/core (cp2077mm-core)"]
@@ -31,7 +31,7 @@ flowchart LR
     analysis[analysis, dependencies,<br/>file_tree, known_issues]
     diag[crash, startup]
     setup[game, game_versions,<br/>linux_setup, winsys, desktop]
-    extra[reshade, radioext, ultraplus,<br/>modpacks, updates, downloads]
+    extra[reshade, optiscaler, radioext, ultraplus,<br/>modpacks, updates, downloads]
     mcp[mcp]
   end
   app & mp & nr & rs & dbg -- invoke --> main & cmds
@@ -45,7 +45,7 @@ flowchart LR
 
 | Tab (button label) | UI file | Main commands | Core modules |
 |---|---|---|---|
-| Installed mods | `app.js`, `profiles.js`, `reshade.js`, `radio.js`, `ultraplus.js` | `install_archive`, `finish_install`, `uninstall_mod`, `disable_mod`, `enable_mod`, `verify_mod`, `check_updates`, `game_version_history`, `*_profile(s)`, `reshade_*`, `radio_*`, `ultraplus_*` | `install`, `updates`, `game_versions`, `profiles`, `reshade`, `radioext`, `ultraplus` |
+| Installed mods | `app.js`, `profiles.js`, `reshade.js`, `optiscaler.js`, `radio.js`, `ultraplus.js` | `install_archive`, `finish_install`, `uninstall_mod`, `disable_mod`, `enable_mod`, `verify_mod`, `check_updates`, `game_version_history`, `*_profile(s)`, `reshade_*`, `optiscaler_*`, `fsr4_overrides*`, `radio_*`, `ultraplus_*` | `install`, `updates`, `game_versions`, `profiles`, `reshade`, `optiscaler`, `radioext`, `ultraplus` |
 | Modpacks | `modpacks.js` | `nexus_collections`, `collection_view`, `track_collection`, tags, `export_modlist`, `import_modlist`, `mod_dependencies` | `modpacks`, `nexus_browse`, `dependencies` |
 | Netrunner | `netrunner.js`, `graph.js` | `analyze_game`, `mod_file_tree`, `load_order_view`, `set_load_order`, `reset_load_order`, `crash_analysis`, `read_log` | `analysis`, `file_tree`, `load_order`, `crash`, `startup`, `known_issues` |
 | Get mods | `app.js` | `nexus_search`, `nexus_mod_details`, `nexus_download`, `nexus_open_in_app`, `source_search`, `source_download`, `framework_plan` | `nexus`, `nexus_browse`, `sources::github` |

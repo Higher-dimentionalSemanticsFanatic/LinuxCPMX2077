@@ -3,8 +3,10 @@
 //! `version` DLL overrides that let CET and RED4ext load, ReShade's DLL
 //! override and Microsoft's shader compiler, `-modded` for REDmod and
 //! `--launcher-skip` (with the REDmod switch that replaces the REDprelauncher), mod
-//! folders that exist twice with different capitalisation, and what HDR
-//! needs (see [`crate::hdr`]).
+//! folders that exist twice with different capitalisation, what HDR
+//! needs (see [`crate::hdr`]), OptiScaler's DLL override and the
+//! `VKD3D_SHADER_OVERRIDE` launch option for FSR 4.1.1 shader overrides (see
+//! [`crate::optiscaler`]).
 //!
 //! Every fix is offered, never applied on its own: the user confirms it, a
 //! record of what changed is kept under the app's data dir, and Undo puts
@@ -45,6 +47,7 @@ pub const FIX_HDR: &str = "hdr";
 /// HDR through gamescope, or back to Wine's Wayland driver, when both work.
 pub const FIX_HDR_GAMESCOPE: &str = "hdr-gamescope";
 pub const FIX_HDR_WAYLAND: &str = "hdr-wayland";
+pub const FIX_FSR4: &str = "fsr4-overrides";
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -282,14 +285,21 @@ pub fn write_overrides(reg: &str, set: &[(String, Option<String>)]) -> String {
 
 /// DLLs Wine must load from the game folder before its own: `winmm` and
 /// `version` for CET and RED4ext, ReShade's DLL and `d3dcompiler_47` (the
-/// shader compiler ReShade calls) when ReShade is in the game.
+/// shader compiler ReShade calls) when ReShade is in the game, and the name
+/// OptiScaler loads as.
 pub fn override_dlls(g: &GameInstall) -> Vec<&'static str> {
     let mut v = Vec::new();
     if game::needs_overrides(g) {
         v.extend(["winmm", "version"]);
     }
     v.extend(reshade_dlls(&g.path));
+    v.extend(optiscaler_dlls(&g.path));
     v
+}
+
+/// OptiScaler's override entry, or none when OptiScaler isn't in the game.
+pub fn optiscaler_dlls(game_dir: &Path) -> Vec<&'static str> {
+    crate::optiscaler::installed_proxy(game_dir).map(|d| d.trim_end_matches(".dll")).into_iter().collect()
 }
 
 /// ReShade's override entries, or none when ReShade isn't in the game.
@@ -710,10 +720,20 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
     let running = ctx.probe.game_running.then_some(CLOSE_GAME);
     let mut out = Vec::new();
     // Who needs the overrides, for the explanations.
-    let for_whom = match (needs, !reshade.is_empty()) {
-        (true, true) => "CET, RED4ext and ReShade",
-        (true, false) => "CET and RED4ext",
-        _ => "ReShade",
+    let mut who: Vec<&str> = Vec::new();
+    if needs {
+        who.extend(["CET", "RED4ext"]);
+    }
+    if !reshade.is_empty() {
+        who.push("ReShade");
+    }
+    if !optiscaler_dlls(&g.path).is_empty() {
+        who.push("OptiScaler");
+    }
+    let for_whom = match who.split_last() {
+        Some((last, rest)) if !rest.is_empty() => format!("{} and {last}", rest.join(", ")),
+        Some((last, _)) => last.to_string(),
+        None => "mods".to_string(),
     };
 
     // Visual C++ runtime.
@@ -980,6 +1000,12 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
         });
     }
 
+    // FSR 4.1.1 shader overrides for vkd3d-proton, once picked on the
+    // OptiScaler page.
+    if let Some(c) = fsr4_check(ctx) {
+        out.push(c);
+    }
+
     // Folders that exist under two spellings.
     let dups = case_duplicates(&g.path);
     let rec = load_record(ctx, FIX_CASE).is_some();
@@ -1048,6 +1074,166 @@ pub fn reshade_launch(g: &GameInstall) -> Option<ReShadeLaunch> {
         let ok = ours.iter().all(|d| o.get(*d).is_some_and(|v| v.starts_with('n')));
         ReShadeLaunch { line: format!("WINEDLLOVERRIDES=\"{}\"", override_value(&dlls)), steam: false, ok, compiler }
     })
+}
+
+// ---- FSR 4.1.1 shader overrides ------------------------------------------------
+
+/// `KEY=value` (quoted or bare) in launch options: the value and the byte
+/// range of the whole assignment.
+fn find_env(s: &str, key: &str) -> Option<(String, usize, usize)> {
+    let pat = format!("{key}=");
+    let mut from = 0;
+    let i = loop {
+        let i = from + s[from..].find(&pat)?;
+        if i == 0 || s[..i].ends_with(char::is_whitespace) {
+            break i;
+        }
+        from = i + pat.len();
+    };
+    let vstart = i + pat.len();
+    Some(match s[vstart..].chars().next() {
+        Some(q @ ('\'' | '"')) => {
+            let close = s[vstart + 1..].find(q).map(|j| vstart + 1 + j).unwrap_or(s.len());
+            (s[vstart + 1..close].to_string(), i, (close + 1).min(s.len()))
+        }
+        _ => {
+            let end = s[vstart..].find(char::is_whitespace).map(|j| vstart + j).unwrap_or(s.len());
+            (s[vstart..end].to_string(), i, end)
+        }
+    })
+}
+
+/// Launch options with `key` set to `value` (single-quoted, in front of
+/// `%command%`), or with `key` taken out for `None`. Everything else stays.
+pub fn merge_env(opts: &str, key: &str, value: Option<&str>) -> String {
+    let mut s = opts.trim().to_string();
+    while let Some((_, i, end)) = find_env(&s, key) {
+        s = format!("{} {}", s[..i].trim_end(), s[end..].trim_start()).trim().to_string();
+    }
+    match value {
+        Some(v) => {
+            if !s.contains("%command%") {
+                // Bare options are game arguments; they go after %command%.
+                s = format!("%command% {s}").trim().to_string();
+            }
+            format!("{key}='{v}' {s}")
+        }
+        None if s == "%command%" => String::new(),
+        None => s,
+    }
+}
+
+fn fsr4_check(ctx: &Ctx) -> Option<Check> {
+    use crate::optiscaler::{OVERRIDE_VAR, Variant, load_choice, override_value};
+    let g = ctx.game;
+    let choice = load_choice(&ctx.state_dir);
+    if choice.is_none() && load_record(ctx, FIX_FSR4).is_none() {
+        return None;
+    }
+    let steam = g.store == Store::Steam;
+    let cur = if steam {
+        g.launch_options.clone().unwrap_or_default()
+    } else {
+        let env = game::heroic_game(ctx.home, &g.path).map(|h| h.env).unwrap_or_default();
+        env.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(" ")
+    };
+    let now = find_env(&cur, OVERRIDE_VAR).map(|(v, ..)| v);
+    let steam_block = if ctx.probe.steam_running { Some(CLOSE_STEAM) } else { None };
+    let no_config = localconfigs(ctx.home).is_empty().then_some("Steam has no settings for this game yet. Start it once from Steam, then try again.");
+    let shown = |s: &str| if s.trim().is_empty() { "(empty)".to_string() } else { s.trim().to_string() };
+    let mut check = Check {
+        id: FIX_FSR4.into(),
+        title: "FSR 4 shader overrides".into(),
+        state: State::Ok,
+        detail: String::new(),
+        fix: None,
+        undo: undo_action(ctx, FIX_FSR4, "the launch options without the shader overrides", steam_block),
+        copy: None,
+        alt: None,
+        alt_id: None,
+    };
+    match choice {
+        Some(c) => {
+            let name = if c.variant == Variant::Lossy { "lossy" } else { "exact" };
+            let Some(want) = override_value(&c.folder) else {
+                check.state = State::Problem;
+                check.detail = format!("{} can't be passed in a launch option (quote or not an absolute path).", c.folder.display());
+                return Some(check);
+            };
+            if !c.folder.is_dir() {
+                check.state = State::Problem;
+                check.detail = format!("The {name} shader overrides are missing from {}. Download them again on the OptiScaler page.", c.folder.display());
+                return Some(check);
+            }
+            if now.as_deref() == Some(want.as_str()) {
+                check.detail = format!("{OVERRIDE_VAR} loads the {name} shader overrides. They apply only while the game runs AMD's {UPSCALER} {}.", crate::optiscaler::FSR_VERSION);
+                return Some(check);
+            }
+            check.state = State::Problem;
+            let line = merge_env(&cur, OVERRIDE_VAR, Some(&want));
+            if steam {
+                check.detail = format!("Launch options lack {OVERRIDE_VAR}='{want}' ({name} shader overrides).");
+                check.fix = action(
+                    "Set launch option",
+                    format!("Set Cyberpunk 2077's Steam launch options to:\n\n{line}\n\nNow: {}\n\nUndo removes the shader overrides again.", shown(&cur)),
+                    steam_block.or(no_config),
+                );
+                check.copy = Some(line);
+            } else {
+                check.detail = format!("The launcher's environment variables for the game lack {OVERRIDE_VAR}={want} ({name} shader overrides).");
+                check.copy = Some(format!("{OVERRIDE_VAR}={want}"));
+            }
+        }
+        None => {
+            let Some(old) = now else {
+                check.detail = "Shader overrides are off.".into();
+                return Some(check);
+            };
+            check.state = State::Problem;
+            check.detail = format!("Shader overrides are off, but the launch options still set {OVERRIDE_VAR}={old}.");
+            if steam {
+                let line = merge_env(&cur, OVERRIDE_VAR, None);
+                check.fix = action(
+                    "Remove launch option",
+                    format!("Set Cyberpunk 2077's Steam launch options to:\n\n{}\n\nNow: {}", shown(&line), shown(&cur)),
+                    steam_block.or(no_config),
+                );
+            }
+        }
+    }
+    Some(check)
+}
+
+const UPSCALER: &str = crate::optiscaler::UPSCALER_DLL;
+
+/// Write the shader-override launch option the FSR 4 check asks for.
+fn write_fsr4(ctx: &Ctx) -> Result<String> {
+    use crate::optiscaler::{OVERRIDE_VAR, load_choice, override_value};
+    let want = load_choice(&ctx.state_dir).and_then(|c| override_value(&c.folder));
+    let mut rec = load_record(ctx, FIX_FSR4).unwrap_or_default();
+    let mut set = String::new();
+    for cfg in localconfigs(ctx.home) {
+        let src = std::fs::read_to_string(&cfg)?;
+        let before = launch_in(&src);
+        let line = merge_env(before.as_deref().unwrap_or(""), OVERRIDE_VAR, want.as_deref());
+        if before.as_deref().unwrap_or("") == line {
+            continue;
+        }
+        let new = vdf::set_value(&src, LAUNCH_PATH, &line, 2).ok_or_else(|| Error::Other(format!("could not edit {}", cfg.display())))?;
+        if !rec.launch.iter().any(|(p, _)| p == &cfg) {
+            rec.launch.push((cfg.clone(), before));
+        }
+        write_atomic(&cfg, &new)?;
+        set = line;
+    }
+    if want.is_none() {
+        // Nothing of ours left to undo.
+        let _ = std::fs::remove_file(record_path(ctx, FIX_FSR4));
+        return Ok(format!("Shader overrides removed from the launch options: {}", if set.is_empty() { "(empty)" } else { &set }));
+    }
+    rec.applied_at = now();
+    save_record(ctx, FIX_FSR4, &rec)?;
+    Ok(format!("Launch options set: {set}"))
 }
 
 // ---- REDmod on/off -------------------------------------------------------------
@@ -1212,6 +1398,7 @@ pub fn apply(ctx: &Ctx, id: &str) -> Result<String> {
     let g = ctx.game;
     match id {
         FIX_VC | FIX_D3DCOMPILER => apply_tricks(ctx, id),
+        FIX_FSR4 => write_fsr4(ctx),
         FIX_LAUNCH => {
             let dlls = override_dlls(g);
             let redmods = game::has_redmods(&g.path) && redmod_wanted(ctx);
@@ -1457,6 +1644,19 @@ pub fn undo(ctx: &Ctx, id: &str) -> Result<String> {
             }
             "HDR settings removed from the launch options.".into()
         }
+        FIX_FSR4 => {
+            for (cfg, _) in &rec.launch {
+                let Ok(src) = std::fs::read_to_string(cfg) else { continue };
+                let Some(cur) = launch_in(&src) else { continue };
+                let want = merge_env(&cur, crate::optiscaler::OVERRIDE_VAR, None);
+                if want != cur
+                    && let Some(new) = vdf::set_value(&src, LAUNCH_PATH, &want, 2)
+                {
+                    write_atomic(cfg, &new)?;
+                }
+            }
+            "Shader overrides removed from the launch options.".into()
+        }
         FIX_OVERRIDES => {
             let prefix = g.proton_prefix.as_ref().ok_or_else(|| Error::Other("no prefix".into()))?;
             let reg_path = prefix.join("user.reg");
@@ -1547,6 +1747,63 @@ mod tests {
         touch(&dll, b"MZ microsoft's");
         assert!(compiler_ok(pfx.path()));
         assert_eq!(checks(&ctx).iter().find(|c| c.id == FIX_D3DCOMPILER).unwrap().state, State::Ok);
+    }
+
+    #[test]
+    fn sets_and_removes_an_environment_variable() {
+        const K: &str = "VKD3D_SHADER_OVERRIDE";
+        assert_eq!(merge_env("", K, Some("Z:/a b")), "VKD3D_SHADER_OVERRIDE='Z:/a b' %command%");
+        assert_eq!(merge_env("-skipStartScreen", K, Some("Z:/x")), "VKD3D_SHADER_OVERRIDE='Z:/x' %command% -skipStartScreen");
+        let set = "VKD3D_SHADER_OVERRIDE='Z:/old dir' WINEDLLOVERRIDES=\"winmm=n,b\" %command% --launcher-skip";
+        assert_eq!(
+            merge_env(set, K, Some("Z:/new")),
+            "VKD3D_SHADER_OVERRIDE='Z:/new' WINEDLLOVERRIDES=\"winmm=n,b\" %command% --launcher-skip"
+        );
+        assert_eq!(merge_env(set, K, None), "WINEDLLOVERRIDES=\"winmm=n,b\" %command% --launcher-skip");
+        assert_eq!(merge_env("VKD3D_SHADER_OVERRIDE=Z:/x %command%", K, None), "");
+        assert_eq!(find_env("XVKD3D_SHADER_OVERRIDE=1 %command%", K), None, "only whole names");
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn fsr4_overrides_check_follows_the_choice() {
+        let gdir = tempfile::tempdir().unwrap();
+        let home = tempfile::tempdir().unwrap();
+        let state = tempfile::tempdir().unwrap();
+        let root = tempfile::tempdir().unwrap();
+        let plain = "WINEDLLOVERRIDES=\"winmm,version=n,b\" %command% --launcher-skip";
+        let g = install(gdir.path(), Store::Steam, None, Some(plain));
+        let ctx = Ctx { home: home.path(), game: &g, state_dir: state.path().to_path_buf(), probe: Probe::default() };
+        assert!(checks(&ctx).iter().all(|c| c.id != FIX_FSR4), "nothing picked: no check");
+
+        std::fs::create_dir_all(root.path().join("prebuilt")).unwrap();
+        crate::optiscaler::save_choice(state.path(), root.path(), Some(crate::optiscaler::Variant::Exact)).unwrap();
+        let c = checks(&ctx).into_iter().find(|c| c.id == FIX_FSR4).unwrap();
+        assert_eq!(c.state, State::Problem);
+        let want = format!("VKD3D_SHADER_OVERRIDE='Z:{}' {plain}", root.path().join("prebuilt").display());
+        assert_eq!(c.copy.as_deref(), Some(want.as_str()));
+        assert_eq!(c.fix.unwrap().label, "Set launch option");
+
+        let g2 = install(gdir.path(), Store::Steam, None, Some(&want));
+        let ctx2 = Ctx { home: home.path(), game: &g2, state_dir: state.path().to_path_buf(), probe: Probe::default() };
+        assert_eq!(checks(&ctx2).into_iter().find(|c| c.id == FIX_FSR4).unwrap().state, State::Ok);
+
+        // Turned off while the launch options still carry it.
+        crate::optiscaler::save_choice(state.path(), root.path(), None).unwrap();
+        std::fs::write(state.path().join(format!("{FIX_FSR4}.json")), "{\"applied_at\":1}").unwrap();
+        let c = checks(&ctx2).into_iter().find(|c| c.id == FIX_FSR4).unwrap();
+        assert_eq!(c.state, State::Problem);
+        assert_eq!(c.fix.unwrap().label, "Remove launch option");
+    }
+
+    #[test]
+    fn optiscaler_needs_its_override() {
+        let gdir = tempfile::tempdir().unwrap();
+        let g = install(gdir.path(), Store::Steam, None, None);
+        touch(&gdir.path().join("bin/x64/wininet.dll"), b"MZ");
+        assert_eq!(override_dlls(&g), ["winmm", "version"], "no OptiScaler.ini: not OptiScaler");
+        touch(&gdir.path().join("bin/x64/OptiScaler.ini"), b"[x]");
+        assert_eq!(override_dlls(&g), ["winmm", "version", "wininet"]);
     }
 
     #[test]
