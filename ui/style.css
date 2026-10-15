@@ -561,3 +561,22 @@ button.link.author { padding: 0; margin: 0; font-size: inherit; }
 #net-list tr.net-drag { cursor: grab; }
 #net-list tr.net-drag.drop td { box-shadow: inset 0 2px var(--yellow); }
 .net-order-info .row { margin-top: 8px; flex-wrap: wrap; }
+
+/* Installed mods › Overview: List or Canvas view (mods_canvas.js). */
+#tab-mods[data-view="canvas"] .list-only, #tab-mods:not([data-view="canvas"]) .canvas-only { display: none !important; }
+#mods-view button { padding: 6px 14px; }
+#mods-canvas { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 18px 12px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: rgba(8, 10, 12, .55); }
+#mods-canvas:empty { display: none; }
+.canvas-col { flex: 0 0 210px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.canvas-col h4 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 4px; padding-bottom: 4px; border-bottom: 2px solid var(--c); font-size: 14px; letter-spacing: 1px; text-transform: uppercase; color: var(--c); }
+.canvas-col h4 button.link { color: var(--c); font: inherit; letter-spacing: inherit; text-transform: inherit; padding: 0; text-align: left; }
+.canvas-count { margin-left: auto; color: var(--muted); }
+button.canvas-tile { display: flex; align-items: center; gap: 4px; width: 100%; margin: 0; padding: 5px 8px; text-align: left; text-transform: none; letter-spacing: 0; font-family: inherit; font-size: 12px; font-weight: 400; color: var(--text); clip-path: none;
+  --fill: rgba(20, 24, 28, .9); background: var(--fill); border: 1px solid var(--border); border-left: 3px solid var(--c); border-radius: 3px; }
+button.canvas-tile:hover { --fill: rgba(246, 207, 60, .12); background: var(--fill); border-color: var(--yellow); border-left-color: var(--c); }
+button.canvas-tile.off { opacity: .5; border-style: dashed; border-left-style: dashed; }
+.canvas-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.canvas-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.canvas-up { flex: none; color: var(--yellow); font-size: 10px; }
+.canvas-files { flex: none; margin-left: auto; padding-left: 6px; color: var(--muted); font-size: 11px; }
+#tab-mods #mods-filter { min-width: 180px; }
