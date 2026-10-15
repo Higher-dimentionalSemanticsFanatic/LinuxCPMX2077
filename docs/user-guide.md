@@ -92,7 +92,7 @@ here only when more than one is found; while none is found, the panel has
 
 To make the left-hand menu wider or narrower, drag the line between it and
 the main area left or right. The width is kept the next time you open the
-app, and a docked debug terminal fills whatever width you choose. Double-click
+app, and a docked terminal fills whatever width you choose. Double-click
 the line to put it back to the default. With the line selected (Tab to
 it), the left and right arrow keys also resize it.
 
@@ -785,7 +785,7 @@ one *Framework* node, not a mod node plus a framework node.
   panning redraw at most once per screen refresh, and far-off groups of
   nodes are counted together while the web layout settles. If the graph
   stops drawing, it says so in red and the error is listed in the
-  [debug terminal](#debug-terminal).
+  [terminal](#terminal).
 
 ### Compatibility
 
@@ -927,8 +927,8 @@ Browse and download mods. The switch at the top right picks the source:
   than 25 requests remain so downloads still work, and nothing is sent once
   Nexus says the quota is used up until it resets.
 - **API requests** (Settings → debug mode) lists every request with timing.
-  Your API key is never shown. **Open debug terminal** there opens the
-  [debug terminal](#debug-terminal).
+  Your API key is never shown. **Open terminal** there opens the
+  [terminal](#terminal).
 - Adult-flagged mods are hidden unless you turn them on in Settings.
 
 ### GitHub
@@ -1043,11 +1043,11 @@ Every archive you downloaded, grouped by mod with each version under it.
   the read-only MCP server, with **Copy**.
 - **Nexus browser sign-in**: the application slug Nexus issues for browser
   sign-in.
-- **Nexus browsing**: show adult content, debug mode, *Debug terminal
+- **Nexus browsing**: show adult content, debug mode, *Terminal
   opens* (**In the sidebar**, the default, or **In its own window**), **Open
-  debug terminal** and **Clear saved pages**. Ticking *Debug mode* adds the
-  API request list to Get mods, opens the [debug terminal](#debug-terminal)
-  and adds a **Debug terminal** button under the tabs in the sidebar. Pages and
+  terminal** and **Clear saved pages**. Ticking *Debug mode* adds the
+  API request list to Get mods, opens the [terminal](#terminal)
+  and adds a **Terminal** button under the tabs in the sidebar. Pages and
   searches are saved for a week; lists count as fresh for 5 minutes and mod
   pages for 10.
 - **Nexus account**: **Forget API key** removes it from the keyring.
@@ -1065,15 +1065,14 @@ Every archive you downloaded, grouped by mod with each version under it.
   last step has **Open getting started guide**. Closing it returns to the
   tab you were on.
 
-### Debug terminal
+### Terminal
 
 A terminal that shows, live and oldest first, every Nexus API request and
 everything the app does on your machine. It works the same on Linux and
 Windows and needs no terminal program.
 
 By default it sits at the foot of the main window's sidebar, under the
-**Debug terminal** button. That button shows or hides it, and **Open debug
-terminal** in Settings or in Get mods' *API requests* list shows it too.
+**Terminal** button. That button shows or hides it, and **Open terminal** in Settings or in Get mods' *API requests* list shows it too.
 Drag its bottom-right corner to make it taller.
 
 - **Pop out** (in the docked terminal) moves it to a window of its own.
@@ -1081,7 +1080,7 @@ Drag its bottom-right corner to make it taller.
   sidebar.
 - **Hide** (in the docked terminal) tucks it away; the app remembers this
   until you show it again.
-- To always open it as a window, set *Debug terminal opens* in Settings to
+- To always open it as a window, set *Terminal opens* in Settings to
   **In its own window**.
 
 Docked, it is a compact version: the filter checkboxes are behind
@@ -1258,7 +1257,7 @@ off with the **On** switch to test, start the game again, then **Check
 again**. The compatibility list may also name a clash.
 
 **Something went wrong and you want to see exactly what happened.** Tick
-*Debug mode* in Settings and use the [debug terminal](#debug-terminal): it
+*Debug mode* in Settings and use the [terminal](#terminal): it
 lists each request, download, checksum check, extraction and file the app
 touched. **Save…** gives you a log to attach to a bug report.
 

@@ -1779,7 +1779,7 @@ function showDock(on) {
   $("#sidebar").classList.toggle("has-dock", on);
   $("#debug-terminal-side").classList.toggle("on", on);
   // A fresh frame reads the whole log again; a hidden one isn't kept polling.
-  if (on && !box.querySelector("iframe")) box.append(el("iframe", { src: "debug.html?docked", title: "Debug terminal", allow: "clipboard-write" }));
+  if (on && !box.querySelector("iframe")) box.append(el("iframe", { src: "debug.html?docked", title: "Terminal", allow: "clipboard-write" }));
   if (!on) box.replaceChildren();
 }
 
