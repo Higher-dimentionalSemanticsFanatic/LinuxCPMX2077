@@ -234,7 +234,7 @@ Screenshots show sample data, with file locations blurred.
   Settings). Pasting a mod URL, ID or `nxm://` link still works. The ⬇ button
   on a mod's card offers its two newest main files, and the download's
   progress shows on the card, on its row in Downloads and in a panel at the
-  top with one bar per file, side by side. A file you already downloaded is never
+  bottom with one bar per file, side by side. A file you already downloaded is never
   fetched twice: the app installs the copy you have.
 - **GitHub as a second source**: the core frameworks (CET, RED4ext,
   redscript, ArchiveXL, TweakXL, Codeware) and many mods ship as GitHub

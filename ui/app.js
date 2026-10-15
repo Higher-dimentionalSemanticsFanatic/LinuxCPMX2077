@@ -2898,17 +2898,35 @@ function queueProgress(match, done, total) {
   if (!progressFrame) progressFrame = requestAnimationFrame(() => { progressFrame = 0; renderQueue(); });
 }
 
-// Show or hide the popup at the top. While the page is scrolled, the scroll
-// position absorbs its height, so what's on screen stays where it is.
+// The downloads panel floats at the bottom of the page area. While it is
+// shown, the page gets that much empty space at its end, so nothing stays
+// hidden under it; nothing above moves when it opens, grows or closes.
+function placePopup() {
+  const pop = $("#queue");
+  const main = $("main");
+  const root = document.documentElement.style;
+  if (pop.classList.contains("hidden")) {
+    main.style.paddingBottom = "";
+    root.removeProperty("--popup-h");
+    return;
+  }
+  const r = main.getBoundingClientRect();
+  const pad = parseFloat(getComputedStyle(main).paddingLeft) || 0;
+  pop.style.left = `${r.left + pad}px`;
+  pop.style.width = `${main.clientWidth - 2 * pad}px`;
+  main.style.paddingBottom = `${pop.offsetHeight + 24}px`;
+  // Toasts sit above the panel.
+  root.setProperty("--popup-h", `${pop.offsetHeight + 12}px`);
+}
+const popupObserver = new ResizeObserver(placePopup);
+popupObserver.observe($("main"));
+popupObserver.observe($("#queue"));
+
 function setPopupShown(show) {
   const pop = $("#queue");
   if (pop.classList.contains("hidden") !== show) return;
-  const main = $("main");
-  const ref = document.querySelector("main > .tab.active");
-  const y0 = ref?.getBoundingClientRect().top;
-  const scrolled = main.scrollTop > 0;
   pop.classList.toggle("hidden", !show);
-  if (ref && scrolled) main.scrollTop += ref.getBoundingClientRect().top - y0;
+  placePopup();
 }
 
 // The popup when only single downloads run (no queue).
@@ -3053,7 +3071,7 @@ function downloadMatches(d, q) {
 
 // A file still downloading: a row with its progress bar on top of the list.
 function transferRow(t) {
-  const row = el("tr", { class: "downloading" },
+  const row = el("tr", { class: "downloading", "data-key": `t:${t.key}` },
     el("td", {}),
     el("td", {}, el("b", { class: "transfer-row-name" }, transferName(t)), el("div", { class: "muted mono transfer-row-file" }, t.name ? t.file : "")),
     el("td", { colspan: 8 }, el("div", { class: "progress row-progress" },
@@ -3098,7 +3116,7 @@ function renderDownloads() {
       renderDownloads();
     };
     const channels = ["stable", "beta", "nightly"].filter((c) => entries.some((e) => e.channel === c));
-    rows.push(el("tr", { class: "folder", onclick: (e) => { if (e.target.tagName !== "BUTTON" || e.target.classList.contains("twisty")) toggle(); } },
+    rows.push(el("tr", { class: "folder", "data-key": `g:${g.key}`, onclick: (e) => { if (e.target.tagName !== "BUTTON" || e.target.classList.contains("twisty")) toggle(); } },
       el("td", {}, dlSel.box(entries.map((e) => e.id), `all ${entries.length} versions of ${g.name}`)),
       el("td", {},
         el("button", { class: "twisty", "aria-expanded": String(open), title: open ? "Hide versions" : "Show versions" }, open ? "▾" : "▸"),
@@ -3123,7 +3141,16 @@ function renderDownloads() {
     th.classList.toggle("asc", th.dataset.sort === dlSort.key && dlSort.dir > 0);
     th.classList.toggle("desc", th.dataset.sort === dlSort.key && dlSort.dir < 0);
   });
+  // Rows added or removed above the visible part (a download starting or
+  // finishing) don't move the rows on screen: the first visible row keeps
+  // its place.
+  const main = $("main");
+  const top = main.getBoundingClientRect().top;
+  const anchor = main.scrollTop > 0 ? [...$("#downloads-body").children].find((r) => r.getBoundingClientRect().bottom > top) : null;
+  const before = anchor?.getBoundingClientRect().top;
   $("#downloads-body").replaceChildren(...rows);
+  const again = anchor && rows.find((r) => r.dataset.key === anchor.dataset.key);
+  if (again) main.scrollTop += again.getBoundingClientRect().top - before;
   dlSel.render(shownIds);
 }
 
@@ -3135,7 +3162,7 @@ function downloadRow(d, depth) {
   const m = installedFor(d);
   const up = m && updatesByMod.get(m.id);
   const checked = d.checked || (d.verified ? "MD5 matches Nexus" : "unverified");
-  return el("tr", { class: depth ? "child" : "" },
+  return el("tr", { class: depth ? "child" : "", "data-key": `d:${d.id}` },
     el("td", {}, dlSel.box([d.id], d.file_name)),
     el("td", {}, el("div", { class: depth ? "indent" : "" },
       depth ? null : el("b", {}, d.mod_name || d.file_name),

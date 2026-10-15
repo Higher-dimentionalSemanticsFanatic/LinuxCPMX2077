@@ -911,7 +911,7 @@ Browse and download mods. The switch at the top right picks the source:
     `nxm://` handler first).
   - You stay on **Get mods** while it downloads. Progress shows on the mod's
     card when you started from the card, on the file's row in **Downloads**,
-    and in the [downloads panel](#downloads-panel) at the top of the window.
+    and in the [downloads panel](#downloads-panel) at the bottom of the window.
 - **No duplicate downloads**: a file that is already in your downloads (same
   Nexus or GitHub file, still on disk and complete) is not downloaded again.
   The app installs the copy you have and says so. Files in your downloads
@@ -948,12 +948,13 @@ The core frameworks and many mods ship as GitHub releases.
 
 ### Downloads panel
 
-A panel at the top of the window appears while files download: one bar per
-file, side by side, each with the mod name, percentage and size. A finished
-bar stays where it is, marked *downloaded*, *already in downloads* or
-*failed*, so the running bars don't move. The panel keeps the same height
-while it is open; when you have scrolled down, the page keeps its place when
-the panel opens or closes. Once every file is finished the bars clear after 8
+A panel at the bottom of the window appears while files download: one bar
+per file, side by side, each with the mod name, percentage and size. A
+finished bar stays where it is, marked *downloaded*, *already in downloads*
+or *failed*, so the running bars don't move. The panel floats over the page
+and the page gets the same amount of empty space at its end, so nothing
+stays hidden under it and nothing on the page moves when it opens or closes.
+Messages show above it. Once every file is finished the bars clear after 8
 seconds, or at once with **Clear**. The download queue shares this panel.
 
 ### Download queue
@@ -997,7 +998,9 @@ Every archive you downloaded, grouped by mod with each version under it.
   mod names, file names, versions, game versions, channels and sources.
   Folders with a match open and show only the matching versions.
 - **Files downloading** are listed on top of the list with their own
-  progress bar, and replaced by the finished download.
+  progress bar, and replaced by the finished download. When you have
+  scrolled down, the rows on screen keep their place as these rows come and
+  go.
 - **Channel filter**: stable, beta and nightly; stable only; or beta and
   nightly only. The channel comes from the version and file name and from
   GitHub's pre-release flag.
