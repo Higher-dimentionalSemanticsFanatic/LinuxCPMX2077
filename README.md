@@ -121,18 +121,21 @@ Screenshots show sample data, with file locations blurred.
   note marks optional, in a different row colour; both can be on together. "Missing on top" lists
   each missing item once, ranked by how many installed mods list it. A mod's
   page in Get mods marks its requirements the same way.
+- **Canvas view** in Installed mods: the installed mods as tiles, one
+  column per tag, Nexus category, source or enabled state, next to the
+  usual list.
 - **Mod page** button in Installed mods opens a mod's Nexus or GitHub page
   in Get mods.
 - **Ultra+ recommendations**: with the Ultra+ path tracing mod installed, a
   section under Installed mods lists what the Ultra+ team's page recommends next to
   it and what conflicts with it, marks what you have, and queues the missing
   ones. Installed conflicts also show as known problems in Netrunner.
-- **Patch-note check**: a section under Installed mods compares each mod's file
-  and release dates with the official patch notes (built in, 1.04 to 2.31):
-  core frameworks older than a game patch, mods released before Update 2.0's
-  rework, mods whose feature a patch added to the base game (metro,
-  Radioport, transmog, AutoDrive, …), and mods no longer published on Nexus.
-  Hints only, offline after one "Read release dates".
+- **Patch-note check**: a section under Installed mods lists each mod's last
+  update (Nexus page or newest release) against the official patch notes
+  (built in, 1.04 to 2.31): which game patches came out since, warnings for
+  script mods older than Update 2.0's rework and outdated core frameworks,
+  plus notes on features a patch added to the base game (metro, Radioport,
+  transmog, AutoDrive, …) and mods no longer published on Nexus. Hints only.
 - **ReShade**: a section under Installed mods installs ReShade from reshade.me
   (or a setup file you downloaded), checks the DLL inside the setup before
   using it, loads it as `dxgi.dll` (or `d3d12.dll` when that name is taken),
@@ -142,9 +145,10 @@ Screenshots show sample data, with file locations blurred.
   Shader packs (Standard effects, SweetFX, qUINT, iMMERSE, prod80, AstrayFX,
   FXShaders) install from their GitHub repositories, shaders and textures
   only, one folder per pack. The preset list shows which preset is active,
-  switches between them, and names effect files a preset needs but that
-  aren't installed.
-- **OptiScaler**: a section under Installed mods installs OptiScaler from its
+  switches between them, names effect files a preset needs but that
+  aren't installed, and repairs `ReShade.ini` search paths a preset mod
+  replaced.
+- **OptiScaler FSR4.1.1 Lite**: a section under Installed mods installs OptiScaler from its
   GitHub releases as a tracked mod (as `wininet.dll`, clear of CET, RED4ext
   and ReShade), optionally with AMD's FSR 4.1.1 upscaler DLL (4.1.1.2740,
   checked against AMD's repository). On Linux it adds OptiScaler's DLL
@@ -234,7 +238,7 @@ Screenshots show sample data, with file locations blurred.
   Settings). Pasting a mod URL, ID or `nxm://` link still works. The ⬇ button
   on a mod's card offers its two newest main files, and the download's
   progress shows on the card, on its row in Downloads and in a panel at the
-  top with one bar per file, side by side. A file you already downloaded is never
+  bottom with one bar per file, side by side. A file you already downloaded is never
   fetched twice: the app installs the copy you have.
 - **GitHub as a second source**: the core frameworks (CET, RED4ext,
   redscript, ArchiveXL, TweakXL, Codeware) and many mods ship as GitHub
@@ -269,7 +273,7 @@ Screenshots show sample data, with file locations blurred.
   (or returns 429) until it resets, and pauses browsing when fewer than 25
   requests remain so downloads and checksum checks still work. Lists and mod
   pages are cached for a few minutes.
-- **Debug terminal**: Settings → *Debug mode* opens a terminal, docked in
+- **Terminal**: Settings → *Debug mode* opens a terminal, docked in
   the sidebar or popped out into its own window, that streams every Nexus and GitHub API request and every operation on
   your machine (downloads, checksum checks, extractions, files copied,
   backed up, moved or deleted, Linux setup fixes), with filters, Copy and
