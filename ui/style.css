@@ -249,15 +249,18 @@ input.switch:focus-visible { outline: 1px solid var(--yellow); outline-offset: 2
 tr.off .mod-thumb { opacity: .45; }
 th.enabled-col, td.enabled-col { text-align: center; white-space: nowrap; }
 th.enabled-col { cursor: help; }
+/* Not installed by CPMX2077: long game paths wrap, the buttons stay on one line. */
+#untracked td.mono { overflow-wrap: anywhere; }
+#untracked td.actions { white-space: nowrap; }
 /* Narrow page (Steam Deck, wide sidebar): tighter cells keep Uninstall on screen. */
 #mods-list-wrap { container-type: inline-size; }
 @container (max-width: 1150px) {
-  #mods-table th, #mods-table td { padding: 6px 5px; }
+  #mods-table th, #mods-table td { padding: 6px 4px; }
   #mods-table th { letter-spacing: .5px; }
-  #mods-table .thumb-col, #mods-table .mod-thumb { width: 44px; }
-  #mods-table .mod-thumb { height: 25px; }
+  #mods-table .thumb-col, #mods-table .mod-thumb { width: 40px; }
+  #mods-table .mod-thumb { height: 23px; }
   #mods-table .badge { white-space: normal; }
-  #mods-table td.actions button { padding-left: 8px; padding-right: 8px; }
+  #mods-table td.actions button { padding-left: 7px; padding-right: 7px; font-size: 12px; letter-spacing: .5px; }
 }
 .help-mark { display: inline-block; width: 14px; height: 14px; line-height: 14px; border: 1px solid currentColor;
   border-radius: 50%; font-size: 10px; text-align: center; opacity: .7; }
