@@ -154,9 +154,9 @@ function renderOptiScaler(s, o) {
       el("label", { title: "The system DLL name OptiScaler loads as. The OptiScaler wiki lists dxgi.dll and wininet.dll for Cyberpunk 2077; ReShade usually has dxgi.dll." },
         "Load as ", el("select", { onchange: (e) => { optiProxy = e.target.value; } },
           ...names.map((n) => el("option", { value: n, selected: n === optiProxy ? "" : null }, n))))),
-    el("label", { class: "row small", title: "From AMD's FidelityFX SDK 2.3.0 on GitHub (pinned commit); checked against its git blob id and version 4.1.1.2740. Replaces the upscaler DLL in OptiScaler's archive." },
+    el("label", { class: "row small", title: "From AMD's FidelityFX SDK 2.3.0 on GitHub (pinned commit); checked against its git blob id and version 4.1.1.2740. Replaces the upscaler DLL in OptiScaler's archive, and sets OptiScaler.ini to start on FSR 4 (Dx12Upscaler=ffx, UpscalerIndex=0)." },
       el("input", { type: "checkbox", checked: optiFsr ? "" : null, onchange: (e) => { optiFsr = e.target.checked; } }),
-      el("span", {}, "Use AMD's FSR 4.1.1 upscaler DLL (4.1.1.2740, needed for the shader overrides)")),
+      el("span", {}, "Use AMD's FSR 4.1.1 upscaler DLL (4.1.1.2740, needed for the shader overrides) and start on FSR 4")),
     el("p", { id: "optiscaler-progress", class: "muted small" }, optiProgress),
     el("div", { class: "row" },
       newer ? el("button", { class: "update", onclick: (e) => busy(e.target, optiInstall) }, `Update to ${optiLatest.tag}`) : null,
@@ -175,7 +175,7 @@ function renderOptiScaler(s, o) {
     i && launch && launch.state !== "ok" ? optiCheck(launch.id) : null,
     i ? el("p", { class: "muted small" },
       "In game: set Settings › Graphics › Resolution scaling to FSR 3.1 or XeSS (the wiki reports noise with DLSS input and path tracing on AMD), ",
-      "then press Insert and pick FSR 4 in OptiScaler's overlay. The overlay also shows the upscaler time per frame.") : null,
+      "then press Insert: the overlay shows the upscaler in use (FSR 4 when installed with AMD's DLL; otherwise pick it there) and its time per frame.") : null,
     ...(fsr4Section(s, o) || []));
   $("#optiscaler").replaceChildren(details);
 }

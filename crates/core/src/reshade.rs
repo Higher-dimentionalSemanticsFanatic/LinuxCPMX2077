@@ -853,7 +853,7 @@ pub fn presets(db: &Db, game: &GameRow) -> Result<Vec<Preset>> {
 }
 
 /// `ini` with `key=value` set in `[section]` (added if missing).
-fn set_ini_value(ini: &str, section: &str, key: &str, value: &str) -> String {
+pub(crate) fn set_ini_value(ini: &str, section: &str, key: &str, value: &str) -> String {
     let nl = if ini.contains("\r\n") { "\r\n" } else { "\n" };
     let mut lines: Vec<String> = ini.lines().map(String::from).collect();
     let mut cur = String::new();

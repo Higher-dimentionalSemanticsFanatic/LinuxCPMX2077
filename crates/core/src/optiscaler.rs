@@ -221,6 +221,17 @@ pub fn download_amd_dll(gh: &github::Client, dest_dir: &Path) -> Result<PathBuf>
     Ok(path)
 }
 
+/// `OptiScaler.ini` settings that make it start on FSR 4 (OptiScaler's
+/// sample ini): the FFX upscaler for DirectX 12, with the FSR 4 backend.
+/// On `auto` it picks DLSS or FSR 4 only on GPUs it considers capable and
+/// XeSS otherwise, and the FSR 3 backend on anything but RDNA4.
+pub const FSR4_INI: &[(&str, &str, &str)] = &[("Upscalers", "Dx12Upscaler", "ffx"), ("FSR", "UpscalerIndex", "0")];
+
+/// `ini` with [`FSR4_INI`] set; everything else stays.
+pub fn fsr4_ini(ini: &str) -> String {
+    FSR4_INI.iter().fold(ini.to_string(), |acc, (section, key, value)| crate::reshade::set_ini_value(&acc, section, key, value))
+}
+
 /// Install (or update) OptiScaler from its release `archive` as `proxy` (or
 /// the name [`pick_proxy`] chooses). With `amd_dll`, AMD's checked upscaler
 /// DLL replaces the one in the archive. The previous OptiScaler is replaced.
@@ -254,6 +265,17 @@ pub fn install(inst: &Installer, game: &GameRow, archive: &Path, tag: &str, prox
             std::fs::create_dir_all(dst.parent().unwrap_or(&relaid))?;
             std::fs::write(dst, bytes)?;
             targets.push(rel);
+            // Start on FSR 4 instead of OptiScaler's own pick.
+            let ini_rel = format!("{BIN}/{INI}");
+            let ini_path = match targets.iter().find(|t| t.eq_ignore_ascii_case(&ini_rel)) {
+                Some(t) => relaid.join(t),
+                None => {
+                    targets.push(ini_rel.clone());
+                    relaid.join(&ini_rel)
+                }
+            };
+            let ini = std::fs::read(&ini_path).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default();
+            std::fs::write(&ini_path, fsr4_ini(&ini))?;
         }
         std::fs::remove_dir_all(p.dir.join("files"))?;
         std::fs::rename(&relaid, p.dir.join("files"))?;
@@ -594,6 +616,15 @@ mod tests {
         inst.uninstall(mods[0].id).unwrap();
         assert!(!gdir.join("bin/x64/wininet.dll").exists());
         assert_eq!(installed_proxy(gdir), None);
+    }
+
+    #[test]
+    fn sets_fsr4_in_the_ini() {
+        let ini = "; c\r\n[Upscalers]\r\nDx11Upscaler=auto\r\nDx12Upscaler=auto\r\n\r\n[FSR]\r\nDebugView=auto\r\nUpscalerIndex=auto\r\n";
+        let out = fsr4_ini(ini);
+        assert!(out.contains("Dx12Upscaler=ffx\r\n") && out.contains("UpscalerIndex=0\r\n") && out.contains("Dx11Upscaler=auto"), "{out}");
+        let empty = fsr4_ini("");
+        assert!(empty.contains("[Upscalers]") && empty.contains("Dx12Upscaler=ffx") && empty.contains("[FSR]") && empty.contains("UpscalerIndex=0"), "{empty}");
     }
 
     #[test]

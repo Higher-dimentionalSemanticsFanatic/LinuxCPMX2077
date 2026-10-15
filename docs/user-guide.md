@@ -503,7 +503,10 @@ can ban for it.
   2.3.0 on GitHub (a fixed commit). It must match its git blob id and name
   version 4.1.1.2740 in its version information, or nothing is installed.
   It replaces the upscaler DLL in OptiScaler's archive. The shader overrides
-  below need exactly this file.
+  below need exactly this file. The same box sets `OptiScaler.ini` to start
+  on FSR 4 (`Dx12Upscaler=ffx` under `[Upscalers]`, `UpscalerIndex=0` under
+  `[FSR]`): left on `auto`, OptiScaler picks XeSS or FSR 3 on cards it
+  doesn't count as FSR 4 capable, RX 7000 included.
 - OptiScaler is one mod row (source *GitHub optiscaler/OptiScaler*), so
   **Disable**, **Uninstall** and **Verify** work as for any mod.
   **Check for updates** reads the newest stable release; **Update to …**
@@ -516,7 +519,8 @@ can ban for it.
   **Set launch options** button.
 
 In game: set the game's upscaler (Settings › Graphics › Resolution scaling)
-to FSR 3.1 or XeSS, press Insert and pick FSR 4 in OptiScaler's overlay.
+to FSR 3.1 or XeSS and press Insert: OptiScaler's overlay shows the
+upscaler in use, FSR 4 when installed with AMD's DLL; otherwise pick it there.
 OptiScaler's wiki reports noise with DLSS input and path tracing on AMD
 cards. The overlay also shows the upscaler time per frame.
 
