@@ -501,6 +501,7 @@ function renderMods() {
   syncModsSubs();
   $("#mods-body").replaceChildren(...deficitRows(), ...shown.flatMap((m) => [modRow(m), ...dependencyRows(m)]));
   modSel.render(shown.map((m) => m.id));
+  renderModsCanvas(shown);
 }
 
 // The mod's page in Get mods (Nexus or another source); none for manual installs.

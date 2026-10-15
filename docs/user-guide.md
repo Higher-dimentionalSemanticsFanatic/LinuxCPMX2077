@@ -9,7 +9,7 @@ ARCHIVE…); this guide writes them in normal case (**Install from
 archive…**). The selected tab is the amber one in the left menu.
 
 Two tabs have sections listed under them in the left menu: **Installed
-mods** (**Mod list**, **ReShade**, **OptiScaler**, **RadioEXT**, **Ultra+
+mods** (**Overview**, **ReShade**, **OptiScaler**, **RadioEXT**, **Ultra+
 recommendations**, **Patch-note check**) and **Get mods** (**Browse mods**,
 **Modpacks**). **▾** next to the tab shows or hides its sections; the choice
 is kept. A section shows in the menu once it applies: ReShade and Patch-note
@@ -193,8 +193,11 @@ it), the left and right arrow keys also resize it.
 
 ![The Installed mods tab with the game panel on the left](images/installed-mods.png)
 
-The list of mods CPMX2077 installed in the selected game (**Mod list** in
-the menu).
+The mods CPMX2077 installed in the selected game (**Overview** in the
+menu). **List** / **Canvas** above the filters switches between the table
+below and the [Canvas view](#canvas-view); the choice is kept. The name
+filter, **All tags and categories** and the game version filter apply to
+both.
 
 **First setup** checklist: on top of the list while a first-run step is
 open. *Core frameworks* (**Install missing frameworks**), *Linux setup*
@@ -216,6 +219,25 @@ removes it; the same buttons stay in the Game panel and Get mods.
 **On** vs **Uninstall**: switching a mod off keeps it in the list with a
 stored copy, so it can come back without a download. **Uninstall** deletes
 the stored copy and removes the mod from the list.
+
+### Canvas view
+
+![Canvas view grouped by tag](images/installed-mods-canvas.png)
+
+**Canvas** shows the same mods as tiles, one column per group, so you can
+see at a glance which mods carry which tag.
+
+- **Group by**: **Tag** (one column per tag in your tag list order, then
+  *No tags*), **Nexus category**, **Source** (Nexus, GitHub, Manual, …) or
+  **Enabled / disabled**. The column heading shows the group's mod count.
+- A mod with several tags shows in each of its tag columns; the dots after
+  its name are its other tags, in their colors.
+- The number on the right of a tile is the mod's file count. **▲** marks an
+  available update. Faded, dashed tiles are disabled mods; untick **Show
+  disabled** to hide them.
+- Click a tile to open that mod in **List** (name filter set to it). Click a
+  tag or category heading to show that group in **List**.
+- Hover a tile for its state, file count, tags and Nexus category.
 
 ### Selecting several mods
 

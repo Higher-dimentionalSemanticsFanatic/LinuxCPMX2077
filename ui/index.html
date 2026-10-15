@@ -29,7 +29,7 @@
         <button class="nav-caret" data-group="mods" aria-expanded="true" aria-controls="nav-sub-mods" title="Show or hide the Installed mods sections">▾</button>
       </div>
       <div class="nav-sub" id="nav-sub-mods">
-        <button data-tab="mods" data-sub="list" class="active">Mod list</button>
+        <button data-tab="mods" data-sub="list" class="active">Overview</button>
         <button data-tab="mods" data-sub="reshade" class="hidden">ReShade</button>
         <button data-tab="mods" data-sub="optiscaler" class="hidden">OptiScaler</button>
         <button data-tab="mods" data-sub="radio" class="hidden">RadioEXT</button>
@@ -104,19 +104,34 @@
       <div id="version-profiles" class="hidden"></div>
       <div id="version-loadout" class="card hidden"></div>
       <div class="row filters">
+        <div id="mods-view" class="segmented" role="group" aria-label="View">
+          <button data-view="list" title="Table of the installed mods with their actions">List</button>
+          <button data-view="canvas" title="Installed mods as tiles, one column per tag, Nexus category, source or state">Canvas</button>
+        </div>
         <input id="mods-filter" type="search" class="inline" placeholder="Filter by name" aria-label="Filter by name" maxlength="100">
         <select id="mods-category" class="inline" aria-label="Tag or category"><option value="">All tags and categories</option></select>
         <select id="mods-version" class="inline hidden" aria-label="Game version the mod was installed on"></select>
-        <label class="check small dep-key" title="Under each mod: what it needs, from its Nexus page and from the frameworks its files use">
+        <span class="canvas-only row">
+          <label class="muted small" for="canvas-group">Group by</label>
+          <select id="canvas-group" class="inline">
+            <option value="tag">Tag</option><option value="category">Nexus category</option>
+            <option value="source">Source</option><option value="state">Enabled / disabled</option>
+          </select>
+          <label class="check small" title="Disabled mods show as faded, dashed tiles"><input type="checkbox" id="canvas-disabled"> Show disabled</label>
+          <span id="canvas-summary" class="muted small"></span>
+        </span>
+        <label class="check small dep-key list-only" title="Under each mod: what it needs, from its Nexus page and from the frameworks its files use">
           <input type="checkbox" id="show-deps"> Dependencies</label>
-        <label class="check small rec-key" title="Under each mod: requirements its author marked optional or recommended on its Nexus page">
+        <label class="check small rec-key list-only" title="Under each mod: requirements its author marked optional or recommended on its Nexus page">
           <input type="checkbox" id="show-recs"> Recommendations</label>
-        <label id="deps-top-wrap" class="check small hidden" title="List each missing item once at the top, with how many installed mods list it, most first; mods with missing items sort first">
+        <label id="deps-top-wrap" class="check small hidden list-only" title="List each missing item once at the top, with how many installed mods list it, most first; mods with missing items sort first">
           <input type="checkbox" id="deps-top"> Missing on top</label>
-        <span id="deps-note" class="muted small"></span>
-        <button id="deps-get-missing" class="hidden" title="Queue every missing requirement: core frameworks from GitHub, the rest from Nexus">Get missing</button>
+        <span id="deps-note" class="muted small list-only"></span>
+        <button id="deps-get-missing" class="hidden list-only" title="Queue every missing requirement: core frameworks from GitHub, the rest from Nexus">Get missing</button>
         <span id="updates-note" class="muted small"></span>
       </div>
+      <div id="mods-canvas" class="canvas-only" aria-label="Installed mods grouped"></div>
+      <div class="list-only">
       <div id="mods-bulk" class="bulk-bar hidden">
         <span id="mods-bulk-count"></span>
         <button id="mods-bulk-enable" title="Put the selected mods' files back into the game">Enable</button>
@@ -138,6 +153,7 @@
         </tr></thead>
         <tbody id="mods-body"></tbody>
       </table>
+      </div>
       <p id="mods-none-shown" class="muted hidden">No installed mod matches the filters.</p>
       <p id="mods-empty" class="muted">No mods installed yet. Install an archive (.zip, .7z, .rar) or get one from Nexus or GitHub.</p>
       </div>
@@ -647,6 +663,7 @@
   <div id="toast" class="hidden"></div>
   <script src="app.js"></script>
   <script src="modpacks.js"></script>
+  <script src="mods_canvas.js"></script>
   <script src="graph.js"></script>
   <script src="netrunner.js"></script>
   <script src="profiles.js"></script>
