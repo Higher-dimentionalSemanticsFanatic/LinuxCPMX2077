@@ -185,7 +185,7 @@ fn env_part(lead: String, text: String, key: &str, value: &str, owners: &Owners)
                 "FSR 4 shaders",
                 format!(
                     "vkd3d-proton replaces the game's FSR 4 shaders with the SPIR-V files in this folder. \
-                     They match AMD's upscaler DLL {} only (OptiScaler section). `Z:` is Wine's drive for the Linux root folder.",
+                     They match AMD's upscaler DLL {} only (OptiScaler FSR4.1.1 Lite section). `Z:` is Wine's drive for the Linux root folder.",
                     optiscaler::FSR_VERSION
                 ),
             );

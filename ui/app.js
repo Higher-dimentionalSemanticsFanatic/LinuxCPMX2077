@@ -876,7 +876,6 @@ async function runDiagnostics() {
   await loadSetup().catch(() => {});
   window.graphPending();
   window.loadFileTree();
-  window.loadLaunchExplain();
   const [analysis, crash] = await Promise.allSettled([
     invoke("analyze_game", { gameId: currentGame.id }),
     invoke("crash_analysis", { gameId: currentGame.id }),
