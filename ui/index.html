@@ -114,7 +114,7 @@
         <span class="canvas-only row">
           <label class="muted small" for="canvas-group">Group by</label>
           <select id="canvas-group" class="inline">
-            <option value="tag">Tag</option><option value="category">Nexus category</option>
+            <option value="tag">Tag</option><option value="taggroup">Tag group</option><option value="category">Nexus category</option>
             <option value="source">Source</option><option value="state">Enabled / disabled</option>
           </select>
           <label class="check small" title="Disabled mods show as faded, dashed tiles"><input type="checkbox" id="canvas-disabled"> Show disabled</label>
@@ -192,6 +192,13 @@
             <button id="cat-add">Add</button>
           </div>
           <ul id="cat-list" class="cat-list"></ul>
+          <h4>Predefined tag set</h4>
+          <p class="muted">Finer tags than the Nexus categories, in groups. Enable a group to add its tags to your list; they then
+            work like your own tags. Disabling a group removes its tags from every mod.</p>
+          <label class="check" title="Suggested tags appear as dashed chips in Installed mods; nothing is tagged until you click one">
+            <input type="checkbox" id="tag-suggest"> Suggest tags from mod name, Nexus category, installed files, TweakXL records and
+            redscript targets</label>
+          <ul id="tag-set-list" class="cat-list"></ul>
         </section>
         <section>
           <div class="card">

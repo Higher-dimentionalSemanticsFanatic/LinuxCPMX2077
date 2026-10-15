@@ -5,7 +5,7 @@
 
 const CANVAS_PALETTE = ["#4fe3d0", "#f6cf3c", "#b48cff", "#3ddc84", "#ff9f43", "#4da3ff", "#ff6bcb", "#e8e8f0", "#9be15d", "#ff4d5e"];
 const CANVAS_NONE = "#8fb0ab";
-const CANVAS_GROUPS = ["tag", "category", "source", "state"];
+const CANVAS_GROUPS = ["tag", "taggroup", "category", "source", "state"];
 let modsView = loadPref("modsView", "list") === "canvas" ? "canvas" : "list";
 let canvasGroup = CANVAS_GROUPS.includes(loadPref("canvasGroup", "tag")) ? loadPref("canvasGroup", "tag") : "tag";
 let canvasDisabled = loadPref("canvasDisabled", true) !== false;
@@ -46,6 +46,20 @@ function canvasColumns(list) {
       const names = modTags.mods[m.id] || [];
       if (!names.length) add("~none", "No tags", CANVAS_NONE, `tag:${NO_CATEGORY}`, m);
       for (const n of names) add(`tag:${n}`, n, canvasTagColor(n), `tag:${n}`, m);
+    }
+  } else if (canvasGroup === "taggroup") {
+    // One column per predefined tag set group, "Your tags" for the rest.
+    const byName = new Map(modTags.tags.map((t) => [t.name, t]));
+    const gname = new Map((modTags.groups || []).map((g) => [g.id, g.name]));
+    for (const g of modTags.groups || []) {
+      const t = modTags.tags.find((x) => x.group === g.id);
+      if (t) cols.set(`grp:${g.id}`, { key: `grp:${g.id}`, label: g.name, color: canvasTagColor(t.name), filter: null, mods: [] });
+    }
+    for (const m of list) {
+      const names = modTags.mods[m.id] || [];
+      if (!names.length) add("~none", "No tags", CANVAS_NONE, `tag:${NO_CATEGORY}`, m);
+      const keys = new Set(names.map((n) => gname.has(byName.get(n)?.group) ? `grp:${byName.get(n).group}` : "~own"));
+      for (const k of keys) add(k, k === "~own" ? "Your tags" : gname.get(k.slice(4)), k === "~own" ? CANVAS_PALETTE[0] : null, null, m);
     }
   } else {
     const keyOf = {

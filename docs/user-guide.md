@@ -209,7 +209,7 @@ removes it; the same buttons stay in the Game panel and Get mods.
 |---|---|
 | Selection box (first column) | Selects the mod for the actions in the selection bar. It changes nothing on its own; see *Selecting several mods* below. |
 | Picture | The mod's thumbnail from its Nexus page, fetched once and saved in `~/.cache/cp2077-modmanager/thumbnails/` (Windows: `%LOCALAPPDATA%\cp2077-modmanager\thumbnails`), so the list shows it offline. Needs a connected Nexus account the first time; a plain box stands in for mods without a Nexus page or picture. The picture URL is checked against Nexus again after 30 days. |
-| **Name / Tags & category / Mod version / Source** | Click a heading to sort (*Tags & category* sorts by a mod's first tag, then its Nexus category). **Mod version** is the mod's own version (the game version is under **Installed on game**). A mod's tags show as chips: **+ Tag** (or **+** once it has one) adds one of your tags (see [Modpacks](#modpacks)), **×** on a chip takes it off. A mod can have any number of tags. The Nexus category is shown under them. |
+| **Name / Tags & category / Mod version / Source** | Click a heading to sort (*Tags & category* sorts by a mod's first tag, then its Nexus category). **Mod version** is the mod's own version (the game version is under **Installed on game**). A mod's tags show as chips: **+ Tag** (or **+** once it has one) adds one of your tags (see [Modpacks](#modpacks)), **×** on a chip takes it off. Dashed chips are suggested tags from the predefined tag set: click to add, **×** to dismiss. A mod can have any number of tags. The Nexus category is shown under them. |
 | **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since: red when an update or the patch-note check names the mod, plain when neither does (hover for both builds). A second badge comes from the [patch-note check](#patch-note-check): *updated before 2.1* (the mod's last update is older than that game patch; red for a warning), *predates game 2.31* (a core framework's file is older than a game patch and a newer release exists), *unlisted on Nexus*. Hover it for the details. |
 | **Update to …** | Appears when a newer file is available. *Switch to stable …* appears when you run a pre-release and a stable release is out. |
 | **Mod page** | Opens the mod's page in **Get mods** (description, files, requirements), for mods from Nexus or GitHub. From there **Open on nexusmods.com** opens the website. Not shown for mods installed from an archive on disk. |
@@ -234,7 +234,9 @@ and **Install from archive…** reinstalls it.
 see at a glance which mods carry which tag.
 
 - **Group by**: **Tag** (one column per tag in your tag list order, then
-  *No tags*), **Nexus category**, **Source** (Nexus, GitHub, Manual, …) or
+  *No tags*), **Tag group** (one column per enabled group of the
+  [predefined tag set](#modpacks), *Your tags* for your own tags, then *No
+  tags*), **Nexus category**, **Source** (Nexus, GitHub, Manual, …) or
   **Enabled / disabled**. The column heading shows the group's mod count.
 - A mod with several tags shows in each of its tag columns; the dots after
   its name are its other tags, in their colors.
@@ -699,6 +701,39 @@ connected Nexus account for collections.
   stay with a mod through updates and can group the [graph](#graph). The
   list shows how many mods have each tag. (Older versions had one "custom
   category" per mod; those became tags automatically.)
+- **Predefined tag set** (under Your tags): finer tags than the Nexus
+  categories, in 12 groups. Tick a group to add its tags to your list; untick
+  it to remove them again (if mods carry them, a dialog asks first, since the
+  tags come off those mods). Hover a group to read what each tag covers.
+  Added tags work like your own: rename, recolor or delete them. A tag you
+  already had with the same name joins the group and keeps its colour. In
+  the tag lists and pickers, set tags are listed under their group's name.
+
+  | Group | Tags |
+  |---|---|
+  | Visuals | Textures, Lighting, Weather & sky, VFX & particles, Post-processing, ReShade preset, LOD & draw distance, Performance |
+  | Characters | Body, Face & hair, Skin & tattoos, Makeup, NPC appearance |
+  | Clothing | Outfits, Accessories, Wardrobe & transmog, Armor stats |
+  | Weapons | New weapons, Weapon appearance, Weapon balance |
+  | Vehicles | New vehicles, Vehicle appearance, Driving & handling, Vehicle combat |
+  | Gameplay | Combat, Enemy AI, Stealth, Quickhacks, Cyberware, Perks & progression, Loot & economy, Crafting, Police & crime, Difficulty |
+  | World | Locations & interiors, Crowds & traffic, NPC behavior, Apartments, Quests & content |
+  | Interface | HUD, Menus, Map, Fonts & text, Photo mode |
+  | Audio | Music & radio, Sound effects, Voice |
+  | Animation | Animations, Poses |
+  | Fixes | Bug fixes, Stability, Compatibility patch |
+  | Tools | Framework, Modder's resource, Utility, Cheats |
+
+- **Suggest tags from mod name, Nexus category, installed files, TweakXL
+  records and redscript targets** (on by default): for the tags of enabled
+  groups, Installed mods shows dashed chips such as *+ Lighting* next to a
+  mod's tags. Hovering one shows what matched (a word in the name or Nexus
+  category, an installed file such as `bin/x64/*.ini` for a ReShade preset, a
+  TweakXL record such as `Vehicle.…driveModel`, a redscript class such as
+  `PreventionSystem`). Click the chip to add the tag, **×** to dismiss the
+  suggestion for that mod. Nothing is tagged without a click. TweakXL and
+  redscript matches come from the compatibility index, which is built when a
+  mod is installed. At most six suggestions per mod.
 - **Export mod list…** saves your mods, tags and followed collections to a
   JSON file. **Import mod list…** reads one, adds its tags (and gives your
   installed mods the tags the list has for them, on top of the ones they

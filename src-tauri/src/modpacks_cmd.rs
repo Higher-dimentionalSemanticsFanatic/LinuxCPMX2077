@@ -10,6 +10,7 @@ use cp2077mm_core::db::Db;
 use cp2077mm_core::dependencies::{self, ModDependencies};
 use cp2077mm_core::modpacks::{self, CollectionModStatus, ImportReport, RevisionDiff, StatusCounts, Tag, TrackedCollection};
 use cp2077mm_core::nexus_browse::{Collection, CollectionPage, CollectionSearch};
+use cp2077mm_core::tag_set::{self, GroupState, Suggestion};
 use cp2077mm_core::{Error, Result, paths};
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
@@ -134,12 +135,31 @@ pub struct ModTags {
     tags: Vec<Tag>,
     /// Installed mod id -> its tags, in the order of the tag list.
     mods: HashMap<i64, Vec<String>>,
+    /// Predefined tag set groups, for labelling grouped tags.
+    groups: Vec<TagGroup>,
+    /// Whether tag suggestions are switched on.
+    suggest: bool,
+    /// Installed mod id -> tags suggested for it (empty when switched off).
+    suggestions: HashMap<i64, Vec<Suggestion>>,
+}
+
+#[derive(Serialize)]
+struct TagGroup {
+    id: String,
+    name: String,
 }
 
 fn mod_tags_for(db: &Db, game_id: i64) -> Result<ModTags> {
     let mut by_key = modpacks::mod_tags(db)?;
     let mods = db.mods(game_id)?.into_iter().filter_map(|m| Some((m.id, by_key.remove(&modpacks::mod_key(&m))?))).collect();
-    Ok(ModTags { tags: modpacks::tags(db)?, mods })
+    let suggest = tag_set::suggestions_on(db)?;
+    Ok(ModTags {
+        tags: modpacks::tags(db)?,
+        mods,
+        groups: tag_set::groups().iter().map(|g| TagGroup { id: g.id.clone(), name: g.name.clone() }).collect(),
+        suggest,
+        suggestions: if suggest { tag_set::suggestions(db, game_id)? } else { HashMap::new() },
+    })
 }
 
 #[tauri::command]
@@ -169,6 +189,42 @@ pub async fn set_mod_tags(app: AppHandle, mod_id: i64, tags: Vec<String>) -> Res
         with_db(&app, |db| {
             let m = db.get_mod(mod_id)?;
             modpacks::set_mod_tags(db, &modpacks::mod_key(&m), &tags)
+        })
+    })
+    .await
+}
+
+/// The predefined tag set, with which groups are switched on.
+#[tauri::command]
+pub async fn tag_set_groups(app: AppHandle) -> Result<Vec<GroupState>> {
+    blocking(move || with_db(&app, tag_set::group_states)).await
+}
+
+/// Switch a group of the predefined tag set on (adds its tags) or off
+/// (removes its tags from the list and every mod).
+#[tauri::command]
+pub async fn tag_set_toggle(app: AppHandle, group: String, on: bool) -> Result<()> {
+    blocking(move || with_db(&app, |db| if on { tag_set::enable_group(db, &group) } else { tag_set::disable_group(db, &group) })).await
+}
+
+/// Mods that carry one of the group's tags, for the confirmation.
+#[tauri::command]
+pub async fn tag_set_usage(app: AppHandle, group: String) -> Result<usize> {
+    blocking(move || with_db(&app, |db| tag_set::group_usage(db, &group))).await
+}
+
+#[tauri::command]
+pub async fn set_tag_suggestions(app: AppHandle, on: bool) -> Result<()> {
+    blocking(move || with_db(&app, |db| tag_set::set_suggestions_on(db, on))).await
+}
+
+/// Stop suggesting `tag` for an installed mod.
+#[tauri::command]
+pub async fn dismiss_tag_suggestion(app: AppHandle, mod_id: i64, tag: String) -> Result<()> {
+    blocking(move || {
+        with_db(&app, |db| {
+            let m = db.get_mod(mod_id)?;
+            tag_set::dismiss(db, &modpacks::mod_key(&m), &tag)
         })
     })
     .await
