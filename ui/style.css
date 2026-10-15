@@ -194,6 +194,8 @@ details.card[open] summary { margin-bottom: 10px; }
 #patch-notes td:first-child { width: 24%; }
 #patch-notes .badge, #patch-notes td.actions { white-space: nowrap; }
 #patch-notes td.actions { text-align: right; }
+#patch-notes td.nowrap, .badge.patch-age { white-space: nowrap; }
+#patch-notes details { margin-top: 10px; }
 #reshade details[open] summary { margin-bottom: 10px; }
 #reshade .req-table { width: 100%; }
 #reshade .req-table td:first-child { width: 170px; }

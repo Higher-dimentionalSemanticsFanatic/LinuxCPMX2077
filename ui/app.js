@@ -144,6 +144,7 @@ function showModsSub(sub) {
   modsSub = MODS_TITLES[sub] ? sub : "list";
   $("#mods-title").textContent = MODS_TITLES[modsSub];
   document.querySelectorAll("#tab-mods .mods-sub").forEach((x) => x.classList.toggle("hidden", x.dataset.sub !== modsSub));
+  if (modsSub === "patchnotes") loadPatchNotes().catch((e) => toast(String(e), true));
 }
 
 // A section's menu entry shows once its card has something to show.
@@ -521,10 +522,11 @@ function modPageButton(m) {
 // The game was patched since the mod went in: red when an update or the
 // patch-note check names the mod, plain otherwise.
 function staleBadge(m, up) {
-  const flagged = up || patchFindings.has(m.id);
+  const age = patchAges.get(m.id);
+  const flagged = up || (age && (age.patches_since.length || age.notes.length));
   return el("div", { class: `badge${flagged ? " bad" : ""}`,
     title: `Installed on build ${m.game_build_id}; the game is now build ${currentGame.install.build_id}. `
-      + (flagged ? "An update or the patch-note check names this mod." : "No update and no patch-note finding for this mod.") },
+      + (flagged ? "An update or the patch-note check names this mod." : "No update; last update after every installed game patch.") },
   "game updated since");
 }
 
