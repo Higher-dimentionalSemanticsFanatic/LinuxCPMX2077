@@ -1,15 +1,17 @@
 // RadioEXT section of Installed mods: radioExt's stations in the game,
 // and an editor to create stations from the user's music files or change the
 // ones made here. A station made here is a tracked mod, so Enable/Disable and
-// Delete reuse the mod table's actions. Loaded after app.js and built from
-// its helpers.
+// Delete reuse the mod table's actions. A station icon can be made from a PNG
+// (built in the backend, checked on demand with the WolvenKit CLI from the
+// Netrunner tab). Loaded after app.js and built from its helpers.
 
 const RADIO_DIR = "bin/x64/plugins/cyber_engine_tweaks/mods/radioExt/radios";
 const RADIO_REPO = "justarandomguyintheinternet/CP77_radioExt";
 const RADIO_EXTS = ["mp3", "mp2", "flac", "ogg", "wav", "wax", "wma", "opus", "aiff", "aif", "aifc"];
 
 let radioStatus = null;
-// The station being edited: { folder, meta, songs: [{ name, keep, path, size, needsRecent }], fixedOrder }.
+// The station being edited: { folder, meta, songs: [{ name, keep, path, size, needsRecent }], fixedOrder,
+// iconMode: "record" | "png" | "atlas", iconPng, iconPreview, iconArchive }.
 let radioEdit = null;
 let radioTagNames = loadPref("radioTagNames", true);
 
@@ -36,7 +38,7 @@ function radioNewMeta() {
 
 function radioStartEdit(st) {
   if (!st) {
-    radioEdit = { folder: null, meta: radioNewMeta(), songs: [], fixedOrder: false };
+    radioEdit = { folder: null, meta: radioNewMeta(), songs: [], fixedOrder: false, iconMode: "record", iconArchive: null };
   } else {
     const meta = st.metadata ? structuredClone(st.metadata) : { ...radioNewMeta(), displayName: st.folder };
     const order = meta.order || [];
@@ -44,7 +46,8 @@ function radioStartEdit(st) {
       const [x, y] = [order.indexOf(a.file), order.indexOf(b.file)];
       return (x < 0) - (y < 0) || x - y || a.file.localeCompare(b.file, undefined, { numeric: true });
     }).map((s) => ({ name: s.file, keep: s.file, path: null, size: s.size }));
-    radioEdit = { folder: st.folder, meta, songs, fixedOrder: order.length > 0 };
+    const iconMode = st.icon_archive ? "png" : meta.customIcon?.useCustom ? "atlas" : "record";
+    radioEdit = { folder: st.folder, meta, songs, fixedOrder: order.length > 0, iconMode, iconArchive: st.icon_archive };
   }
   renderRadio();
   $("#radio-editor")?.scrollIntoView({ block: "start" });
@@ -74,10 +77,30 @@ async function radioAddSongs() {
   if (bad.length) toast(`Not added:\n${bad.join("\n")}`, true);
 }
 
+async function radioPickIcon() {
+  const path = await dialog.open({ title: "Choose the station icon", filters: [{ name: "PNG image", extensions: ["png"] }] });
+  if (!path) return;
+  const p = await invoke("radio_icon_preview", { path });
+  Object.assign(radioEdit, { iconPng: path, iconPreview: p.data_url, iconSize: `${p.width}×${p.height}` });
+  renderRadio();
+}
+
+async function radioCheckIcon(st) {
+  const c = await invoke("radio_icon_check", { gameId: currentGame.id, folder: st.folder });
+  const lines = c.files.map((f) => `${f.path.split("\\").pop()}: ${f.class || "not read"}${f.detail ? ` ${f.detail}` : ""}, ${f.same_bytes ? "bytes identical" : "bytes differ"}`);
+  toast(`${c.tool}: ${c.ok ? "icon archive read back" : "icon archive check failed"}\n${lines.join("\n")}`, !c.ok);
+}
+
 async function radioSave() {
   const d = radioEdit;
+  const meta = structuredClone(d.meta);
+  let iconPng = null;
+  if (d.iconMode === "record") meta.customIcon.useCustom = false;
+  else if (d.iconMode === "atlas") meta.customIcon.useCustom = true;
+  else if (d.iconPng) { iconPng = d.iconPng; meta.customIcon.useCustom = false; }
+  else if (!d.iconArchive) throw "Choose a PNG for the icon, or pick another icon source.";
   const r = await invoke("radio_save", { gameId: currentGame.id, draft: {
-    folder: d.folder, metadata: d.meta, fixed_order: d.fixedOrder,
+    folder: d.folder, metadata: meta, fixed_order: d.fixedOrder, icon_png: iconPng,
     songs: d.songs.map((s) => ({ name: s.name, keep: s.keep, path: s.path })),
   } });
   radioEdit = null;
@@ -107,7 +130,6 @@ function radioEditor() {
     const n = parseFloat(v);
     if (Number.isFinite(n)) { m.fm = n; radioSyncName(n); name.value = m.displayName; }
   }, { type: "number", min: "0.1", max: "999.9", step: "0.1" });
-  const icons = el("datalist", { id: "radio-icons" }, ...(radioStatus?.icons || []).map((i) => el("option", { value: i })));
 
   const move = (i, by) => {
     const j = i + by;
@@ -137,15 +159,10 @@ function radioEditor() {
       radioField("FM", fm, "Sort position in the station list."),
       radioField("Volume", input(m.volume, (v) => { const n = parseFloat(v); if (Number.isFinite(n)) m.volume = n; },
         { type: "number", min: "0.05", max: "10", step: "0.05" }), "1.0 = unchanged; match vanilla stations."),
-      radioField("Icon", input(m.icon, (v) => { m.icon = v; }, { list: "radio-icons", disabled: m.customIcon.useCustom ? "" : null }),
-        "A UIIcon record (TweakDB). Suggestions: icons of the listed stations.")),
-    icons,
-    check(m.customIcon.useCustom, (v) => { m.customIcon.useCustom = v; }, "Custom icon from an .inkatlas",
-      "Use an icon texture from an installed archive mod; .inkatlas files are made with WolvenKit"),
-    m.customIcon.useCustom ? el("div", { class: "radio-grid" },
-      radioField("inkatlas path", input(m.customIcon.inkAtlasPath, (v) => { m.customIcon.inkAtlasPath = v; },
-        { placeholder: "base\\gameplay\\gui\\...\\atlas.inkatlas" }), "Resource path inside the archive, with backslashes."),
-      radioField("inkatlas part", input(m.customIcon.inkAtlasPart, (v) => { m.customIcon.inkAtlasPart = v; }, { placeholder: "part_name" }))) : null,
+      radioField("Icon source", el("div", { class: "segmented", role: "tablist", "aria-label": "Icon source" },
+        ...[["record", "Game icon"], ["png", "PNG image"], ["atlas", "Mod .inkatlas"]].map(([k, label]) =>
+          el("button", { class: d.iconMode === k ? "active" : null, role: "tab", onclick: () => { d.iconMode = k; renderRadio(); } }, label))))),
+    radioIconEditor(d, input),
     check(m.streamInfo.isStream, (v) => { m.streamInfo.isStream = v; }, "Web stream", "Play an internet audio stream instead of song files"),
     m.streamInfo.isStream ? radioField("Stream URL", input(m.streamInfo.streamURL, (v) => { m.streamInfo.streamURL = v; },
       { type: "url", placeholder: "https://…/stream.mp3" }), "Direct audio stream (opens the browser's audio player). Song files are ignored while this is on.") : null,
@@ -163,11 +180,36 @@ function radioEditor() {
       el("button", { onclick: () => { radioEdit = null; renderRadio(); } }, "Cancel")));
 }
 
+function radioIconEditor(d, input) {
+  const m = d.meta;
+  if (d.iconMode === "record") {
+    return el("div", { class: "radio-grid" }, radioField("UIIcon record", input(m.icon, (v) => { m.icon = v; }, { list: "radio-icons" }),
+      "A TweakDB UIIcon record. Suggestions: icons of the listed stations."),
+      el("datalist", { id: "radio-icons" }, ...(radioStatus?.icons || []).map((i) => el("option", { value: i }))));
+  }
+  if (d.iconMode === "atlas") {
+    return el("div", { class: "radio-grid" },
+      radioField("inkatlas path", input(m.customIcon.inkAtlasPath, (v) => { m.customIcon.inkAtlasPath = v; },
+        { placeholder: "base\\gameplay\\gui\\...\\atlas.inkatlas" }), "Resource path inside an installed archive mod, with backslashes."),
+      radioField("inkatlas part", input(m.customIcon.inkAtlasPart, (v) => { m.customIcon.inkAtlasPart = v; }, { placeholder: "part_name" })));
+  }
+  const current = d.iconPng ? `${d.iconPng.split(/[\\/]/).pop()} (${d.iconSize}), scaled to 256×256`
+    : d.iconArchive ? `current: ${d.iconArchive}` : "no PNG chosen";
+  return el("div", { class: "radio-icon-row" },
+    d.iconPreview ? el("img", { class: "radio-icon-preview", src: d.iconPreview, alt: "Icon preview" }) : null,
+    el("div", {},
+      el("div", { class: "row" }, el("button", { onclick: (e) => busy(e.target, radioPickIcon) }, d.iconPng || d.iconArchive ? "Change PNG…" : "Choose PNG…"),
+        el("span", { class: "muted small" }, current)),
+      el("p", { class: "muted small" }, "Centred on a transparent square and scaled to 256×256. Saved as a texture and atlas in ",
+        el("span", { class: "mono" }, "archive/pc/mod/cpmx2077_radio_<station>.archive"),
+        ", installed and removed with the station. In-game display not yet confirmed; Check icon reads the archive back with the WolvenKit CLI.")));
+}
+
 function radioRow(st) {
   const meta = st.metadata;
   const m = st.mod_id ? mods.find((x) => x.id === st.mod_id) : null;
   const source = st.managed ? "made in CPMX2077" : st.mod_name ? `from ${st.mod_name}` : "not tracked";
-  const icon = meta ? (meta.customIcon?.useCustom ? `${meta.customIcon.inkAtlasPart} (custom)` : meta.icon) : "";
+  const icon = !meta ? "" : st.icon_archive ? "PNG icon" : meta.customIcon?.useCustom ? `${meta.customIcon.inkAtlasPart} (custom)` : meta.icon;
   return el("tr", {},
     el("td", {}, meta ? Number(meta.fm).toFixed(1) : "—"),
     el("td", {}, meta?.displayName || st.folder,
@@ -181,6 +223,8 @@ function radioRow(st) {
     el("td", { class: "actions" },
       st.managed || !st.mod_id ? el("button", { title: st.managed ? "Change name, icon, songs or order" : "Edit and save as a tracked station",
         onclick: () => radioStartEdit(st) }, "Edit") : null,
+      st.icon_archive && st.enabled ? el("button", { title: "Read the icon archive back with the WolvenKit CLI (Netrunner › WolvenKit) and compare it byte for byte",
+        onclick: (e) => busy(e.target, () => radioCheckIcon(st)) }, "Check icon") : null,
       st.enabled ? el("button", { title: "Open the station folder",
         onclick: (e) => busy(e.target, () => invoke("open_game_folder", { gameId: currentGame.id, path: `${RADIO_DIR}/${st.folder}` })) }, "Open folder") : null,
       st.managed && m ? el("button", { onclick: (e) => busy(e.target, () => setEnabled(m, !st.enabled)).finally(loadMods) }, st.enabled ? "Disable" : "Enable") : null,

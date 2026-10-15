@@ -15,6 +15,11 @@
 //! checked by their content, not only their extension. Stations another mod
 //! installed are listed read-only; folders no mod owns can be taken over by
 //! saving them once.
+//!
+//! A station can get its own icon from a PNG: [`crate::inkicon`] turns it into
+//! a texture and atlas in `archive/pc/mod/cpmx2077_radio_<slug>.archive`,
+//! which is installed with the station (so it is enabled, disabled and
+//! removed with it), and `customIcon` points at the atlas.
 
 use std::collections::HashSet;
 use std::io::Read;
@@ -26,7 +31,7 @@ use serde_json::{Map, Value};
 use crate::activity::{self, Kind};
 use crate::db::{GameRow, ModRow, NewMod};
 use crate::install::{InstallOptions, InstallReport, Installer, Prepared, resolve_ci};
-use crate::{Error, Result};
+use crate::{Error, Result, inkicon};
 
 /// radioExt's CET mod folder.
 pub const MOD_DIR: &str = "bin/x64/plugins/cyber_engine_tweaks/mods/radioExt";
@@ -47,11 +52,53 @@ pub const AUDIO_EXTS: &[&str] = &["mp3", "mp2", "flac", "ogg", "wav", "wax", "wm
 pub const NEWER_EXTS: &[&str] = &["opus", "aiff", "aif", "aifc"];
 /// The icon radioExt's template station uses.
 pub const DEFAULT_ICON: &str = "UIIcon.alcohol_absynth";
+/// Depot folder of the icons made here.
+pub const ICON_DEPOT: &str = "cpmx2077\\radioext";
+/// Where icon archives go.
+pub const ICON_ARCHIVE_DIR: &str = "archive/pc/mod";
 /// Bytes read from a song to find its tags.
 const MAX_TAG_READ: u64 = 4 << 20;
 
 fn ext_of(name: &str) -> String {
     Path::new(name).extension().map(|e| e.to_string_lossy().to_ascii_lowercase()).unwrap_or_default()
+}
+
+/// ASCII name of a station's icon files: the folder name reduced to
+/// `[a-z0-9_]` plus a hash of the full folder name, so folders that differ
+/// only in other characters still get their own icon.
+pub fn icon_slug(folder: &str) -> String {
+    let mut base = String::new();
+    for c in folder.chars() {
+        let c = c.to_ascii_lowercase();
+        if c.is_ascii_alphanumeric() {
+            base.push(c);
+        } else if !base.ends_with('_') {
+            base.push('_');
+        }
+    }
+    let base: String = base.trim_matches('_').chars().take(40).collect();
+    let hash = crate::inkicon::fnv1a64(folder.to_lowercase().as_bytes()) as u32;
+    format!("{}_{hash:08x}", if base.is_empty() { "station" } else { base.trim_end_matches('_') })
+}
+
+/// Depot folder of a station's icon.
+pub fn icon_depot_dir(folder: &str) -> String {
+    format!("{ICON_DEPOT}\\{}", icon_slug(folder))
+}
+
+/// The atlas path `customIcon` names for a station's PNG icon.
+pub fn icon_atlas_path(folder: &str) -> String {
+    format!("{}\\icon.inkatlas", icon_depot_dir(folder))
+}
+
+/// Game-relative path of a station's icon archive.
+pub fn icon_archive_rel(folder: &str) -> String {
+    format!("{ICON_ARCHIVE_DIR}/cpmx2077_radio_{}.archive", icon_slug(folder))
+}
+
+/// The station's metadata points at an icon made here.
+fn uses_png_icon(m: &Metadata, folder: &str) -> bool {
+    m.custom_icon.use_custom && m.custom_icon.ink_atlas_path.eq_ignore_ascii_case(&icon_atlas_path(folder))
 }
 
 pub fn is_audio(name: &str) -> bool {
@@ -510,6 +557,9 @@ pub struct Station {
     /// Made in the app (editable here).
     pub managed: bool,
     pub enabled: bool,
+    /// Game-relative path of the icon archive made here from a PNG, when the
+    /// station uses one.
+    pub icon_archive: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -584,6 +634,7 @@ fn station_from(folder: String, files: Vec<(String, u64)>, metadata: Option<Resu
         mod_name: None,
         managed: false,
         enabled: true,
+        icon_archive: None,
     }
 }
 
@@ -651,6 +702,14 @@ pub fn status(inst: &Installer, game: &GameRow) -> Result<Status> {
         s.mod_name = Some(m.name.clone());
         stations.push(s);
     }
+    for s in &mut stations {
+        if s.metadata.as_ref().is_some_and(|m| uses_png_icon(m, &s.folder)) {
+            s.icon_archive = Some(icon_archive_rel(&s.folder));
+            if s.enabled && !resolve_ci(game_dir, &icon_archive_rel(&s.folder)).is_file() {
+                s.warnings.push(format!("icon archive {} is missing; the station shows no icon", icon_archive_rel(&s.folder)));
+            }
+        }
+    }
     stations.sort_by(|a, b| {
         let fm = |s: &Station| s.metadata.as_ref().map(|m| m.fm).unwrap_or(f64::MAX);
         fm(a).total_cmp(&fm(b)).then_with(|| a.folder.to_lowercase().cmp(&b.folder.to_lowercase()))
@@ -692,6 +751,9 @@ pub struct Draft {
     /// Write the song list as radioExt's play order; otherwise shuffled.
     #[serde(default)]
     pub fixed_order: bool,
+    /// A PNG to make the station's icon from.
+    #[serde(default)]
+    pub icon_png: Option<String>,
 }
 
 /// Where the current files of a station being edited come from.
@@ -701,6 +763,14 @@ enum Origin {
     Managed(Box<ModRow>),
     /// A folder no mod owns, moved aside while the station is installed.
     Untracked(PathBuf),
+}
+
+/// Where a station's icon archive comes from when saving.
+enum IconSource {
+    /// Made from a PNG just now.
+    Bytes(Vec<u8>),
+    /// The stored copy of the one made before.
+    Stored(PathBuf),
 }
 
 fn folder_taken(inst: &Installer, game: &GameRow, name: &str) -> Result<bool> {
@@ -796,6 +866,30 @@ pub fn save(inst: &Installer, game: &GameRow, draft: &Draft) -> Result<InstallRe
     };
     let find_current = |name: &str| current.iter().find(|(n, _)| n == name).map(|(_, p)| p.clone());
 
+    // The icon archive: made from a new PNG, or the one made before.
+    let icon_rel = icon_archive_rel(&folder);
+    let icon: Option<IconSource> = if let Some(png) = draft.icon_png.as_deref().filter(|p| !p.trim().is_empty()) {
+        let img = inkicon::load_png(Path::new(png)).map_err(|e| Error::Other(format!("icon: {e}")))?;
+        let made = inkicon::build(&img, &icon_depot_dir(&folder))?;
+        metadata.custom_icon = CustomIcon { ink_atlas_path: made.atlas_path, ink_atlas_part: made.part.into(), use_custom: true };
+        Some(IconSource::Bytes(made.archive))
+    } else if uses_png_icon(&metadata, &folder) {
+        let stored = match &origin {
+            Origin::Managed(m) => inst
+                .db
+                .mod_files(m.id)?
+                .into_iter()
+                .find(|f| f.rel_path.eq_ignore_ascii_case(&icon_rel))
+                .map(|f| inst.staging_root.join(m.id.to_string()).join(f.staged_path)),
+            _ => None,
+        };
+        Some(IconSource::Stored(
+            stored.filter(|p| p.is_file()).ok_or_else(|| Error::Other("the station's icon archive is missing; choose the PNG again".into()))?,
+        ))
+    } else {
+        None
+    };
+
     // Check every song before touching anything.
     let mut names = HashSet::new();
     let mut plan: Vec<(String, PathBuf, bool)> = Vec::new(); // name, source, user file
@@ -856,6 +950,15 @@ pub fn save(inst: &Installer, game: &GameRow, draft: &Draft) -> Result<InstallRe
         }
         for (name, src) in &keep_other {
             put(name, src, !matches!(origin, Origin::Managed(_)))?;
+        }
+        if let Some(icon) = &icon {
+            let dst = dir.join("files").join(&icon_rel);
+            std::fs::create_dir_all(dst.parent().unwrap_or(&dir))?;
+            match icon {
+                IconSource::Bytes(b) => std::fs::write(&dst, b)?,
+                IconSource::Stored(p) => link_or_copy(p, &dst)?,
+            }
+            files.push(icon_rel.clone());
         }
         let meta_rel = format!("{base}/{METADATA}");
         let meta_path = dir.join("files").join(&meta_rel);
@@ -920,6 +1023,31 @@ pub fn save(inst: &Installer, game: &GameRow, draft: &Draft) -> Result<InstallRe
             Err(e)
         }
     }
+}
+
+/// Depot path and bytes of each file in an icon archive.
+pub type IconFiles = Vec<(String, Vec<u8>)>;
+
+/// A station's icon archive in the game folder and the texture and atlas it
+/// holds (read with [`inkicon::read_archive`]), for checking with WolvenKit.
+pub fn icon_files(game: &GameRow, folder: &str) -> Result<(PathBuf, IconFiles)> {
+    let rel = icon_archive_rel(folder);
+    let path = resolve_ci(Path::new(&game.path), &rel);
+    if !path.is_file() {
+        return Err(Error::Other(format!("{rel} is not in the game folder")));
+    }
+    let mut bytes = Vec::new();
+    std::fs::File::open(&path)?.take(64 << 20).read_to_end(&mut bytes)?;
+    let files = inkicon::read_archive(&bytes)?;
+    let dir = icon_depot_dir(folder);
+    let mut out = Vec::new();
+    for name in ["icon.xbm", "icon.inkatlas"] {
+        let p = format!("{dir}\\{name}");
+        let h = inkicon::path_hash(&p);
+        let (_, b) = files.iter().find(|(x, _)| *x == h).ok_or_else(|| Error::Other(format!("{rel} has no {p}")))?;
+        out.push((p, b.clone()));
+    }
+    Ok((path, out))
 }
 
 #[cfg(test)]
@@ -1021,6 +1149,7 @@ mod tests {
             metadata: meta("99.1 Night City Nights", 99.1),
             songs: vec![song("One.mp3", "a.mp3"), song("Two.mp3", "b.mp3")],
             fixed_order: true,
+            icon_png: None,
         };
         let r = save(&inst, &game, &draft).unwrap();
         let st = gdir.join(RADIOS).join("99.1 Night City Nights");
@@ -1044,6 +1173,7 @@ mod tests {
             metadata: meta("99.2 Nights", 99.2),
             songs: vec![DraftSong { name: "Renamed.mp3".into(), keep: Some("Two.mp3".into()), path: None }],
             fixed_order: false,
+            icon_png: None,
         };
         let r2 = save(&inst, &game, &edit).unwrap();
         assert_eq!(r2.replaced.as_deref(), Some("99.1 Night City Nights"));
@@ -1078,6 +1208,7 @@ mod tests {
                 metadata: h.metadata.clone().unwrap(),
                 songs: vec![DraftSong { name: "song.mp3".into(), keep: Some("song.mp3".into()), path: None }],
                 fixed_order: false,
+                icon_png: None,
             },
         )
         .unwrap();
@@ -1093,6 +1224,70 @@ mod tests {
         assert!(e.to_string().contains("not MP3"), "{e}");
         let e = save(&inst, &game, &Draft { songs: vec![], ..draft }).unwrap_err();
         assert!(e.to_string().contains("at least one song"), "{e}");
+    }
+
+    #[test]
+    fn station_icon_from_png() {
+        let (dir, db, game) = setup_game();
+        let gdir = PathBuf::from(&game.path);
+        let inst = installer(&db, dir.path());
+        let mp3 = dir.path().join("a.mp3");
+        std::fs::write(&mp3, MP3).unwrap();
+        let png = dir.path().join("logo.png");
+        let img = inkicon::Rgba { width: 64, height: 32, pixels: [10, 200, 30, 255].repeat(64 * 32) };
+        std::fs::write(&png, inkicon::encode_png(&img).unwrap()).unwrap();
+        let song = DraftSong { name: "a.mp3".into(), keep: None, path: Some(mp3.to_string_lossy().into()) };
+        let draft = Draft {
+            folder: None,
+            metadata: meta("95.5 Ünïcode FM", 95.5),
+            songs: vec![song],
+            fixed_order: false,
+            icon_png: Some(png.to_string_lossy().into()),
+        };
+        let r = save(&inst, &game, &draft).unwrap();
+        let folder = "95.5 Ünïcode FM";
+        let rel = icon_archive_rel(folder);
+        assert!(rel.starts_with("archive/pc/mod/cpmx2077_radio_95_5_n_code_fm_"), "{rel}");
+        assert!(gdir.join(&rel).is_file());
+        let written = Metadata::parse(&std::fs::read(gdir.join(RADIOS).join(folder).join(METADATA)).unwrap()).unwrap();
+        assert!(written.custom_icon.use_custom);
+        assert_eq!(written.custom_icon.ink_atlas_path, icon_atlas_path(folder));
+        assert_eq!(written.custom_icon.ink_atlas_part, "icon");
+        let s = status(&inst, &game).unwrap();
+        assert_eq!(s.stations[0].icon_archive.as_deref(), Some(rel.as_str()));
+        assert!(s.stations[0].warnings.is_empty(), "{:?}", s.stations[0].warnings);
+        let (_, files) = icon_files(&game, folder).unwrap();
+        assert_eq!(files.len(), 2);
+
+        // Editing without a new PNG keeps the icon; disabling removes it.
+        let keep = |m: Metadata| Draft {
+            folder: Some(folder.into()),
+            metadata: m,
+            songs: vec![DraftSong { name: "a.mp3".into(), keep: Some("a.mp3".into()), path: None }],
+            fixed_order: false,
+            icon_png: None,
+        };
+        let r2 = save(&inst, &game, &keep(written.clone())).unwrap();
+        assert_eq!(r2.replaced.as_deref(), Some(folder));
+        assert!(gdir.join(&rel).is_file());
+        inst.disable(r2.mod_id).unwrap();
+        assert!(!gdir.join(&rel).exists());
+        inst.enable(r2.mod_id, false).unwrap();
+        assert!(gdir.join(&rel).is_file());
+
+        // Back to a UIIcon record: the archive goes.
+        let mut plain = written;
+        plain.custom_icon.use_custom = false;
+        let r3 = save(&inst, &game, &keep(plain)).unwrap();
+        assert!(!gdir.join(&rel).exists());
+        assert!(icon_files(&game, folder).is_err());
+        let _ = r;
+
+        // A file that isn't a PNG is refused.
+        std::fs::write(&png, b"GIF89a").unwrap();
+        let e = save(&inst, &game, &Draft { icon_png: Some(png.to_string_lossy().into()), ..keep(meta("x", 1.0)) }).unwrap_err();
+        assert!(e.to_string().contains("icon: not a PNG"), "{e}");
+        inst.uninstall(r3.mod_id).unwrap();
     }
 
     #[test]
@@ -1123,6 +1318,7 @@ mod tests {
                 metadata: meta("x", 1.0),
                 songs: vec![DraftSong { name: "song.mp3".into(), keep: Some("song.mp3".into()), path: None }],
                 fixed_order: false,
+                icon_png: None,
             },
         )
         .unwrap_err();

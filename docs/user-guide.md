@@ -9,7 +9,7 @@ ARCHIVE…); this guide writes them in normal case (**Install from
 archive…**). The selected tab is the amber one in the left menu.
 
 Two tabs have sections listed under them in the left menu: **Installed
-mods** (**Mod list**, **ReShade**, **OptiScaler FSR4.1.1 Lite**, **RadioEXT**, **Ultra+
+mods** (**Overview**, **ReShade**, **OptiScaler FSR4.1.1 Lite**, **RadioEXT**, **Ultra+
 recommendations**, **Patch-note check**) and **Get mods** (**Browse mods**,
 **Modpacks**). **▾** next to the tab shows or hides its sections; the choice
 is kept. A section shows in the menu once it applies: ReShade and Patch-note
@@ -193,8 +193,11 @@ it), the left and right arrow keys also resize it.
 
 ![The Installed mods tab with the game panel on the left](images/installed-mods.png)
 
-The list of mods CPMX2077 installed in the selected game (**Mod list** in
-the menu).
+The mods CPMX2077 installed in the selected game (**Overview** in the
+menu). **List** / **Canvas** above the filters switches between the table
+below and the [Canvas view](#canvas-view); the choice is kept. The name
+filter, **All tags and categories** and the game version filter apply to
+both.
 
 **First setup** checklist: on top of the list while a first-run step is
 open. *Core frameworks* (**Install missing frameworks**), *Linux setup*
@@ -205,21 +208,44 @@ removes it; the same buttons stay in the Game panel and Get mods.
 | Column / control | What it does |
 |---|---|
 | Selection box (first column) | Selects the mod for the actions in the selection bar. It changes nothing on its own; see *Selecting several mods* below. |
-| **On** switch | The slider. Turns a mod off without uninstalling it: its files leave the game, whatever they replaced comes back, and a checked copy is kept. Turning it on puts them back without a download. Files the mod changed after install (its own settings) are kept. Disabled mods are left out of compatibility and crash checks. |
-| **Name / Tags & category / Mod version / Source** | Click a heading to sort (*Tags & category* sorts by a mod's first tag, then its Nexus category). **Mod version** is the mod's own version (the game version is under **Installed on game**). A mod's tags show as chips: **+ Tag** (or **+** once it has one) adds one of your tags (see [Modpacks](#modpacks)), **×** on a chip takes it off. A mod can have any number of tags. The Nexus category is shown under them. |
-| **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since: red when an update or the patch-note check names the mod, plain when neither does (hover for both builds). A second badge comes from the [patch-note check](#patch-note-check): *predates game 2.31* (a core framework older than a game patch), *before game 2.0* (released before a patch that reworked the systems mods build on), *in base game 2.1?* (a patch added what the mod does), *unlisted on Nexus*. Hover it for the details. |
+| Picture | The mod's thumbnail from its Nexus page, fetched once and saved in `~/.cache/cp2077-modmanager/thumbnails/` (Windows: `%LOCALAPPDATA%\cp2077-modmanager\thumbnails`), so the list shows it offline. Needs a connected Nexus account the first time; a plain box stands in for mods without a Nexus page or picture. The picture URL is checked against Nexus again after 30 days. |
+| **Name / Tags & category / Mod version / Source** | Click a heading to sort (*Tags & category* sorts by a mod's first tag, then its Nexus category). **Mod version** is the mod's own version (the game version is under **Installed on game**). A mod's tags show as chips: **+ Tag** (or **+** once it has one) adds one of your tags (see [Modpacks](#modpacks)), **×** on a chip takes it off. Dashed chips are suggested tags from the predefined tag set: click to add, **×** to dismiss. A mod can have any number of tags. The Nexus category is shown under them. |
+| **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since: red when an update or the patch-note check names the mod, plain when neither does (hover for both builds). A second badge comes from the [patch-note check](#patch-note-check): *updated before 2.1* (the mod's last update is older than that game patch; red for a warning), *predates game 2.31* (a core framework's file is older than a game patch and a newer release exists), *unlisted on Nexus*. Hover it for the details. |
 | **Update to …** | Appears when a newer file is available. *Switch to stable …* appears when you run a pre-release and a stable release is out. |
 | **Mod page** | Opens the mod's page in **Get mods** (description, files, requirements), for mods from Nexus or GitHub. From there **Open on nexusmods.com** opens the website. Not shown for mods installed from an archive on disk. |
 | **Verify** | Re-hashes the mod's files and reports missing, edited or overridden ones. |
+| **Enabled** switch | The slider next to **Uninstall**. Off disables a mod without uninstalling it: its files leave the game, whatever they replaced comes back, and a checked copy is kept. On puts them back without a download. Files the mod changed after install (its own settings) are kept. Disabled mods are left out of compatibility and crash checks. Hover the **Enabled** heading for the difference to **Uninstall**. |
 | **Uninstall** | Removes the mod and its stored copy and restores what it replaced. Files changed after install (the mod's own settings) stay in the game and are no longer tracked. The downloaded archive is not deleted: the confirmation names it, and **Install** on its row in [Downloads](#downloads) reinstalls the mod. |
 
-**On** vs **Uninstall**: switching a mod off keeps it in the list with a
-stored copy, so it can come back without a download. **Uninstall** deletes
-the stored copy and removes the mod from the list. The archive in
+**Enabled** vs **Uninstall**: switching **Enabled** off keeps the mod in the
+list with a stored copy, so it can come back without a download.
+**Uninstall** deletes the stored copy and removes the mod from the list; its
+confirmation points at **Enabled** for keeping the mod. The archive in
 **Downloads** stays, so the mod can be reinstalled from there without a new
 download; delete it there to free the space. Mods put in with **Install from
 archive…** have no Downloads entry: the archive stays where you picked it,
 and **Install from archive…** reinstalls it.
+
+### Canvas view
+
+![Canvas view grouped by tag](images/installed-mods-canvas.png)
+
+**Canvas** shows the same mods as tiles, one column per group, so you can
+see at a glance which mods carry which tag.
+
+- **Group by**: **Tag** (one column per tag in your tag list order, then
+  *No tags*), **Tag group** (one column per enabled group of the
+  [predefined tag set](#modpacks), *Your tags* for your own tags, then *No
+  tags*), **Nexus category**, **Source** (Nexus, GitHub, Manual, …) or
+  **Enabled / disabled**. The column heading shows the group's mod count.
+- A mod with several tags shows in each of its tag columns; the dots after
+  its name are its other tags, in their colors.
+- The number on the right of a tile is the mod's file count. **▲** marks an
+  available update. Faded, dashed tiles are disabled mods; untick **Show
+  disabled** to hide them.
+- Click a tile to open that mod in **List** (name filter set to it). Click a
+  tag or category heading to show that group in **List**.
+- Hover a tile for its state, file count, tags and Nexus category.
 
 ### Selecting several mods
 
@@ -229,7 +255,7 @@ and **Install from archive…** reinstalls it.
 - With at least one mod selected, a bar above the list shows the count and:
   - **Enable**: switches the selected disabled mods on. A mod whose files
     conflict with an enabled mod is left off and named in the report; switch
-    it on with its own **On** switch to choose which mod's files win.
+    it on with its own **Enabled** switch to choose which mod's files win.
   - **Disable**: switches the selected enabled mods off.
   - **Add tag…** / **Remove tag…**: puts one of your tags on every selected
     mod, or takes it off (shown once you have tags).
@@ -246,7 +272,13 @@ Above the list:
   belong to another mod. Uninstalling the winner later restores the loser's
   copy.
 - **Check for updates** asks Nexus and GitHub for newer files (also runs at
-  start-up). **Update all** queues every available update.
+  start-up). **Update all** checks first (unless a check ran in the last
+  10 minutes), then lists every mod with a newer file, current version →
+  new version, and asks **Proceed** or **Cancel**. **Proceed** puts them all
+  in the download queue: GitHub files and Nexus files on a Premium account
+  download through the API; on a free account the Nexus window steps
+  through the files, one **Mod Manager Download** click each. Each update
+  replaces the installed version and keeps its tags.
 - **Install from archive…** installs a `.zip`, `.7z` or `.rar` from disk.
 - **Game version and profiles**: one column per game version the app has
   seen, oldest on the left, with that version's mod profiles (named lists
@@ -332,7 +364,8 @@ requirement).
 
 - **Conflicts with Ultra+ path tracing**: mods the Ultra+ team says don't
   work with its path tracing. Ones you have are marked *installed* in red,
-  with **Turn off**. Also listed: RedHotTools, which Ultra+ itself checks for
+  with **Turn off**; ones you turned off or don't have are marked green
+  (*turned off*, *not installed*). Also listed: RedHotTools, which Ultra+ itself checks for
   at start-up because it turns Ultra+'s V5 lighting off.
 - **Recommended for path tracing and ray tracing**: mods the Ultra+ team
   suggests alongside it, with notes such as The Nullifier's "set 'Fix Broken
@@ -357,37 +390,44 @@ show under **Known problems** in Netrunner's
 
 ### Patch-note check
 
-![The Patch-note check card with two warnings and five hints](images/patch-note-check.png)
+![The Patch-note check section listing mods by last update](images/patch-note-check.png)
 
-The **Patch-note check** section (under Installed mods in the menu) compares each turned-on mod's dates with the
-game's official patch notes (cyberpunk.net), from Hotfix 1.04 to Patch
-2.31. The list is built into the app; the line under the heading says when
-it was last compared with the official notes. The heading line counts
-warnings and hints and shows the game version used (from the game's exe;
-when it can't be read, every listed patch counts). Click it to unfold the
-card. Nothing is changed or turned off: these are hints.
+The **Patch-note check** section (under Installed mods in the menu) compares
+each turned-on mod's **last update** with the game's official patch notes
+(cyberpunk.net), from Hotfix 1.04 to Patch 2.31. The list is built into the
+app; the line under the heading says when it was last compared with the
+official notes. The heading line counts the mods last updated before a game
+patch and the warnings, and shows the game version used (from the game's
+exe; when it can't be read, every listed patch counts). Nothing is changed
+or turned off: these are hints.
 
-Dates used:
+Last update dates:
 
-- **File date**: Nexus puts the upload time in every file name, so mods
-  installed from Nexus are dated without asking Nexus anything.
+- **Nexus page**: the date Nexus gives for the mod page's last update.
+- **newest release**: for GitHub mods, the newest release's date.
+- **installed file**: until the two above are read, the installed file's
+  upload date (Nexus puts it in every file name).
 - **Read release dates** asks Nexus (one request per 50 mods) for each mod
   page's last update, summary and page status, and GitHub for release dates,
-  and keeps them in the library database. Without a Nexus API key only
-  GitHub is read. Mods that couldn't be read are listed under the buttons.
+  and keeps them in the library database. It also runs once by itself the
+  first time you open the section without dates. Without a Nexus API key
+  only GitHub is read. Mods that couldn't be read are listed under the
+  button.
 
-What it reports, warnings first:
+The table lists the mods last updated before a game patch, the longest
+without an update first:
 
-| Finding | When |
+| Column | What it shows |
 |---|---|
-| **… file predates game X** (warning) | A core framework (Cyber Engine Tweaks, RED4ext, redscript, ArchiveXL, TweakXL, Codeware) installed from a file older than a game patch you have, while a newer release exists. The modding wiki's rule: after a game update every core framework needs a release from after that update. Shown as a hint until **Read release dates** confirms the newer release; not shown when the source has nothing newer. |
-| **Released before game 2.0** | The mod's last update (or, before reading dates, its file) is older than Update 2.0, which reworked perk trees, cyberware, the NCPD, vehicle combat and enemy scaling. A warning for mods with scripts, CET, plugins or TweakXL files; a hint for mods with only archives. **Installed file predates game 2.0** means a newer release exists. |
-| **Possibly covered by game X** | The mod's name or Nexus summary matches a feature that patch added (NCART metro, Radioport, wardrobe/transmog, AutoDrive, the vignette toggle, FSR 3 frame generation, …) and the mod wasn't updated after that patch. Some mods are matched by their Nexus id. |
-| **Nexus page status: …** | The Nexus page is hidden, removed or otherwise no longer published (known after **Read release dates**). |
+| **Last update** | The date and where it came from. |
+| **Game patches since** | *before 2.1* is the first game patch released after the mod's last update; then how many patches came out since. **Patch 2.1 notes** opens that patch's official notes. |
+| Notes under it | *Game 2.0 reworked: …* (the mod is older than Update 2.0, which reworked perk trees, cyberware, the NCPD, vehicle combat and enemy scaling). *Possibly covered by game 2.1: …* (the mod's name or Nexus summary matches a feature that patch added, such as the NCART metro, Radioport, transmog, AutoDrive or the vignette toggle; some mods are matched by their Nexus id). *Installed file: …; Nexus page updated since* (check the mod for a newer file). *… file predates game 2.31* for core frameworks. *Nexus page status: removed* (or hidden). |
+| **warning** | Mods with scripts, CET, plugins or TweakXL files last updated before Update 2.0, and core frameworks (Cyber Engine Tweaks, RED4ext, redscript, ArchiveXL, TweakXL, Codeware) whose installed file predates a game patch while a newer release exists. The modding wiki's rule: after a game update every core framework needs a release from after that update. |
 
-Each row links the patch notes or the modding wiki page it is based on.
-Mods without any date (installed from an archive on disk, or from a source
-without dates) are listed at the bottom as *Not checked*.
+Mods updated after every game patch you have are folded under **Updated
+after game 2.31**. Mods without any date (installed from an archive on
+disk, or from a source without dates) are listed at the bottom as *Not
+checked*.
 
 ### ReShade
 
@@ -417,7 +457,7 @@ installed*. Click the heading to open or fold the card.
   ReShade at `bin/x64/reshade-shaders/` for effects and textures. An existing
   `ReShade.ini` is left alone.
 - ReShade is listed in the mod table like any mod (source *reshade.me*), so
-  the **On** switch, **Verify**, **Uninstall** and the File map work on it.
+  the **Enabled** switch, **Verify**, **Uninstall** and the File map work on it.
   The card has **Disable**/**Enable** and **Uninstall** too.
 - **Check for updates** reads the newest version from reshade.me and the
   newest commit of each installed shader pack. When ReShade is newer,
@@ -461,8 +501,10 @@ loads, whether you picked it here or in ReShade's overlay; **Use** makes
 another one active by setting `PresetPath` in `ReShade.ini`, from the next
 game start.
 
-*N effect files missing* names the effect files a preset uses that aren't
-under `reshade-shaders/Shaders`. **Find shader packs** reads each listed
+*N effect files missing* names the effect files a preset uses that ReShade
+does not reach through the `EffectSearchPaths` in `ReShade.ini` (by default
+everything under `reshade-shaders/Shaders`; a preset mod's own folders count
+when its `ReShade.ini` lists them). **Find shader packs** reads each listed
 pack's file list on GitHub and shows which pack has each missing file, with
 an **Install** button for a pack you don't have yet. Files no listed pack
 ships show *not in a listed pack*; the preset's mod page says where to get
@@ -476,7 +518,15 @@ line and goes to `bin/x64`, not to the engine config folder like other loose
 clashes with the ReShade installed here: the install stops and names the
 file, and **Allow overwriting other mods** lets the mod's copy win. A
 `ReShade.ini` in a preset mod replaces the one in the game folder; the old one
-is backed up and comes back when you uninstall the preset mod.
+is backed up and comes back when you uninstall the preset mod. When that
+`ReShade.ini`'s search paths skip folders under `reshade-shaders` (for
+example the shader packs installed here), *N shader folders not in search
+paths* lists them above the presets; **Add to search paths** appends
+`reshade-shaders\Shaders\**` and `reshade-shaders\Textures\**` to
+`ReShade.ini` and keeps the mod's own entries.
+
+**Browse preset mods** opens Get mods with a Nexus search for "reshade
+preset", most endorsed first.
 
 In game, the Home key opens ReShade's overlay.
 
@@ -570,7 +620,7 @@ The station table, sorted by FM number:
 |---|---|
 | **FM** / **Station** | The FM number and in-game name, with the folder name and where the station comes from: *made in CPMX2077*, *from &lt;mod&gt;* (installed with a mod), or *not tracked* (copied in by hand). Red badges name what radioExt would report in its CET console: no `metadata.json`, an unreadable `metadata.json`, no songs on a station that isn't a stream, or a play order naming a missing file. |
 | **Songs** | Number of song files, *stream* for a web-stream station, *fixed order* when a play order is set. |
-| **Icon** | The UIIcon record, or the `.inkatlas` part for a custom icon. |
+| **Icon** | The UIIcon record, *PNG icon* for an icon made here from a PNG, or the `.inkatlas` part for a custom icon from a mod. |
 | **State** | *enabled*, or *disabled* for a station switched off here. |
 
 Buttons per station:
@@ -578,9 +628,14 @@ Buttons per station:
 - **Edit** opens the editor. Shown for stations made here and for
   *not tracked* folders. Saving a *not tracked* folder installs it as a
   station made here: from then on it is tracked like any mod.
+- **Check icon** (stations with a *PNG icon*): reads the station's icon
+  archive back with the WolvenKit CLI and shows, per file, the class
+  WolvenKit read (*CBitmapTexture 256×256*, *inkTextureAtlas part icon*) and
+  whether the extracted bytes are identical to the archive's. Needs the
+  WolvenKit CLI and its .NET runtime ([WolvenKit](#wolvenkit) in Netrunner).
 - **Open folder** opens the station's folder.
 - **Disable** / **Enable** and **Delete** (stations made here): the same
-  as the mod list's **On** switch and **Uninstall**.
+  as the mod list's **Enabled** switch and **Uninstall**.
 
 Stations installed with another mod aren't edited here; change them through
 that mod. Archives of radioExt stations from Nexus install like any other
@@ -596,12 +651,23 @@ radioExt's `radios` folder, one folder per station.
 - **FM**: sorts the station into the radio list (0.1–999.9).
 - **Volume**: multiplier for the whole station (1.0 = unchanged), to match
   vanilla stations.
-- **Icon**: a `UIIcon.` record from the game's TweakDB, such as
-  `UIIcon.alcohol_absynth` (radioExt's template). Suggestions list the icons
-  the other stations use. **Custom icon from an .inkatlas** uses a texture
-  from an installed archive mod instead: **inkatlas path** (resource path
-  with backslashes) and **inkatlas part**. `.inkatlas` files are made with
-  WolvenKit.
+- **Icon source**, one of three:
+  - **Game icon**: a `UIIcon.` record from the game's TweakDB, such as
+    `UIIcon.alcohol_absynth` (radioExt's template), in **UIIcon record**.
+    Suggestions list the icons the other stations use.
+  - **PNG image**: **Choose PNG…** picks any PNG up to 4096×4096 and 32 MB
+    and shows a preview. The image is centred on a transparent square and
+    scaled to 256×256. On save, CPMX2077 writes it as a game texture
+    (`.xbm`, uncompressed RGBA) and an atlas (`.inkatlas`, part *icon*) in
+    `archive/pc/mod/cpmx2077_radio_<station>.archive` and points the
+    station's custom icon at it. The archive belongs to the station: it is
+    disabled, enabled and deleted with it, and kept when you save the
+    station again without picking a new PNG. Built into CPMX2077; WolvenKit
+    is not needed to make it, only to check it (**Check icon**). In-game
+    display is not yet confirmed.
+  - **Mod .inkatlas**: a texture from an installed archive mod:
+    **inkatlas path** (resource path with backslashes) and **inkatlas
+    part**.
 - **Web stream**: plays an internet audio stream (**Stream URL**,
   `http://` or `https://`) instead of song files.
 - **Add songs…** picks files. Accepted: mp3, mp2, flac, ogg, wav, wax, wma,
@@ -656,6 +722,39 @@ connected Nexus account for collections.
   stay with a mod through updates and can group the [graph](#graph). The
   list shows how many mods have each tag. (Older versions had one "custom
   category" per mod; those became tags automatically.)
+- **Predefined tag set** (under Your tags): finer tags than the Nexus
+  categories, in 12 groups. Tick a group to add its tags to your list; untick
+  it to remove them again (if mods carry them, a dialog asks first, since the
+  tags come off those mods). Hover a group to read what each tag covers.
+  Added tags work like your own: rename, recolor or delete them. A tag you
+  already had with the same name joins the group and keeps its colour. In
+  the tag lists and pickers, set tags are listed under their group's name.
+
+  | Group | Tags |
+  |---|---|
+  | Visuals | Textures, Lighting, Weather & sky, VFX & particles, Post-processing, ReShade preset, LOD & draw distance, Performance |
+  | Characters | Body, Face & hair, Skin & tattoos, Makeup, NPC appearance |
+  | Clothing | Outfits, Accessories, Wardrobe & transmog, Armor stats |
+  | Weapons | New weapons, Weapon appearance, Weapon balance |
+  | Vehicles | New vehicles, Vehicle appearance, Driving & handling, Vehicle combat |
+  | Gameplay | Combat, Enemy AI, Stealth, Quickhacks, Cyberware, Perks & progression, Loot & economy, Crafting, Police & crime, Difficulty |
+  | World | Locations & interiors, Crowds & traffic, NPC behavior, Apartments, Quests & content |
+  | Interface | HUD, Menus, Map, Fonts & text, Photo mode |
+  | Audio | Music & radio, Sound effects, Voice |
+  | Animation | Animations, Poses |
+  | Fixes | Bug fixes, Stability, Compatibility patch |
+  | Tools | Framework, Modder's resource, Utility, Cheats |
+
+- **Suggest tags from mod name, Nexus category, installed files, TweakXL
+  records and redscript targets** (on by default): for the tags of enabled
+  groups, Installed mods shows dashed chips such as *+ Lighting* next to a
+  mod's tags. Hovering one shows what matched (a word in the name or Nexus
+  category, an installed file such as `bin/x64/*.ini` for a ReShade preset, a
+  TweakXL record such as `Vehicle.…driveModel`, a redscript class such as
+  `PreventionSystem`). Click the chip to add the tag, **×** to dismiss the
+  suggestion for that mod. Nothing is tagged without a click. TweakXL and
+  redscript matches come from the compatibility index, which is built when a
+  mod is installed. At most six suggestions per mod.
 - **Export mod list…** saves your mods, tags and followed collections to a
   JSON file. **Import mod list…** reads one, adds its tags (and gives your
   installed mods the tags the list has for them, on top of the ones they
@@ -677,8 +776,8 @@ fixes still open (each with its fix button, such as **Install vcrun2022**)
 and frameworks that are installed without what they need (with **Install
 missing frameworks**). **Show in
 graph** next to a finding lights up the mods involved. The links under the
-title (**Files**, **Graph**, **Compatibility**, **Crashes & logs**) jump to
-each section.
+title (**Files**, **Graph**, **Compatibility**, **Crashes & logs**,
+**Launch options**, **WolvenKit**) jump to each section.
 
 ### File map
 
@@ -859,6 +958,60 @@ logs and Proton's `steam-1091500.log`.
 folder**). It includes RED4ext's dated logs, ArchiveXL's and TweakXL's dated
 logs and other RED4ext plugins' own logs.
 
+### Launch options
+
+The game's Steam launch options (read from Steam's `localconfig.vdf`), split
+into parts with a curly bracket under each: environment variables such as
+`WINEDLLOVERRIDES`, wrapper programs such as `gamescope … --` or `mangohud`,
+`%command%` (the game's start command) and game arguments such as
+`--launcher-skip` and `-modded`. The label under each bracket names the part.
+Click a part (or use the left and right arrow keys) to show a box with:
+
+- what it does;
+- the entries inside it: each DLL in `WINEDLLOVERRIDES` with its load order
+  (*native, then builtin*) and the mod it is for (`version` = CET, `winmm` =
+  RED4ext, ReShade's and OptiScaler's DLL names as found in `bin/x64`,
+  `d3dcompiler_47` = ReShade's shader compiler), or each `gamescope` option;
+- **Added by**: the Game panel item that writes it (*Steam launch options*,
+  *HDR*, *FSR 4 shader overrides* or the *REDmod switch*), or *Not added by
+  CPMX2077*;
+- warnings, labelled red with `!`: a variable after `%command%` or in a line
+  without `%command%` (Steam passes it to the game as an argument and does not
+  set it), a `gamescope` wrapper without `--`, or a shader-override path that
+  is not a `Z:/` path.
+
+Parts not in the app's list (other variables, programs or arguments) get a
+grey bracket and a generic explanation. The text box above the brackets holds
+the line: edit it, or paste a line from a guide or from Heroic's environment
+variables, to check it. Nothing is written to Steam; **Current line** puts
+Steam's line back. The section reloads after every Linux setup fix. For GOG,
+Epic and manual installs no Steam line is read; paste the launcher's settings
+instead. On Windows the game loads mod DLLs without overrides, so Wine and
+Proton parts are marked *no effect on Windows*.
+
+### WolvenKit
+
+[WolvenKit](https://github.com/WolvenKit/WolvenKit) is the Cyberpunk 2077
+modding toolkit. This section downloads it from its GitHub releases into
+CPMX2077's data folder (not into the game) and runs its command-line build.
+
+| Row | What it shows |
+|---|---|
+| **Newest release** | The newest stable release on GitHub, with a link to its release page. |
+| **WolvenKit CLI** | The installed version of WolvenKit's command-line build, and *SHA-256 matches GitHub* when the download matched the digest GitHub published (*no GitHub digest* otherwise). **Install** / **Update** downloads `WolvenKit.ConsoleLinux-<version>.zip` (Windows: `WolvenKit.Console-<version>.zip`); **Remove** deletes it. |
+| **.NET runtime** | The runtime the installed CLI needs (from its `WolvenKit.CLI.runtimeconfig.json`, currently Microsoft.NETCore.App 10), where `dotnet` was found (`DOTNET_ROOT`, `PATH`, `~/.dotnet`, the standard install folders) and which runtimes it lists. *missing* means the CLI can't run: install your distribution's .NET runtime package (`dotnet-runtime-10.0` on Ubuntu and Fedora, `dotnet-runtime` on Arch) or Microsoft's install script into `~/.dotnet`, then **Check again**. CPMX2077 doesn't install .NET itself. |
+| **WolvenKit editor** | Windows only: the editor (`WolvenKit-<version>.zip`, self-contained, no .NET install needed), with **Open WolvenKit**. On Linux the row says it's a Windows program; the CLI covers what CPMX2077 uses. |
+
+Buttons:
+
+- **List archive contents…** picks an `.archive` file and lists the files
+  in it as WolvenKit reads them: by name where WolvenKit's hash list or the
+  archive's own name list has one, else by hash. Up to 5000 lines.
+- **Open folder** opens the folder WolvenKit is kept in.
+- **WolvenKit wiki** opens WolvenKit's documentation.
+
+Used by: **Check icon** in [RadioEXT](#radioext).
+
 ## Get mods
 
 Browse and download mods. The switch at the top right picks the source:
@@ -919,7 +1072,7 @@ Browse and download mods. The switch at the top right picks the source:
     `nxm://` handler first).
   - You stay on **Get mods** while it downloads. Progress shows on the mod's
     card when you started from the card, on the file's row in **Downloads**,
-    and in the [downloads panel](#downloads-panel) at the top of the window.
+    and in the [downloads panel](#downloads-panel) at the bottom of the window.
 - **No duplicate downloads**: a file that is already in your downloads (same
   Nexus or GitHub file, still on disk and complete) is not downloaded again.
   The app installs the copy you have and says so. Files in your downloads
@@ -956,12 +1109,13 @@ The core frameworks and many mods ship as GitHub releases.
 
 ### Downloads panel
 
-A panel at the top of the window appears while files download: one bar per
-file, side by side, each with the mod name, percentage and size. A finished
-bar stays where it is, marked *downloaded*, *already in downloads* or
-*failed*, so the running bars don't move. The panel keeps the same height
-while it is open; when you have scrolled down, the page keeps its place when
-the panel opens or closes. Once every file is finished the bars clear after 8
+A panel at the bottom of the window appears while files download: one bar
+per file, side by side, each with the mod name, percentage and size. A
+finished bar stays where it is, marked *downloaded*, *already in downloads*
+or *failed*, so the running bars don't move. The panel floats over the page
+and the page gets the same amount of empty space at its end, so nothing
+stays hidden under it and nothing on the page moves when it opens or closes.
+Messages show above it. Once every file is finished the bars clear after 8
 seconds, or at once with **Clear**. The download queue shares this panel.
 
 ### Download queue
@@ -1005,7 +1159,9 @@ Every archive you downloaded, grouped by mod with each version under it.
   mod names, file names, versions, game versions, channels and sources.
   Folders with a match open and show only the matching versions.
 - **Files downloading** are listed on top of the list with their own
-  progress bar, and replaced by the finished download.
+  progress bar, and replaced by the finished download. When you have
+  scrolled down, the rows on screen keep their place as these rows come and
+  go.
 - **Channel filter**: stable, beta and nightly; stable only; or beta and
   nightly only. The channel comes from the version and file name and from
   GitHub's pre-release flag.
@@ -1162,6 +1318,12 @@ part of download links are never shown.
   app and name version 4.1.1.2740. FSR 4 shader overrides come from one
   listed repository; each file must match the git blob id in GitHub's file
   list for that commit.
+- WolvenKit comes only from its GitHub releases, like other GitHub
+  downloads, and is unpacked with the same checks as mod archives into the
+  app's data folder, never into the game. It runs only when you use a
+  WolvenKit button.
+- PNG files for station icons are checked before decoding: PNG signature,
+  at most 32 MB and 4096×4096.
 - ReShade comes only over HTTPS from reshade.me, with no redirects to other
   hosts. The DLL taken out of the setup must be a 64-bit Windows DLL that
   names ReShade in its version information and has the version in the setup's
@@ -1197,7 +1359,10 @@ logs are only readable from a fixed list of known locations.
 | ReShade setups from reshade.me | `~/.local/share/cp2077-modmanager/reshade/` |
 | AMD's FSR 4.1.1 upscaler DLL (OptiScaler archives are deleted after install) | `~/.local/share/cp2077-modmanager/optiscaler/` |
 | FSR 4 shader overrides | `~/.local/share/cp2077-modmanager/fsr4-shader-overrides/` (`prebuilt/`, `prebuilt-lossy/`) |
+| WolvenKit (Netrunner) | `~/.local/share/cp2077-modmanager/tools/wolvenkit/` (`cli/`, `editor/` on Windows; release archives are deleted after unpacking) |
+| Radio station icons made from a PNG | `archive/pc/mod/cpmx2077_radio_<station>.archive` in the game folder |
 | Saved Nexus pages | `~/.cache/cp2077-modmanager/nexus/` |
+| Mod thumbnails | `~/.cache/cp2077-modmanager/thumbnails/` |
 | Refreshed Ultra+ recommendations | In the library database (settings) |
 | Release dates for the patch-note check | In the library database (`release_dates`) |
 | Nexus API key | System keyring (Secret Service) only |
@@ -1215,6 +1380,8 @@ API key is in Windows Credential Manager.
   Organizer on its own.
 - `.rar` archives are unpacked with the `tar.exe` built into Windows 10
   and 11.
+- Netrunner › WolvenKit also offers the WolvenKit editor (it's a Windows
+  program) and downloads the Windows build of the CLI.
 - The OptiScaler FSR4.1.1 Lite section has no FSR 4.1.1 shader overrides: they are a
   vkd3d-proton (Proton) feature. OptiScaler and AMD's DLL install the same
   way.
@@ -1264,7 +1431,7 @@ clicked the download in CPMX2077's own Nexus window, or that CPMX2077 handles
 **The game crashes.** Open Netrunner → *Crashes & logs* and start with the
 step marked **Start here** under *Last start, step by step*, then *Known
 problems*. Mods named in errors from the last session are listed; turn them
-off with the **On** switch to test, start the game again, then **Check
+off with the **Enabled** switch to test, start the game again, then **Check
 again**. The compatibility list may also name a clash.
 
 **Something went wrong and you want to see exactly what happened.** Tick

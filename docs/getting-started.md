@@ -138,7 +138,7 @@ frameworks), a *Missing requirements* dialog lists them first. Click
 **Queue requirements first** and the app installs them, then the mod.
 
 You stay on **Get mods** while it downloads; the download's bar is on the
-mod's card and in the downloads panel at the top of the window, one bar per
+mod's card and in the downloads panel at the bottom of the window, one bar per
 file when several download at once. For a quick install from the list, click the **⬇** button on a mod's
 picture and pick one of its main files. Click an author's name to see all
 their mods.
@@ -157,7 +157,7 @@ Install from archive…** and pick a `.zip`, `.7z` or `.rar`.
 GitHub mods and Premium downloads run straight through. With a free account,
 one Nexus window steps through the file pages ("Mod 3 of 12"): click the
 download button on each page and the app installs that mod in the background
-while it moves on to the next. The panel at the top of the window shows
+while it moves on to the next. The panel at the bottom of the window shows
 progress and has **Skip this mod** and **Cancel**.
 
 Prefer a ready-made setup? **Modpacks** (under **Get mods** in the menu) lists Nexus collections. Open
@@ -172,7 +172,9 @@ top, anything that needs attention: setup problems, the first step of the
 last start that failed (**Start here**), whether the game crashed, mods
 named in errors from that session, known problem mods, and compatibility
 problems between your mods. Its
-*File map* shows every file your mods installed and where it went.
+*File map* shows every file your mods installed and where it went, and
+*Launch options* explains each part of the line the Linux setup fixes wrote
+to Steam.
 
 If the game crashes or a framework does not load, see
 [Troubleshooting](user-guide.md#troubleshooting).
@@ -183,13 +185,13 @@ sidebar. **Pop out** moves it to its own window.
 
 ## Next steps
 
-- Turn mods off and on with the switch in the **On** column instead of
-  uninstalling them.
+- Turn mods off and on with the switch in the **Enabled** column (next to
+  **Uninstall**) instead of uninstalling them.
 - Click **Check for updates** in **Installed mods** now and then (it also
   runs at start-up).
 - After a game update, open **Patch-note check** under **Installed
-  mods** in the menu and click **Read release dates**: it lists frameworks that need a
-  newer release and mods older than the patches you have (see
+  mods** in the menu: it lists each mod's last update against the game
+  patches, oldest first, and frameworks that need a newer release (see
   [Patch-note check](user-guide.md#patch-note-check)).
 - Using Ultra+ for path tracing? Once it's installed, the **Ultra+
   recommendations** (under **Installed mods** in the menu) shows what its authors
@@ -200,5 +202,10 @@ sidebar. **Pop out** moves it to its own window.
   [ReShade](user-guide.md#reshade) in the user guide.
 - Want your own radio station? Open **RadioEXT** under **Installed
   mods**, click **Install radioExt** if it's missing, then **New station**
-  and **Add songs…**. See [RadioEXT](user-guide.md#radioext).
+  and **Add songs…**. For your own logo, pick **PNG image** as the icon
+  source. See [RadioEXT](user-guide.md#radioext).
+- Modding tools: **Netrunner › WolvenKit** installs WolvenKit from GitHub.
+  Its command-line build needs the .NET 10 runtime (on Linux, your
+  distribution's `dotnet-runtime-10.0` package). See
+  [WolvenKit](user-guide.md#wolvenkit).
 - Read the [user guide](user-guide.md) for everything else.

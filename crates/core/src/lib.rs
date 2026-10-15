@@ -18,8 +18,10 @@ pub mod game;
 pub mod game_versions;
 pub mod hash;
 pub mod hdr;
+pub mod inkicon;
 pub mod install;
 pub mod known_issues;
+pub mod launch_explain;
 pub mod linux_setup;
 pub mod load_order;
 pub mod mcp;
@@ -38,12 +40,15 @@ pub mod secrets;
 pub mod sources;
 pub mod sso;
 pub mod startup;
+pub mod tag_set;
 #[cfg(test)]
 mod testutil;
+pub mod thumbnails;
 pub mod ultraplus;
 pub mod updates;
 pub mod vdf;
 pub mod winsys;
+pub mod wolvenkit;
 
 pub use error::{Error, Result};
 

@@ -1,0 +1,1093 @@
+{
+ "_about": "Predefined tag set. Groups are switched on in Modpacks > Your tags. Rules suggest tags: words of 4 characters or fewer match whole words, longer ones the start of a word, in the mod name or Nexus category; paths are game-relative globs (* within a folder, ** across); tweak entries are TweakXL record prefixes, or substrings when they start with *; reds entries are substrings of redscript class names; all case-insensitive.",
+ "groups": [
+  {
+   "id": "visuals",
+   "name": "Visuals",
+   "color": "#00f0ff",
+   "tags": [
+    {
+     "name": "Textures",
+     "about": "Retextures and higher-resolution textures.",
+     "words": [
+      "textur",
+      "retex",
+      "4k",
+      "8k",
+      "2k",
+      "hd",
+      "decal"
+     ]
+    },
+    {
+     "name": "Lighting",
+     "about": "Light sources, shadows, global illumination, ray and path tracing.",
+     "words": [
+      "lighting",
+      "lights",
+      "shadow",
+      "illumin",
+      "ray trac",
+      "raytrac",
+      "path trac",
+      "pathtrac",
+      "ultra plus"
+     ]
+    },
+    {
+     "name": "Weather & sky",
+     "about": "Weather presets, sky, clouds, fog, rain.",
+     "words": [
+      "weather",
+      "sky",
+      "skies",
+      "skybox",
+      "rain",
+      "rainy",
+      "fog",
+      "cloud",
+      "climate",
+      "season",
+      "sunset"
+     ]
+    },
+    {
+     "name": "VFX & particles",
+     "about": "Visual effects: explosions, blood, muzzle flashes, smoke.",
+     "words": [
+      "vfx",
+      "particle",
+      "explosion",
+      "blood",
+      "muzzle",
+      "smoke",
+      "sparks",
+      "gore"
+     ]
+    },
+    {
+     "name": "Post-processing",
+     "about": "ReShade, colour grading, LUTs, film grain, depth of field, sharpening.",
+     "words": [
+      "reshade",
+      "enb",
+      "lut",
+      "luts",
+      "nova",
+      "color grad",
+      "colour grad",
+      "film grain",
+      "chromatic",
+      "vignette",
+      "depth of field",
+      "dof",
+      "sharpen",
+      "lens flare",
+      "motion blur",
+      "post process",
+      "postprocess"
+     ],
+     "sources": [
+      "reshade",
+      "reshade-shaders"
+     ],
+     "paths": [
+      "bin/x64/reshade-shaders/**"
+     ]
+    },
+    {
+     "name": "ReShade preset",
+     "about": "A ReShade preset .ini (needs ReShade).",
+     "words": [
+      "reshade preset"
+     ],
+     "paths": [
+      "bin/x64/*.ini",
+      "bin/x64/reshade-presets/**"
+     ],
+     "not_sources": [
+      "reshade",
+      "reshade-shaders",
+      "optiscaler"
+     ]
+    },
+    {
+     "name": "LOD & draw distance",
+     "about": "Level of detail, draw distance, pop-in.",
+     "words": [
+      "lod",
+      "lods",
+      "draw distance",
+      "pop in",
+      "popin",
+      "distant",
+      "streaming"
+     ]
+    },
+    {
+     "name": "Performance",
+     "about": "FPS, upscalers (DLSS, FSR, XeSS), frame generation, VRAM use.",
+     "words": [
+      "performance",
+      "fps",
+      "optimi",
+      "potato",
+      "low end",
+      "dlss",
+      "fsr",
+      "xess",
+      "frame gen",
+      "framegen",
+      "optiscaler",
+      "vram"
+     ],
+     "sources": [
+      "optiscaler"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "characters",
+   "name": "Characters",
+   "color": "#ff6bd6",
+   "tags": [
+    {
+     "name": "Body",
+     "about": "Body shapes and body frameworks.",
+     "words": [
+      "body",
+      "bodies",
+      "physique",
+      "muscle",
+      "nails",
+      "vtk",
+      "hyst",
+      "solo body"
+     ]
+    },
+    {
+     "name": "Face & hair",
+     "about": "Hairstyles, beards, brows, eyes, teeth, face presets.",
+     "words": [
+      "hair",
+      "hairs",
+      "hairstyle",
+      "haircut",
+      "beard",
+      "eyebrow",
+      "brows",
+      "eyelash",
+      "lashes",
+      "face",
+      "faces",
+      "facial",
+      "eyes",
+      "teeth"
+     ]
+    },
+    {
+     "name": "Skin & tattoos",
+     "about": "Skin textures, tattoos, scars, freckles.",
+     "words": [
+      "skin",
+      "skins",
+      "tattoo",
+      "freckle",
+      "scar",
+      "scars",
+      "pores"
+     ]
+    },
+    {
+     "name": "Makeup",
+     "about": "Makeup, lipstick, eyeliner, nail polish.",
+     "words": [
+      "makeup",
+      "make up",
+      "lipstick",
+      "eyeliner",
+      "eyeshadow",
+      "blush",
+      "nail polish"
+     ]
+    },
+    {
+     "name": "NPC appearance",
+     "about": "How NPCs look: appearance variety, NPC outfits.",
+     "words": [
+      "npv",
+      "npc appearance",
+      "npc outfit",
+      "npc clothes",
+      "npc variety",
+      "appearance variety"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "clothing",
+   "name": "Clothing",
+   "color": "#b48cff",
+   "tags": [
+    {
+     "name": "Outfits",
+     "about": "Clothing items and outfits.",
+     "words": [
+      "outfit",
+      "clothes",
+      "clothing",
+      "jacket",
+      "dress",
+      "shirt",
+      "pants",
+      "boots",
+      "shoes",
+      "coat",
+      "coats",
+      "jumpsuit",
+      "suit",
+      "hoodie",
+      "skirt",
+      "top",
+      "tops"
+     ]
+    },
+    {
+     "name": "Accessories",
+     "about": "Jewellery, glasses, masks, hats, bags.",
+     "words": [
+      "accessor",
+      "earring",
+      "necklace",
+      "glasses",
+      "sunglasses",
+      "ring",
+      "rings",
+      "bracelet",
+      "piercing",
+      "mask",
+      "masks",
+      "hat",
+      "hats",
+      "cap",
+      "bag",
+      "gloves"
+     ]
+    },
+    {
+     "name": "Wardrobe & transmog",
+     "about": "Transmog, wardrobe and outfit managers.",
+     "words": [
+      "transmog",
+      "wardrobe",
+      "equipment ex",
+      "equipmentex",
+      "eqex",
+      "outfit manager"
+     ],
+     "repos": [
+      "psiberx/cp2077-equipment-ex"
+     ]
+    },
+    {
+     "name": "Armor stats",
+     "about": "Armor values and clothing stats.",
+     "words": [
+      "armor",
+      "armour",
+      "clothing stats"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "weapons",
+   "name": "Weapons",
+   "color": "#ff5a6a",
+   "tags": [
+    {
+     "name": "New weapons",
+     "about": "Adds weapons.",
+     "words": [
+      "new weapon",
+      "weapon pack",
+      "weapons pack",
+      "gun pack",
+      "katana",
+      "sword",
+      "pistol",
+      "rifle",
+      "shotgun",
+      "revolver",
+      "smg",
+      "sniper"
+     ]
+    },
+    {
+     "name": "Weapon appearance",
+     "about": "Weapon skins, retextures and meshes.",
+     "words": [
+      "weapon skin",
+      "weapon retex",
+      "weapon textur",
+      "gun skin",
+      "weapon appearance",
+      "weapon colo",
+      "camo"
+     ]
+    },
+    {
+     "name": "Weapon balance",
+     "about": "Weapon stats, damage, recoil, ammo.",
+     "words": [
+      "weapon balance",
+      "weapon stats",
+      "damage",
+      "recoil",
+      "ammo",
+      "magazine",
+      "reload",
+      "ballistic"
+     ],
+     "tweak": [
+      "Items.Preset_",
+      "*weapontypes",
+      "Ammo."
+     ],
+     "reds": [
+      "WeaponObject"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vehicles",
+   "name": "Vehicles",
+   "color": "#ff9a4d",
+   "tags": [
+    {
+     "name": "New vehicles",
+     "about": "Adds cars and bikes.",
+     "words": [
+      "car",
+      "cars",
+      "bike",
+      "bikes",
+      "motorcycle",
+      "motorbike",
+      "truck",
+      "new vehicle",
+      "vehicle pack",
+      "drivable",
+      "driveable"
+     ]
+    },
+    {
+     "name": "Vehicle appearance",
+     "about": "Liveries, paint, vehicle retextures, lights.",
+     "words": [
+      "vehicle skin",
+      "car skin",
+      "livery",
+      "liveries",
+      "paint",
+      "vehicle retex",
+      "vehicle textur",
+      "car textur",
+      "headlight",
+      "neon",
+      "tint"
+     ]
+    },
+    {
+     "name": "Driving & handling",
+     "about": "Handling, physics, driving camera.",
+     "words": [
+      "handling",
+      "driving",
+      "drive",
+      "physics",
+      "steering",
+      "suspension"
+     ],
+     "tweak": [
+      "*drivemodel",
+      "*enginedata",
+      "*wheelsetup"
+     ],
+     "reds": [
+      "VehicleComponent",
+      "DriveEvents"
+     ]
+    },
+    {
+     "name": "Vehicle combat",
+     "about": "Vehicle weapons, ramming, car chases.",
+     "words": [
+      "vehicle combat",
+      "car combat",
+      "vehicle weapon",
+      "ramming",
+      "drive by",
+      "driveby",
+      "chase"
+     ],
+     "reds": [
+      "VehicleCombat"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "gameplay",
+   "name": "Gameplay",
+   "color": "#f6cf3c",
+   "tags": [
+    {
+     "name": "Combat",
+     "about": "Combat mechanics: damage, melee, dodging, hit reactions.",
+     "words": [
+      "combat",
+      "dodge",
+      "dash",
+      "melee",
+      "parry",
+      "finisher",
+      "headshot",
+      "hitbox",
+      "bullet"
+     ],
+     "reds": [
+      "DamageSystem",
+      "HitReaction"
+     ]
+    },
+    {
+     "name": "Enemy AI",
+     "about": "How enemies fight and react.",
+     "words": [
+      "ai",
+      "enemy",
+      "enemies",
+      "npc ai",
+      "smarter",
+      "hostile",
+      "aggress"
+     ],
+     "reds": [
+      "AIHumanComponent",
+      "AIBehavior",
+      "AICommand"
+     ],
+     "tweak": [
+      "AIAction",
+      "AIActionCondition"
+     ]
+    },
+    {
+     "name": "Stealth",
+     "about": "Detection, takedowns, sneaking.",
+     "words": [
+      "stealth",
+      "sneak",
+      "detection",
+      "takedown",
+      "silenc",
+      "crouch"
+     ],
+     "reds": [
+      "SenseComponent",
+      "StimBroadcaster"
+     ]
+    },
+    {
+     "name": "Quickhacks",
+     "about": "Quickhacks, netrunning, breach protocol.",
+     "words": [
+      "quickhack",
+      "quick hack",
+      "hack",
+      "hacks",
+      "hacking",
+      "netrun",
+      "breach",
+      "ram",
+      "daemon"
+     ],
+     "reds": [
+      "QuickHack",
+      "Netrun",
+      "Breach",
+      "Minigame"
+     ],
+     "tweak": [
+      "*quickhack",
+      "*minigame"
+     ]
+    },
+    {
+     "name": "Cyberware",
+     "about": "Cyberware, ripperdocs, capacity.",
+     "words": [
+      "cyberware",
+      "implant",
+      "ripperdoc",
+      "cyberdeck",
+      "sandevistan",
+      "berserk",
+      "mantis",
+      "gorilla",
+      "kerenzikov",
+      "monowire",
+      "mono wire",
+      "capacity"
+     ],
+     "tweak": [
+      "*cyberware",
+      "AttachmentSlots.",
+      "*sandevistan",
+      "*berserk",
+      "*kerenzikov"
+     ],
+     "reds": [
+      "Ripperdoc",
+      "Cyberware"
+     ]
+    },
+    {
+     "name": "Perks & progression",
+     "about": "Perks, skills, attributes, levels, XP.",
+     "words": [
+      "perk",
+      "skill",
+      "level",
+      "attribute",
+      "xp",
+      "experience",
+      "street cred",
+      "relic",
+      "progression",
+      "respec"
+     ],
+     "tweak": [
+      "Perks.",
+      "NewPerks.",
+      "Proficiencies.",
+      "Traits."
+     ],
+     "reds": [
+      "PlayerDevelopment"
+     ]
+    },
+    {
+     "name": "Loot & economy",
+     "about": "Loot, vendors, prices, money.",
+     "words": [
+      "loot",
+      "vendor",
+      "price",
+      "prices",
+      "money",
+      "eurodollar",
+      "eddies",
+      "economy",
+      "shop",
+      "sell",
+      "rarity",
+      "legendary",
+      "airdrop"
+     ],
+     "tweak": [
+      "Vendors.",
+      "Loot",
+      "*loottable",
+      "*price"
+     ],
+     "reds": [
+      "Vendor",
+      "LootManager",
+      "MarketSystem"
+     ]
+    },
+    {
+     "name": "Crafting",
+     "about": "Crafting, upgrades, recipes, components.",
+     "words": [
+      "craft",
+      "upgrade",
+      "component",
+      "recipe",
+      "disassembl"
+     ],
+     "categories": [
+      "Crafting"
+     ],
+     "tweak": [
+      "CraftingRecipes",
+      "Crafting.",
+      "*recipe"
+     ],
+     "reds": [
+      "Crafting"
+     ]
+    },
+    {
+     "name": "Police & crime",
+     "about": "NCPD, wanted level, MaxTac, crime reactions.",
+     "words": [
+      "police",
+      "ncpd",
+      "wanted",
+      "heat",
+      "crime",
+      "bounty",
+      "maxtac",
+      "max tac"
+     ],
+     "tweak": [
+      "PreventionSystem",
+      "*prevention"
+     ],
+     "reds": [
+      "Prevention",
+      "Police"
+     ]
+    },
+    {
+     "name": "Difficulty",
+     "about": "Difficulty, realism and rebalance overhauls.",
+     "words": [
+      "difficulty",
+      "hardcore",
+      "realism",
+      "realistic",
+      "survival",
+      "balance",
+      "rebalance",
+      "overhaul"
+     ],
+     "tweak": [
+      "Difficulty.",
+      "*difficulty"
+     ],
+     "reds": [
+      "Difficulty"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "world",
+   "name": "World",
+   "color": "#7cff6b",
+   "tags": [
+    {
+     "name": "Locations & interiors",
+     "about": "New or changed places, interiors, buildings.",
+     "words": [
+      "location",
+      "interior",
+      "building",
+      "bar",
+      "club",
+      "district",
+      "map extension",
+      "restaurant",
+      "landmark",
+      "world"
+     ],
+     "categories": [
+      "Locations"
+     ]
+    },
+    {
+     "name": "Crowds & traffic",
+     "about": "Crowd and traffic density, spawns.",
+     "words": [
+      "crowd",
+      "traffic",
+      "pedestrian",
+      "population",
+      "density",
+      "spawn"
+     ],
+     "tweak": [
+      "*crowd",
+      "*traffic"
+     ],
+     "reds": [
+      "Crowd",
+      "Traffic"
+     ]
+    },
+    {
+     "name": "NPC behavior",
+     "about": "How NPCs act: reactions, companions, romance, dialogue.",
+     "words": [
+      "npc",
+      "npcs",
+      "citizen",
+      "reaction",
+      "behavior",
+      "behaviour",
+      "romance",
+      "companion",
+      "dialog",
+      "conversation"
+     ],
+     "reds": [
+      "ReactionComponent"
+     ]
+    },
+    {
+     "name": "Apartments",
+     "about": "Homes, apartments, beds, stashes in homes.",
+     "words": [
+      "apartment",
+      "home",
+      "house",
+      "housing",
+      "penthouse",
+      "hideout",
+      "mansion",
+      "villa",
+      "condo"
+     ]
+    },
+    {
+     "name": "Quests & content",
+     "about": "Quests, gigs, side jobs, story additions.",
+     "words": [
+      "quest",
+      "mission",
+      "gig",
+      "gigs",
+      "story",
+      "side job",
+      "sidequest",
+      "contract"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "interface",
+   "name": "Interface",
+   "color": "#4f8cff",
+   "tags": [
+    {
+     "name": "HUD",
+     "about": "HUD, crosshair, health bar, markers, icons.",
+     "words": [
+      "hud",
+      "crosshair",
+      "reticle",
+      "health bar",
+      "healthbar",
+      "widget",
+      "compass",
+      "marker",
+      "icon"
+     ],
+     "reds": [
+      "hud",
+      "Crosshair"
+     ]
+    },
+    {
+     "name": "Menus",
+     "about": "Menus, inventory, tooltips, stash.",
+     "words": [
+      "menu",
+      "menus",
+      "inventory",
+      "ui",
+      "interface",
+      "tooltip",
+      "stash"
+     ],
+     "reds": [
+      "Menu",
+      "Inventory",
+      "Tooltip"
+     ]
+    },
+    {
+     "name": "Map",
+     "about": "World map, minimap, fast travel, GPS.",
+     "words": [
+      "map",
+      "minimap",
+      "mini map",
+      "fast travel",
+      "waypoint",
+      "gps"
+     ],
+     "reds": [
+      "Minimap",
+      "WorldMap",
+      "Mappin"
+     ]
+    },
+    {
+     "name": "Fonts & text",
+     "about": "Fonts, subtitles, translations.",
+     "words": [
+      "font",
+      "fonts",
+      "text",
+      "subtitle",
+      "translation",
+      "locali",
+      "language"
+     ]
+    },
+    {
+     "name": "Photo mode",
+     "about": "Photo mode poses, cameras, freecam.",
+     "words": [
+      "photo mode",
+      "photomode",
+      "camera",
+      "freecam",
+      "free cam",
+      "screenshot"
+     ],
+     "categories": [
+      "Photo Mode"
+     ],
+     "reds": [
+      "PhotoMode"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "audio",
+   "name": "Audio",
+   "color": "#d9e021",
+   "tags": [
+    {
+     "name": "Music & radio",
+     "about": "Radio stations, music, soundtrack.",
+     "words": [
+      "radio",
+      "music",
+      "song",
+      "station",
+      "soundtrack",
+      "radioext"
+     ],
+     "sources": [
+      "radioext"
+     ],
+     "repos": [
+      "justarandomguyintheinternet/CP77_radioExt"
+     ],
+     "categories": [
+      "Radio station"
+     ],
+     "paths": [
+      "bin/x64/plugins/cyber_engine_tweaks/mods/radioext/**"
+     ]
+    },
+    {
+     "name": "Sound effects",
+     "about": "Sounds: weapons, footsteps, ambience.",
+     "words": [
+      "sound",
+      "sfx",
+      "footstep",
+      "ambient",
+      "ambience"
+     ],
+     "paths": [
+      "mods/*/customsounds/**"
+     ]
+    },
+    {
+     "name": "Voice",
+     "about": "Voice lines and dubs.",
+     "words": [
+      "voice",
+      "dub",
+      "voiceover",
+      "voice over",
+      "vo"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "animation",
+   "name": "Animation",
+   "color": "#a0a0b4",
+   "tags": [
+    {
+     "name": "Animations",
+     "about": "Walk cycles, idles, emotes, gestures.",
+     "words": [
+      "animation",
+      "anim",
+      "anims",
+      "walk",
+      "walking",
+      "idle",
+      "emote",
+      "dance",
+      "gesture"
+     ],
+     "categories": [
+      "Animations"
+     ]
+    },
+    {
+     "name": "Poses",
+     "about": "Pose packs for photo mode.",
+     "words": [
+      "pose",
+      "poses",
+      "posepack"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fixes",
+   "name": "Fixes",
+   "color": "#5ad1a8",
+   "tags": [
+    {
+     "name": "Bug fixes",
+     "about": "Fixes for game bugs.",
+     "words": [
+      "fix",
+      "fixes",
+      "fixed",
+      "bug",
+      "bugs",
+      "bugfix",
+      "unofficial",
+      "glitch",
+      "restore"
+     ]
+    },
+    {
+     "name": "Stability",
+     "about": "Crashes, freezes, memory, loading.",
+     "words": [
+      "crash",
+      "stability",
+      "stable",
+      "memory",
+      "leak",
+      "freeze",
+      "stutter"
+     ]
+    },
+    {
+     "name": "Compatibility patch",
+     "about": "Makes two mods work together.",
+     "words": [
+      "compat",
+      "patch for",
+      "addon for",
+      "bridge"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tools",
+   "name": "Tools",
+   "color": "#c8c8d8",
+   "tags": [
+    {
+     "name": "Framework",
+     "about": "Frameworks and libraries other mods need.",
+     "words": [
+      "framework",
+      "library",
+      "lib",
+      "api",
+      "extender",
+      "archivexl",
+      "archive xl",
+      "tweakxl",
+      "tweak xl",
+      "codeware",
+      "red4ext",
+      "cyber engine tweaks",
+      "cet",
+      "native settings",
+      "mod settings",
+      "input loader"
+     ],
+     "repos": [
+      "maximegmd/CyberEngineTweaks",
+      "wopss/RED4ext",
+      "jac3km4/redscript",
+      "psiberx/cp2077-archive-xl",
+      "psiberx/cp2077-tweak-xl",
+      "psiberx/cp2077-codeware"
+     ]
+    },
+    {
+     "name": "Modder's resource",
+     "about": "Resources and templates for mod authors.",
+     "words": [
+      "resource",
+      "modder",
+      "template",
+      "base files"
+     ],
+     "categories": [
+      "Modders Resources",
+      "Modder's Resource"
+     ]
+    },
+    {
+     "name": "Utility",
+     "about": "Tools: consoles, teleport, save editors, hotkeys.",
+     "words": [
+      "utility",
+      "utilities",
+      "tool",
+      "tools",
+      "manager",
+      "console",
+      "teleport",
+      "save editor",
+      "editor",
+      "debug",
+      "toggle",
+      "hotkey",
+      "keybind"
+     ],
+     "categories": [
+      "Utilities"
+     ]
+    },
+    {
+     "name": "Cheats",
+     "about": "Cheats, god mode, infinite resources.",
+     "words": [
+      "cheat",
+      "god mode",
+      "godmode",
+      "infinite",
+      "unlimited",
+      "no cooldown",
+      "trainer",
+      "one hit"
+     ],
+     "categories": [
+      "Cheats"
+     ]
+    }
+   ]
+  }
+ ]
+}

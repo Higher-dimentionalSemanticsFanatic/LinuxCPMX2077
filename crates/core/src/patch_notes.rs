@@ -257,44 +257,77 @@ pub fn fetch(mods: &[ModRow], nexus: Option<&crate::nexus::Client>, sources: &cr
     f
 }
 
+/// Where a mod's last-update date comes from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum FindingKind {
-    /// A core framework older than a game update, with a newer release out.
+pub enum DateSource {
+    /// The Nexus mod page's last update (read with "Read release dates").
+    NexusPage,
+    /// The newest release on the mod's source (GitHub).
+    Release,
+    /// Only the installed file's upload date is known.
+    File,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NoteKind {
+    /// A core framework's installed file predates a game patch.
     Framework,
-    /// Released before a patch that reworked the systems mods build on.
+    /// A patch the mod predates reworked the systems mods build on.
     Rework,
-    /// The base game added what the mod does.
+    /// A patch the mod predates added what the mod does.
     Feature,
+    /// The installed file is older than the mod's last update.
+    NewerRelease,
     /// The Nexus page is no longer published.
     Unlisted,
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct Finding {
+pub struct Note {
+    pub kind: NoteKind,
+    /// The game patch it's about, if any.
+    pub patch: Option<String>,
+    pub text: String,
+    pub link: Option<String>,
+}
+
+/// One installed mod's last update against the game patches.
+#[derive(Debug, Clone, Serialize)]
+pub struct ModAge {
     pub mod_id: i64,
     pub mod_name: String,
-    pub kind: FindingKind,
-    pub severity: Severity,
-    /// The game patch it's about (none for `Unlisted`).
-    pub patch: Option<String>,
-    pub title: String,
-    pub detail: String,
+    /// Unix seconds.
+    pub last_update: i64,
+    pub date_source: DateSource,
+    /// `last_update` is an upper bound (file older than every listed release).
+    pub date_before: bool,
+    /// Game patches (up to the installed version) released after
+    /// `last_update`, oldest first. Empty: updated after the newest one.
+    pub patches_since: Vec<String>,
+    /// Release date of the first of `patches_since`.
+    pub first_patch_date: Option<String>,
+    /// Official notes of the first of `patches_since`.
     pub link: Option<String>,
+    pub severity: Severity,
+    /// Core framework name.
+    pub framework: Option<String>,
+    pub notes: Vec<Note>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Report {
-    pub findings: Vec<Finding>,
+    /// Dated mods, the longest without an update first; mods updated after
+    /// the newest patch last.
+    pub mods: Vec<ModAge>,
     /// The game version the check used; `None` when unknown, in which case
     /// every listed patch counts.
     pub game_version: Option<String>,
     pub newest_patch: String,
     /// When the patch list was last compared with the official notes.
     pub data_checked: String,
-    /// Mods with a date to compare.
-    pub dated: usize,
-    /// Names of mods without one (manual installs, files without a date).
+    /// Names of mods without a date (manual installs, files without a date).
     pub undated: Vec<String>,
     /// When release dates were last read from the sources.
     pub dates_read_at: Option<i64>,
@@ -362,8 +395,7 @@ fn check_with(
         .filter(|p| game_version.as_deref().is_none_or(|g| cmp_version(&p.version, g).is_some_and(|o| o.is_le())))
         .filter_map(|p| Some((p, day(&p.date)?)))
         .collect();
-    let mut findings = Vec::new();
-    let mut dated = 0;
+    let mut out = Vec::new();
     let mut undated = Vec::new();
     for mf in mods {
         let m = mf.row;
@@ -374,145 +406,119 @@ fn check_with(
             .and_then(|id| nexus_upload_time(&m.archive_name, id))
             .map(|at| FileDate { at, before: false })
             .or_else(|| src.and_then(|s| s.files.get(&file_key(m)).copied()));
-        let latest = src.and_then(|s| s.latest);
+        // The mod's last update: from its source when read, else the
+        // installed file's date.
+        let (last_update, date_source, date_before) = match (src.and_then(|s| s.latest), file) {
+            (Some(l), _) => (l, if m.source == "nexus" { DateSource::NexusPage } else { DateSource::Release }, false),
+            (None, Some(f)) => (f.at, DateSource::File, f.before),
+            (None, None) => {
+                undated.push(m.name.clone());
+                continue;
+            }
+        };
+        let since: Vec<&(&Patch, i64)> = applied.iter().filter(|(_, at)| last_update < *at).collect();
+        let framework = framework_name(m);
+        let mut notes = Vec::new();
+        let mut severity = Severity::Info;
+
         if let Some(status) = src.and_then(|s| s.status.as_deref()).filter(|s| *s != "published") {
-            findings.push(Finding {
-                mod_id: m.id,
-                mod_name: m.name.clone(),
-                kind: FindingKind::Unlisted,
-                severity: Severity::Info,
+            notes.push(Note {
+                kind: NoteKind::Unlisted,
                 patch: None,
-                title: format!("Nexus page status: {}", status.replace('_', " ")),
-                detail: "The mod page is no longer published on Nexus; no further updates expected there.".into(),
+                text: format!("Nexus page status: {}. No further updates expected there.", status.replace('_', " ")),
                 link: m.nexus_mod_id.map(|id| crate::nexus_browse::mod_page_url(id, None)),
             });
         }
-        // The date the mod's content is from: its newest release when known
-        // (an author who never updated after a patch), else the file's.
-        let reference = match (latest, file) {
-            (Some(l), _) => Some(l),
-            (None, Some(f)) => Some(f.at),
-            _ => None,
-        };
-        let Some(reference) = reference else {
-            undated.push(m.name.clone());
-            continue;
-        };
-        dated += 1;
         let fmt_file = |f: FileDate| if f.before { format!("before {}", ymd(f.at)) } else { ymd(f.at) };
-
-        if let Some(name) = framework_name(m) {
+        // Installed file older than the mod's last update.
+        // A week's margin: a Nexus page date also moves with page edits.
+        if let Some(f) = file.filter(|f| date_source != DateSource::File && f.at + 7 * 86_400 < last_update) {
+            notes.push(Note {
+                kind: NoteKind::NewerRelease,
+                patch: None,
+                text: format!(
+                    "Installed file: {}; {}.",
+                    fmt_file(f),
+                    if date_source == DateSource::NexusPage { "Nexus page updated since (check for a newer file)" } else { "a newer release exists" }
+                ),
+                link: None,
+            });
+        }
+        if let Some(name) = framework {
             // The modding wiki: after a game update, every core framework
             // needs a release from after that update.
-            let Some(f) = file else { continue };
-            if let Some((p, at)) = applied.iter().rev().find(|(_, at)| f.at < *at) {
-                let newer = latest.map(|l| l > *at);
-                if newer == Some(false) {
-                    continue; // no release since the patch: nothing to update to
+            if let Some(f) = file
+                && let Some((p, at)) = applied.iter().rev().find(|(_, at)| f.at < *at)
+                && (date_source == DateSource::File || last_update > *at)
+            {
+                let confirmed = date_source != DateSource::File;
+                if confirmed {
+                    severity = Severity::Warning;
                 }
-                findings.push(Finding {
-                    mod_id: m.id,
-                    mod_name: m.name.clone(),
-                    kind: FindingKind::Framework,
-                    severity: if newer == Some(true) { Severity::Warning } else { Severity::Info },
+                notes.push(Note {
+                    kind: NoteKind::Framework,
                     patch: Some(p.version.clone()),
-                    title: format!("{name} file predates game {}", p.version),
-                    detail: format!(
-                        "Installed file: {}. Game {} released {}. Core frameworks need a release from after the game update{}.",
-                        fmt_file(f),
+                    text: format!(
+                        "{name} file predates game {} ({}). Core frameworks need a release from after the game update; {}.",
                         p.version,
                         p.date,
-                        match newer {
-                            Some(true) => format!("; newer release: {}", ymd(latest.unwrap_or_default())),
-                            _ => "; newer release not confirmed (Read release dates)".into(),
-                        }
+                        if confirmed { "a newer release exists" } else { "newer release not confirmed" }
                     ),
                     link: Some("https://wiki.redmodding.org/cyberpunk-2077-modding/for-mod-users/user-guide-troubleshooting/users-troubleshooting-after-a-game-update".into()),
                 });
             }
-            continue;
-        }
-
-        let based_on = match (latest, file) {
-            (Some(l), _) => if m.source == "nexus" { format!("Nexus page last updated: {}", ymd(l)) } else { format!("Newest release: {}", ymd(l)) },
-            (None, Some(f)) => format!("Installed file: {}", fmt_file(f)),
-            _ => unreachable!(),
-        };
-        // Installed file older than the patch while a newer release exists.
-        let update_note = |at: i64| match (file, latest) {
-            (Some(f), Some(l)) if f.at < at && l >= at => Some(format!(" Installed file: {}; a newer release exists.", fmt_file(f))),
-            _ => None,
-        };
-
-        if let Some((p, _)) = applied.iter().rev().find(|(p, at)| p.rework && reference < *at) {
-            findings.push(Finding {
-                mod_id: m.id,
-                mod_name: m.name.clone(),
-                kind: FindingKind::Rework,
-                severity: if has_code(&mf.files) { Severity::Warning } else { Severity::Info },
-                patch: Some(p.version.clone()),
-                title: format!("Released before game {}", p.version),
-                detail: format!(
-                    "{based_on}; game {} released {} and reworked: {}.",
-                    p.version,
-                    p.date,
-                    p.changes.join("; ").trim_end_matches('.')
-                ),
-                link: Some(p.link.clone()),
-            });
-        } else if let Some((p, at)) = applied.iter().rev().find(|(p, at)| p.rework && file.is_some_and(|f| f.at < *at)) {
-            // The author updated after the rework, the installed file didn't.
-            findings.push(Finding {
-                mod_id: m.id,
-                mod_name: m.name.clone(),
-                kind: FindingKind::Rework,
-                severity: Severity::Info,
-                patch: Some(p.version.clone()),
-                title: format!("Installed file predates game {}", p.version),
-                detail: format!("{}{}", format_args!("Game {} released {}.", p.version, p.date), update_note(*at).unwrap_or_default()),
-                link: Some(p.link.clone()),
-            });
-        }
-
-        let text = words(&format!("{} {}", m.name, src.and_then(|s| s.summary.as_deref()).unwrap_or_default()));
-        for (p, at) in &applied {
-            if reference >= *at {
-                continue;
-            }
-            for f in p.features.iter().filter(|f| matches_feature(f, m.nexus_mod_id, &text)) {
-                findings.push(Finding {
-                    mod_id: m.id,
-                    mod_name: m.name.clone(),
-                    kind: FindingKind::Feature,
-                    severity: Severity::Info,
+        } else {
+            if let Some((p, _)) = since.iter().rev().find(|(p, _)| p.rework) {
+                if has_code(&mf.files) {
+                    severity = Severity::Warning;
+                }
+                notes.push(Note {
+                    kind: NoteKind::Rework,
                     patch: Some(p.version.clone()),
-                    title: format!("Possibly covered by game {}", p.version),
-                    detail: format!("Game {} ({}): {} {based_on}.", p.version, p.date, f.text),
+                    text: format!("Game {} reworked: {}.", p.version, p.changes.join("; ").trim_end_matches('.')),
                     link: Some(p.link.clone()),
                 });
             }
+            let text = words(&format!("{} {}", m.name, src.and_then(|s| s.summary.as_deref()).unwrap_or_default()));
+            for (p, _) in &since {
+                for f in p.features.iter().filter(|f| matches_feature(f, m.nexus_mod_id, &text)) {
+                    notes.push(Note {
+                        kind: NoteKind::Feature,
+                        patch: Some(p.version.clone()),
+                        text: format!("Possibly covered by game {}: {}", p.version, f.text),
+                        link: Some(p.link.clone()),
+                    });
+                }
+            }
         }
+        out.push(ModAge {
+            mod_id: m.id,
+            mod_name: m.name.clone(),
+            last_update,
+            date_source,
+            date_before,
+            patches_since: since.iter().map(|(p, _)| p.version.clone()).collect(),
+            first_patch_date: since.first().map(|(p, _)| p.date.clone()),
+            link: since.first().map(|(p, _)| p.link.clone()),
+            severity,
+            framework: framework.map(String::from),
+            notes,
+        });
     }
-    // Warnings first; per mod, the most specific finding first (it labels
-    // the mod's row).
-    let rank = |k: FindingKind| match k {
-        FindingKind::Framework => 0,
-        FindingKind::Feature => 1,
-        FindingKind::Rework => 2,
-        FindingKind::Unlisted => 3,
-    };
-    findings.sort_by(|a, b| {
-        a.severity
-            .cmp(&b.severity)
+    // Longest without an update first; warnings before hints on the same date.
+    out.sort_by(|a, b| {
+        a.patches_since
+            .is_empty()
+            .cmp(&b.patches_since.is_empty())
+            .then_with(|| a.last_update.cmp(&b.last_update))
+            .then_with(|| a.severity.cmp(&b.severity))
             .then_with(|| a.mod_name.to_lowercase().cmp(&b.mod_name.to_lowercase()))
-            .then_with(|| rank(a.kind).cmp(&rank(b.kind)))
     });
     Report {
-        findings,
+        mods: out,
         game_version,
         newest_patch: list.last().map(|p| p.version.clone()).unwrap_or_default(),
         data_checked: data().checked.clone(),
-        dated,
         undated,
         dates_read_at,
         errors: Vec::new(),
@@ -621,7 +627,7 @@ mod tests {
     }
 
     #[test]
-    fn flags_old_mods_frameworks_and_covered_features() {
+    fn ranks_mods_by_last_update() {
         let list = vec![
             patch("2.0", "2023-09-21", true, vec![]),
             patch(
@@ -664,32 +670,47 @@ mod tests {
         dates.insert("nexus:2380".to_string(), SourceDates { latest: Some(t("2025-08-01")), ..Default::default() });
         dates.insert("nexus:700".to_string(), SourceDates { latest: Some(t("2025-08-01")), status: Some("removed".into()), ..Default::default() });
 
-        let r = check_with(&list, Some("2.31"), &facts, &dates, None);
-        let by = |id: i64| r.findings.iter().filter(|f| f.mod_id == id).collect::<Vec<_>>();
-        let f1 = by(1);
-        assert_eq!(f1.len(), 1);
-        assert_eq!((f1[0].kind, f1[0].severity, f1[0].patch.as_deref()), (FindingKind::Rework, Severity::Warning, Some("2.0")));
-        assert!(f1[0].detail.contains("perks; police"), "{}", f1[0].detail);
-        assert_eq!(by(2)[0].severity, Severity::Info);
-        let f3 = by(3);
-        assert_eq!(f3.len(), 1);
-        assert_eq!((f3[0].kind, f3[0].patch.as_deref()), (FindingKind::Feature, Some("2.1")));
-        assert!(by(4).is_empty());
-        let f5 = by(5);
-        assert_eq!((f5[0].kind, f5[0].severity, f5[0].patch.as_deref()), (FindingKind::Framework, Severity::Warning, Some("2.3")));
-        assert_eq!(by(7)[0].kind, FindingKind::Unlisted);
-        assert_eq!(r.undated, vec!["Loose".to_string()]);
-        assert_eq!(r.dated, 6);
-        // Warnings first.
-        assert_eq!(r.findings[0].severity, Severity::Warning);
+        // Old Hair: the page was updated after 2.1, the installed file not.
+        dates.insert("nexus:200".to_string(), SourceDates { latest: Some(t("2024-02-01")), ..Default::default() });
 
-        // On game 2.1, the 2.3 framework check doesn't apply.
+        let r = check_with(&list, Some("2.31"), &facts, &dates, None);
+        let get = |id: i64| r.mods.iter().find(|m| m.mod_id == id).unwrap();
+        let kinds = |id: i64| get(id).notes.iter().map(|n| n.kind).collect::<Vec<_>>();
+        let m1 = get(1);
+        assert_eq!(m1.patches_since, vec!["2.0", "2.1", "2.3"]);
+        assert_eq!((m1.date_source, m1.severity, m1.first_patch_date.as_deref()), (DateSource::File, Severity::Warning, Some("2023-09-21")));
+        assert!(m1.notes[0].text.contains("perks; police"), "{}", m1.notes[0].text);
+        // Last update (Nexus page) decides, not the old file.
+        let m2 = get(2);
+        assert_eq!((m2.date_source, m2.severity), (DateSource::NexusPage, Severity::Info));
+        assert_eq!(m2.patches_since, vec!["2.3"]);
+        assert_eq!(kinds(2), vec![NoteKind::NewerRelease]);
+        assert_eq!(kinds(3), vec![NoteKind::Feature]);
+        assert_eq!(get(3).notes[0].patch.as_deref(), Some("2.1"));
+        // Updated after 2.1, so no metro note; still before 2.3.
+        assert_eq!(get(4).patches_since, vec!["2.3"]);
+        assert!(kinds(4).is_empty());
+        let m5 = get(5);
+        assert_eq!((m5.framework.as_deref(), m5.severity), (Some("RED4ext"), Severity::Warning));
+        assert!(m5.patches_since.is_empty(), "page updated after 2.3");
+        assert_eq!(kinds(5), vec![NoteKind::NewerRelease, NoteKind::Framework]);
+        assert!(kinds(7).contains(&NoteKind::Unlisted));
+        assert_eq!(r.undated, vec!["Loose".to_string()]);
+        assert_eq!(r.mods.len(), 6);
+        // Longest without an update first, current mods last.
+        assert_eq!(r.mods[0].mod_id, 1);
+        assert!(r.mods.last().unwrap().patches_since.is_empty());
+
+        // On game 2.1, 2.3 doesn't count.
         let r = check_with(&list, Some("2.1"), &facts, &dates, None);
-        assert!(r.findings.iter().all(|f| f.mod_id != 5));
-        // RED4ext without a newer release: nothing to update to.
+        assert!(r.mods.iter().all(|m| !m.patches_since.contains(&"2.3".to_string())));
+        assert!(r.mods.iter().find(|m| m.mod_id == 5).unwrap().notes.iter().all(|n| n.kind != NoteKind::Framework));
+        // RED4ext without a release since 2.3: nothing to update to.
         dates.insert("nexus:2380".to_string(), SourceDates { latest: Some(t("2025-01-01")), ..Default::default() });
         let r = check_with(&list, Some("2.31"), &facts, &dates, None);
-        assert!(r.findings.iter().all(|f| f.mod_id != 5));
+        let m5 = r.mods.iter().find(|m| m.mod_id == 5).unwrap();
+        assert_eq!((m5.severity, m5.patches_since.clone()), (Severity::Info, vec!["2.3".to_string()]));
+        assert!(m5.notes.is_empty());
     }
 
     #[test]

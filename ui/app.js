@@ -144,6 +144,7 @@ function showModsSub(sub) {
   modsSub = MODS_TITLES[sub] ? sub : "list";
   $("#mods-title").textContent = MODS_TITLES[modsSub];
   document.querySelectorAll("#tab-mods .mods-sub").forEach((x) => x.classList.toggle("hidden", x.dataset.sub !== modsSub));
+  if (modsSub === "patchnotes") loadPatchNotes().catch((e) => toast(String(e), true));
 }
 
 // A section's menu entry shows once its card has something to show.
@@ -337,6 +338,7 @@ async function loadSetup(offer = false) {
   if (currentGame?.id !== id) return;
   setupChecks = checks;
   renderWarnings();
+  window.loadLaunchExplain?.(); // a fix may have changed the launch options
   const problems = checks.filter((c) => c.state === "problem" && c.fix);
   if (setupGameId !== id || !setupSeen) {
     setupGameId = id;
@@ -421,7 +423,7 @@ let mods = [];
 let updatesByMod = new Map(); // installed mod id -> update from check_updates
 // The user's own tags and which installed mod has which (modpacks.js):
 // { tags: [{ name, color }], mods: { modId: [tag names] } }.
-let modTags = { tags: [], mods: {} };
+let modTags = { tags: [], mods: {}, groups: [], suggest: true, suggestions: {} };
 let modSort = loadPref("modSort", { key: "name", dir: 1 });
 const NO_CATEGORY = "__none__";
 
@@ -461,6 +463,7 @@ async function loadMods() {
   await loadModExtras().catch((e) => toast(String(e), true));
   await loadVersionRibbon().catch(() => {});
   renderMods();
+  loadThumbs().catch(() => {});
   showLoadout().catch(() => {});
   loadProfiles().catch((e) => toast(String(e), true));
   loadUltraPlus().catch(() => {});
@@ -477,9 +480,7 @@ function renderMods() {
   const cats = [...new Set(mods.map((m) => m.category).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const own = modTags.tags;
   sel.replaceChildren(el("option", { value: "" }, "All tags and categories"),
-    own.length ? el("optgroup", { label: "Your tags" },
-      ...own.map((c) => el("option", { value: `tag:${c.name}` }, c.name)),
-      el("option", { value: `tag:${NO_CATEGORY}` }, "No tags")) : null,
+    ...(own.length ? tagOptions(own, { prefix: "tag:", ownLabel: "Your tags", extra: [el("option", { value: `tag:${NO_CATEGORY}` }, "No tags")] }) : []),
     el("optgroup", { label: "Nexus categories" },
       ...cats.map((c) => el("option", { value: c }, c)),
       cats.length && mods.some((m) => !m.category) ? el("option", { value: NO_CATEGORY }, "No category") : null));
@@ -501,6 +502,7 @@ function renderMods() {
   syncModsSubs();
   $("#mods-body").replaceChildren(...deficitRows(), ...shown.flatMap((m) => [modRow(m), ...dependencyRows(m)]));
   modSel.render(shown.map((m) => m.id));
+  renderModsCanvas(shown);
 }
 
 // The mod's page in Get mods (Nexus or another source); none for manual installs.
@@ -521,10 +523,11 @@ function modPageButton(m) {
 // The game was patched since the mod went in: red when an update or the
 // patch-note check names the mod, plain otherwise.
 function staleBadge(m, up) {
-  const flagged = up || patchFindings.has(m.id);
+  const age = patchAges.get(m.id);
+  const flagged = up || (age && (age.patches_since.length || age.notes.length));
   return el("div", { class: `badge${flagged ? " bad" : ""}`,
     title: `Installed on build ${m.game_build_id}; the game is now build ${currentGame.install.build_id}. `
-      + (flagged ? "An update or the patch-note check names this mod." : "No update and no patch-note finding for this mod.") },
+      + (flagged ? "An update or the patch-note check names this mod." : "No update; last update after every installed game patch.") },
   "game updated since");
 }
 
@@ -532,12 +535,14 @@ function modRow(m) {
   const stale = m.game_build_id && currentGame.install.build_id && m.game_build_id !== currentGame.install.build_id;
   const on = m.status === "installed";
   const up = updatesByMod.get(m.id);
-  const sw = el("input", { type: "checkbox", class: "switch", title: on ? "Enabled: click to take its files out of the game" : "Disabled: click to put its files back" });
+  const sw = el("input", { type: "checkbox", class: "switch", "aria-label": `${m.name} enabled`,
+    title: on ? "Enabled: files are in the game folder. Click to disable: files move out of the game, the mod stays installed"
+      : "Disabled: files are out of the game folder, the mod stays installed. Click to enable: files go back in" });
   sw.checked = on;
   sw.addEventListener("change", () => busy(sw, () => setEnabled(m, sw.checked)).finally(loadMods));
   return el("tr", { class: on ? "" : "off" },
     el("td", {}, modSel.box([m.id], m.name)),
-    el("td", {}, sw),
+    el("td", { class: "thumb-col" }, modThumb(m)),
     el("td", {}, el("b", {}, m.name), on ? null : el("span", { class: "badge" }, "disabled"),
       el("div", { class: "muted mono" }, m.archive_name)),
     el("td", {}, tagEditor(m), el("div", { class: "muted small" }, m.category || "")),
@@ -554,9 +559,38 @@ function modRow(m) {
         onclick: (e) => busy(e.target, () => applyUpdate(up)),
       }, up.to_stable ? `Switch to stable ${up.latest}` : `Update to ${up.latest}`) : null, " ",
       modPageButton(m), " ",
-      on ? el("button", { onclick: (e) => busy(e.target, () => verify(m)) }, "Verify") : null, " ",
-      el("button", { class: "danger", onclick: (e) => busy(e.target, () => uninstall(m)) }, "Uninstall")),
+      on ? el("button", { onclick: (e) => busy(e.target, () => verify(m)) }, "Verify") : null),
+    el("td", { class: "enabled-col" }, sw),
+    el("td", { class: "actions" },
+      el("button", { class: "danger", title: "Remove its files and stored copy; restore game files it replaced. A download in Downloads is kept",
+        onclick: (e) => busy(e.target, () => uninstall(m)) }, "Uninstall")),
   );
+}
+
+// ---- thumbnails -------------------------------------------------------------
+// Nexus mod id -> data: URL, or null when the mod page has no picture.
+const thumbs = new Map();
+let thumbsLoading = false;
+
+function modThumb(m) {
+  const src = m.nexus_mod_id && thumbs.get(m.nexus_mod_id);
+  if (src) return el("img", { class: "mod-thumb", src, alt: "" });
+  return el("div", { class: "mod-thumb noimg",
+    title: m.nexus_mod_id ? (thumbs.has(m.nexus_mod_id) ? "No picture on its Nexus page" : "Picture loading") : "No Nexus page: no picture" });
+}
+
+// Fetch the pictures not loaded yet (saved on disk after the first time).
+async function loadThumbs() {
+  const ids = [...new Set(mods.map((m) => m.nexus_mod_id).filter((id) => id && !thumbs.has(id)))];
+  if (!ids.length || thumbsLoading) return;
+  thumbsLoading = true;
+  try {
+    const got = await invoke("mod_thumbnails", { nexusIds: ids });
+    for (const id of ids) thumbs.set(id, got[id] || null);
+  } finally {
+    thumbsLoading = false;
+  }
+  renderMods();
 }
 
 document.querySelectorAll("#tab-mods th.sortable").forEach((th) => th.addEventListener("click", () => {
@@ -639,10 +673,9 @@ $("#mods-bulk-clear").addEventListener("click", () => modSel.clear());
 
 // Add or remove one of the user's tags on every selected mod.
 function renderBulkTags() {
-  const names = modTags.tags.map((t) => t.name);
   for (const [id, label] of [["#mods-bulk-tag-add", "Add tag…"], ["#mods-bulk-tag-remove", "Remove tag…"]]) {
-    $(id).replaceChildren(el("option", { value: "" }, label), ...names.map((n) => el("option", { value: n }, n)));
-    $(id).classList.toggle("hidden", !names.length);
+    $(id).replaceChildren(el("option", { value: "" }, label), ...tagOptions(modTags.tags));
+    $(id).classList.toggle("hidden", !modTags.tags.length);
   }
 }
 for (const [id, add] of [["#mods-bulk-tag-add", true], ["#mods-bulk-tag-remove", false]]) {
@@ -674,12 +707,16 @@ async function checkUpdates(quiet = false) {
   if (currentGame?.id !== gameId) return;
   updatesByMod = new Map(r.updates.map((u) => [u.mod_id, u]));
   lastCheck = r;
+  lastCheckAt = Date.now();
+  lastCheckGame = gameId;
   const note = updatesChanged();
   if ($("#tab-downloads").classList.contains("active")) loadDownloads().catch(() => {});
   if (!quiet) toast([note, ...r.errors.slice(0, 5)].join("\n"), r.errors.length > 0 && !r.updates.length);
 }
 
 let lastCheck = null;
+let lastCheckAt = 0;
+let lastCheckGame = null;
 
 // Redraw what depends on the known updates; returns the summary line.
 function updatesChanged() {
@@ -692,16 +729,32 @@ function updatesChanged() {
   if (lastCheck.errors.length) parts.push(`${lastCheck.errors.length} couldn't be checked`);
   $("#updates-note").textContent = parts.join(" · ");
   $("#updates-note").title = lastCheck.errors.join("\n");
-  $("#update-all").classList.toggle("hidden", n < 2);
-  $("#update-all").textContent = `Update all (${n})`;
+  $("#update-all").textContent = n ? `Update all (${n})` : "Update all";
   renderMods();
   return parts.join(" · ");
 }
 $("#check-updates").addEventListener("click", (e) => busy(e.target, () => checkUpdates()));
-$("#update-all").addEventListener("click", () => busy(null, async () => {
-  enqueue([...updatesByMod.values()].map(updateSeed));
-  $("#update-all").classList.add("hidden");
-}));
+$("#update-all").addEventListener("click", (e) => busy(e.target, () => updateAll()));
+
+// Check (unless just checked), list what would change, then queue it all.
+async function updateAll() {
+  if (!currentGame) throw "Select a game first";
+  if (lastCheckGame !== currentGame.id || Date.now() - lastCheckAt > 10 * 60 * 1000) await checkUpdates(true);
+  const list = sortMods(mods.filter((m) => updatesByMod.has(m.id))).map((m) => [m, updatesByMod.get(m.id)]);
+  if (!list.length) {
+    toast($("#updates-note").textContent || "No updates available");
+    return;
+  }
+  const lines = list.map(([m, u]) => `${m.name}: ${m.version || "?"} → ${u.to_stable ? "stable " : ""}${u.latest}`);
+  const viaWindow = !nexusUser?.is_premium && list.some(([, u]) => u.source === "nexus");
+  const ok = await dialog.ask(`Update ${list.length} mod${list.length === 1 ? "" : "s"}?\n\n${nameList(lines, 20)}\n\n`
+    + "Each update is downloaded and replaces the installed version; its tags are kept. "
+    + (viaWindow ? "Nexus files: free account, one Mod Manager Download click each in the Nexus window. " : "")
+    + "Progress shows in the download queue.",
+  { title: "Update all", kind: "info", okLabel: "Proceed", cancelLabel: "Cancel" });
+  if (!ok) return;
+  enqueue(list.map(([, u]) => updateSeed(u)));
+}
 
 // A queue entry that replaces the installed mod with its update.
 function updateSeed(u) {
@@ -776,8 +829,9 @@ async function uninstall(m) {
   const d = (await keptDownloads([m])).get(m.id);
   const kept = d ? `The download ${d.file_name} is kept: Downloads › Install reinstalls it.`
     : "No download of this archive in Downloads: reinstall with Install from archive… or download it again.";
-  const ok = await dialog.ask(`Uninstall “${m.name}”? Its files are removed and any game files it replaced are restored. Files changed after install (settings) stay in the game.\n\n${kept}`,
-    { title: "Uninstall mod", kind: "warning" });
+  const ok = await dialog.ask(`Uninstall “${m.name}”? Its files and stored copy are removed and any game files it replaced are restored. Files changed after install (settings) stay in the game.\n\n${kept}\n\n`
+    + "To keep the mod installed but out of the game, switch Enabled off instead.",
+  { title: "Uninstall mod", kind: "warning", okLabel: "Uninstall", cancelLabel: "Cancel" });
   if (!ok) return;
   await invoke("uninstall_mod", { modId: m.id });
   toast(d ? `Uninstalled ${m.name}. Download kept: Downloads › Install reinstalls it.` : `Uninstalled ${m.name}`);
@@ -819,6 +873,7 @@ async function runDiagnostics() {
   await loadSetup().catch(() => {});
   window.graphPending();
   window.loadFileTree();
+  window.loadWolvenKit();
   const [analysis, crash] = await Promise.allSettled([
     invoke("analyze_game", { gameId: currentGame.id }),
     invoke("crash_analysis", { gameId: currentGame.id }),
@@ -2912,17 +2967,35 @@ function queueProgress(match, done, total) {
   if (!progressFrame) progressFrame = requestAnimationFrame(() => { progressFrame = 0; renderQueue(); });
 }
 
-// Show or hide the popup at the top. While the page is scrolled, the scroll
-// position absorbs its height, so what's on screen stays where it is.
+// The downloads panel floats at the bottom of the page area. While it is
+// shown, the page gets that much empty space at its end, so nothing stays
+// hidden under it; nothing above moves when it opens, grows or closes.
+function placePopup() {
+  const pop = $("#queue");
+  const main = $("main");
+  const root = document.documentElement.style;
+  if (pop.classList.contains("hidden")) {
+    main.style.paddingBottom = "";
+    root.removeProperty("--popup-h");
+    return;
+  }
+  const r = main.getBoundingClientRect();
+  const pad = parseFloat(getComputedStyle(main).paddingLeft) || 0;
+  pop.style.left = `${r.left + pad}px`;
+  pop.style.width = `${main.clientWidth - 2 * pad}px`;
+  main.style.paddingBottom = `${pop.offsetHeight + 24}px`;
+  // Toasts sit above the panel.
+  root.setProperty("--popup-h", `${pop.offsetHeight + 12}px`);
+}
+const popupObserver = new ResizeObserver(placePopup);
+popupObserver.observe($("main"));
+popupObserver.observe($("#queue"));
+
 function setPopupShown(show) {
   const pop = $("#queue");
   if (pop.classList.contains("hidden") !== show) return;
-  const main = $("main");
-  const ref = document.querySelector("main > .tab.active");
-  const y0 = ref?.getBoundingClientRect().top;
-  const scrolled = main.scrollTop > 0;
   pop.classList.toggle("hidden", !show);
-  if (ref && scrolled) main.scrollTop += ref.getBoundingClientRect().top - y0;
+  placePopup();
 }
 
 // The popup when only single downloads run (no queue).
@@ -3067,7 +3140,7 @@ function downloadMatches(d, q) {
 
 // A file still downloading: a row with its progress bar on top of the list.
 function transferRow(t) {
-  const row = el("tr", { class: "downloading" },
+  const row = el("tr", { class: "downloading", "data-key": `t:${t.key}` },
     el("td", {}),
     el("td", {}, el("b", { class: "transfer-row-name" }, transferName(t)), el("div", { class: "muted mono transfer-row-file" }, t.name ? t.file : "")),
     el("td", { colspan: 8 }, el("div", { class: "progress row-progress" },
@@ -3112,7 +3185,7 @@ function renderDownloads() {
       renderDownloads();
     };
     const channels = ["stable", "beta", "nightly"].filter((c) => entries.some((e) => e.channel === c));
-    rows.push(el("tr", { class: "folder", onclick: (e) => { if (e.target.tagName !== "BUTTON" || e.target.classList.contains("twisty")) toggle(); } },
+    rows.push(el("tr", { class: "folder", "data-key": `g:${g.key}`, onclick: (e) => { if (e.target.tagName !== "BUTTON" || e.target.classList.contains("twisty")) toggle(); } },
       el("td", {}, dlSel.box(entries.map((e) => e.id), `all ${entries.length} versions of ${g.name}`)),
       el("td", {},
         el("button", { class: "twisty", "aria-expanded": String(open), title: open ? "Hide versions" : "Show versions" }, open ? "▾" : "▸"),
@@ -3137,7 +3210,16 @@ function renderDownloads() {
     th.classList.toggle("asc", th.dataset.sort === dlSort.key && dlSort.dir > 0);
     th.classList.toggle("desc", th.dataset.sort === dlSort.key && dlSort.dir < 0);
   });
+  // Rows added or removed above the visible part (a download starting or
+  // finishing) don't move the rows on screen: the first visible row keeps
+  // its place.
+  const main = $("main");
+  const top = main.getBoundingClientRect().top;
+  const anchor = main.scrollTop > 0 ? [...$("#downloads-body").children].find((r) => r.getBoundingClientRect().bottom > top) : null;
+  const before = anchor?.getBoundingClientRect().top;
   $("#downloads-body").replaceChildren(...rows);
+  const again = anchor && rows.find((r) => r.dataset.key === anchor.dataset.key);
+  if (again) main.scrollTop += again.getBoundingClientRect().top - before;
   dlSel.render(shownIds);
 }
 
@@ -3149,7 +3231,7 @@ function downloadRow(d, depth) {
   const m = installedFor(d);
   const up = m && updatesByMod.get(m.id);
   const checked = d.checked || (d.verified ? "MD5 matches Nexus" : "unverified");
-  return el("tr", { class: depth ? "child" : "" },
+  return el("tr", { class: depth ? "child" : "", "data-key": `d:${d.id}` },
     el("td", {}, dlSel.box([d.id], d.file_name)),
     el("td", {}, el("div", { class: depth ? "indent" : "" },
       depth ? null : el("b", {}, d.mod_name || d.file_name),

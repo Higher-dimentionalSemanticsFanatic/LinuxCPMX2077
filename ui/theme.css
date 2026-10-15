@@ -246,3 +246,33 @@ div.mod-card:hover, div.mod-card:focus-visible { --frame: var(--cyan); --fill: r
 #net-browser, #net-address { background: rgba(8, 10, 12, .9); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---- Netrunner › Launch options -------------------------------------------- */
+#launch-line { width: 100%; box-sizing: border-box; resize: vertical; background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 6px 8px; }
+#launch-line:focus { outline: none; border-color: var(--cyan); }
+#launch-parts { position: relative; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 14px 12px; margin: 10px 0 4px; padding: 12px; background: var(--bg); border: 1px solid var(--border); }
+#launch-parts .launch-part {
+  clip-path: none; background: none; border: none; padding: 2px; max-width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text); --stroke: var(--line);
+}
+#launch-parts .launch-part:hover { --stroke: var(--cyan); background: none; }
+#launch-parts .launch-text { color: var(--text); font-size: 13px; text-align: left; overflow-wrap: anywhere; max-width: 100%; }
+#launch-parts .launch-brace { display: block; overflow: visible; }
+#launch-parts .launch-brace path { fill: none; stroke: var(--stroke); stroke-width: 1.5; stroke-linecap: round; }
+#launch-parts .launch-label { font-family: var(--label); font-weight: 600; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; color: var(--cyan); white-space: nowrap; }
+#launch-parts .unknown { --stroke: rgba(143, 176, 171, .45); }
+#launch-parts .unknown .launch-label { color: var(--muted); }
+#launch-parts .warn .launch-label { color: var(--red); }
+#launch-parts .launch-part.selected { --stroke: var(--yellow); }
+#launch-parts .launch-part.selected .launch-text, #launch-parts .launch-part.selected .launch-label { color: var(--yellow); }
+#launch-note { position: relative; margin-top: 10px; padding: 10px 14px; background: var(--panel-2); border: 1px solid var(--line); }
+#launch-note::before { content: ""; position: absolute; top: -7px; left: var(--x, 24px); width: 12px; height: 12px; transform: translateX(-50%) rotate(45deg); background: var(--panel-2); border-left: 1px solid var(--line); border-top: 1px solid var(--line); }
+#launch-note h4 { margin: 0 0 6px; color: var(--yellow); }
+#launch-note h4 .mono { text-transform: none; letter-spacing: 0; font-weight: 400; overflow-wrap: anywhere; }
+#launch-note p { margin: 4px 0; }
+#launch-note .launch-items { margin: 6px 0; border-collapse: collapse; }
+#launch-note .launch-items td { padding: 2px 12px 2px 0; vertical-align: top; }
+#launch-note .launch-items td.mono { white-space: nowrap; color: var(--cyan); }
+#launch-note .launch-warning { color: var(--red); }
+#launch-parts .launch-part:focus-visible { outline-offset: 2px; }
