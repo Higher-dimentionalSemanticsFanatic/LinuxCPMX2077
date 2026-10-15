@@ -74,7 +74,7 @@ function renderPatchNotes(r) {
   const current = r.mods.filter((a) => !a.patches_since.length);
   const warn = r.mods.filter((a) => a.severity === "warning").length;
   const summary = [
-    `${behind.length} of ${r.mods.length} mods last updated before a game patch`,
+    r.mods.length ? `${behind.length} of ${r.mods.length} mods last updated before a game patch` : "no dated mods",
     warn ? `${warn} warning${warn === 1 ? "" : "s"}` : "no warnings",
     r.game_version ? `game ${r.game_version}` : "game version unknown: all patches applied",
   ];
@@ -92,7 +92,9 @@ function renderPatchNotes(r) {
         toast("Last update dates read");
       }) }, "Read release dates")),
     r.errors.length ? el("p", { class: "muted small" }, "Not read: " + r.errors.join("; ")) : null,
-    behind.length ? patchTable(behind) : el("p", { class: "muted" }, "Every dated mod was updated after the newest game patch installed."),
+    behind.length ? patchTable(behind) : el("p", { class: "muted" }, r.mods.length
+      ? "Every dated mod was updated after the newest game patch installed."
+      : "No dated mods: no installed file or release date read yet."),
     current.length ? el("details", {}, el("summary", {}, `Updated after game ${r.game_version || r.newest_patch} (${current.length})`), patchTable(current)) : null,
     r.undated.length ? el("p", { class: "muted small" },
       `Not checked, no file or release date (${r.undated.length}): ${r.undated.join(", ")}`) : null,

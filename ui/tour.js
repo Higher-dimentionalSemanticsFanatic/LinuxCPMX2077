@@ -41,8 +41,8 @@ function tourSteps() {
       target: () => "#sidebar nav",
       body: [
         el("ul", {},
-          el("li", {}, el("b", {}, "Installed mods"), ": enable, disable, update, verify, uninstall; profiles per game version. Sections: ReShade, Ultra+ recommendations, Patch-note check."),
-          el("li", {}, el("b", {}, "Netrunner"), ": setup problems, crashes and logs, file map, graph, compatibility."),
+          el("li", {}, el("b", {}, "Installed mods"), ": enable, disable, update, verify, uninstall; profiles per game version. Sections: Overview, ReShade, OptiScaler FSR4.1.1 Lite, RadioEXT, Ultra+ recommendations, Patch-note check."),
+          el("li", {}, el("b", {}, "Netrunner"), ": setup problems, launch options, crashes and logs, file map, graph, compatibility, WolvenKit."),
           el("li", {}, el("b", {}, "Get mods"), ": Nexus Mods and GitHub. Section Modpacks: Nexus collections, tags, mod list import and export."),
           el("li", {}, el("b", {}, "Downloads"), ": downloaded archives per mod and version; reinstall or switch."),
           el("li", {}, el("b", {}, "Settings"), ": game installs, download location, nxm:// links, terminal.")),
@@ -92,7 +92,7 @@ function tourSteps() {
         "Install from archive… installs a .zip, .7z or .rar from disk. Mods from Get mods are installed on download.",
         "Enabled switch (next to Uninstall): disables a mod without uninstalling it (files leave the game, a checked copy is kept). Uninstall: removes its files and stored copy and restores what they replaced.",
         "Tick the first column to Enable, Disable or Uninstall several mods at once.",
-        "List / Canvas: Canvas shows the mods as tiles, one column per tag, Nexus category, source or state.",
+        "List / Canvas: Canvas shows the mods as tiles, one column per tag, tag group, Nexus category, source or state.",
       ],
     },
     {

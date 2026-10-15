@@ -277,7 +277,7 @@ Above the list:
   new version, and asks **Proceed** or **Cancel**. **Proceed** puts them all
   in the download queue: GitHub files and Nexus files on a Premium account
   download through the API; on a free account the Nexus window steps
-  through the files, one **Mod Manager Download** click each. Each update
+  through the files, one **Slow download** click each. Each update
   replaces the installed version and keeps its tags.
 - **Install from archive…** installs a `.zip`, `.7z` or `.rar` from disk.
 - **Game version and profiles**: one column per game version the app has

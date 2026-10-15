@@ -459,6 +459,11 @@ function sortMods(list) {
 async function loadMods() {
   if (!currentGame) return;
   mods = await invoke("list_mods", { gameId: currentGame.id });
+  // Uninstalled mods leave the update list and the Update all count.
+  const ids = new Set(mods.map((m) => m.id));
+  let pruned = false;
+  for (const id of [...updatesByMod.keys()]) if (!ids.has(id)) pruned = updatesByMod.delete(id) || pruned;
+  if (pruned) updatesChanged();
   // Tags and dependencies (modpacks.js).
   await loadModExtras().catch((e) => toast(String(e), true));
   await loadVersionRibbon().catch(() => {});
@@ -749,7 +754,7 @@ async function updateAll() {
   const viaWindow = !nexusUser?.is_premium && list.some(([, u]) => u.source === "nexus");
   const ok = await dialog.ask(`Update ${list.length} mod${list.length === 1 ? "" : "s"}?\n\n${nameList(lines, 20)}\n\n`
     + "Each update is downloaded and replaces the installed version; its tags are kept. "
-    + (viaWindow ? "Nexus files: free account, one Mod Manager Download click each in the Nexus window. " : "")
+    + (viaWindow ? "Nexus files: free account, one “Slow download” click each in the Nexus window. " : "")
     + "Progress shows in the download queue.",
   { title: "Update all", kind: "info", okLabel: "Proceed", cancelLabel: "Cancel" });
   if (!ok) return;
@@ -3192,7 +3197,7 @@ function renderDownloads() {
         el("span", { class: "folder-icon", "aria-hidden": "true" }, "📁"),
         el("b", {}, g.name),
         el("span", { class: "muted small" }, ` · ${entries.length} versions`),
-        installedEntry ? el("span", { class: "badge ok" }, `${installedEntry.version || "one"} installed`) : null),
+        installedEntry ? el("span", { class: "badge ok" }, `${installedEntry.version || "one"} ${installedFor(installedEntry).status === "installed" ? "installed" : "installed, off"}`) : null),
       el("td", {}, newest.version || "—", " ", newest.channel === "stable" ? null : channelBadge(newest.channel),
         channels.length > 1 ? el("div", { class: "muted small" }, channels.join(", ")) : null),
       el("td", {}, [...new Set(entries.map((e) => e.game_version).filter(Boolean))].join(", ") || "—"),
