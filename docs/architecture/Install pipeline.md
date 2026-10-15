@@ -62,7 +62,7 @@ flowchart TD
 - The toast built in `app.js` (after `install_archive` / `finish_install`):
   `Installed <name>: N files (<layout>)`, replaced version, overridden mods,
   backed-up game files, and the **first five** skipped files.
-- Every step also lands in the debug terminal through `core::activity`
+- Every step also lands in the terminal through `core::activity`
   (Hashed, Extracting, Copied, Saved the original, Installed … layout).
 - The layout name (`game-root`, `redmod`, `cet-mod`, `radioext-station`, `reshade`, `loose`,
   `engine-config`, `fomod`) is the quickest clue when a mod lands in the wrong

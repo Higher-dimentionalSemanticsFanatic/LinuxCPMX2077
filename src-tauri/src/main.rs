@@ -989,11 +989,11 @@ async fn open_debug_terminal(app: AppHandle) -> Result<()> {
         return Ok(());
     }
     let window = tauri::WebviewWindowBuilder::new(&app, DEBUG_WINDOW, tauri::WebviewUrl::App("debug.html".into()))
-        .title("CPMX2077 debug terminal")
+        .title("CPMX2077 terminal")
         .inner_size(1000.0, 620.0)
         .min_inner_size(520.0, 300.0)
         .build()
-        .map_err(|e| Error::Other(format!("could not open the debug terminal: {e}")))?;
+        .map_err(|e| Error::Other(format!("could not open the terminal: {e}")))?;
     let _ = window.set_focus();
     Ok(())
 }
