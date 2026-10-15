@@ -842,6 +842,49 @@ async fn uninstall_mod(app: AppHandle, mod_id: i64) -> Result<()> {
     .await
 }
 
+/// Mods in the game folder that CPMX2077 didn't install.
+#[tauri::command]
+async fn untracked_mods(app: AppHandle, game_id: i64) -> Result<Vec<cp2077mm_core::untracked::Unit>> {
+    blocking(move || {
+        let state = app.state::<AppState>();
+        let db = state.db.lock().unwrap();
+        cp2077mm_core::untracked::scan(&db, &db.game(game_id)?)
+    })
+    .await
+}
+
+/// Start tracking untracked mods (by `Unit::key`). Returns the new mod ids;
+/// stops at the first failure.
+#[tauri::command]
+async fn adopt_mods(app: AppHandle, game_id: i64, keys: Vec<String>) -> Result<Vec<i64>> {
+    blocking(move || {
+        let state = app.state::<AppState>();
+        let db = state.db.lock().unwrap();
+        let game = db.game(game_id)?;
+        with_installer(&db, |i| keys.iter().map(|k| cp2077mm_core::untracked::adopt(i, &game, k)).collect())
+    })
+    .await
+}
+
+/// Folder holding the stored copies of installed mods, for the explainer.
+#[tauri::command]
+fn stored_copies_dir() -> Result<String> {
+    Ok(paths::staging_dir()?.to_string_lossy().into_owned())
+}
+
+/// Open the folder holding a mod's stored copy.
+#[tauri::command]
+async fn open_stored_copy(mod_id: i64) -> Result<()> {
+    blocking(move || {
+        let dir = paths::staging_dir()?.join(mod_id.to_string());
+        if !dir.is_dir() {
+            return Err(Error::Other(format!("no stored copy at {}", dir.display())));
+        }
+        desktop::open_folder(&dir)
+    })
+    .await
+}
+
 /// Returns files left in the game because they changed after install.
 #[tauri::command]
 async fn disable_mod(app: AppHandle, mod_id: i64) -> Result<Vec<String>> {
@@ -1726,6 +1769,10 @@ fn main() {
             finish_install,
             cancel_install,
             uninstall_mod,
+            untracked_mods,
+            adopt_mods,
+            open_stored_copy,
+            stored_copies_dir,
             disable_mod,
             enable_mod,
             analyze_game,

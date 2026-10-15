@@ -943,6 +943,7 @@ pub fn report_for_game(db: &crate::db::Db, staging_root: &Path, game: &crate::db
         }
         indexes.push((m.id, m.name, touches));
     }
+    indexes.extend(untracked_indexes(db, game)?);
     Ok(build_report(game_dir, &base, &indexes, &fw_mods))
 }
 
@@ -962,7 +963,19 @@ pub fn report_from_index(db: &crate::db::Db, game: &crate::db::GameRow) -> Resul
         }
         indexes.push((m.id, m.name.clone(), db.touches(m.id)?));
     }
+    indexes.extend(untracked_indexes(db, game)?);
     Ok((build_report(Path::new(&game.path), &base, &indexes, &fw_mods), unindexed))
+}
+
+/// Mods in the game folder CPMX2077 didn't install (see `untracked`),
+/// scanned in place. They get negative ids, which match no installed mod.
+pub fn untracked_indexes(db: &crate::db::Db, game: &crate::db::GameRow) -> Result<Vec<(i64, String, Vec<Touch>)>> {
+    let game_dir = Path::new(&game.path);
+    Ok(crate::untracked::scan(db, game)?
+        .iter()
+        .enumerate()
+        .map(|(i, u)| (-(i as i64) - 1, crate::untracked::report_name(u), crate::untracked::touches(game_dir, u)))
+        .collect())
 }
 
 fn build_key(game: &crate::db::GameRow) -> String {
@@ -1008,7 +1021,7 @@ pub fn merge_framework_nodes(g: &mut Graph, fw_mods: &[(i64, &str)]) {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     #[test]
@@ -1026,11 +1039,8 @@ mod tests {
         assert_eq!(depot_hash("Base/Characters/x.mesh"), fnv1a64("base\\characters\\x.mesh"));
     }
 
-    #[test]
-    fn reads_rdar_index() {
-        let tmp = tempfile::tempdir().unwrap();
-        let p = tmp.path().join("t.archive");
-        let hashes = [depot_hash("base\\a.mesh"), depot_hash("base\\b.xbm")];
+    /// A minimal `.archive` holding `hashes`.
+    pub(crate) fn rdar_bytes(hashes: &[u64]) -> Vec<u8> {
         let index_pos = 40u64;
         let index_size = 28 + 56 * hashes.len() as u32;
         let mut buf = Vec::new();
@@ -1052,6 +1062,15 @@ mod tests {
             buf.extend(h.to_le_bytes());
             buf.extend([0u8; 48]);
         }
+        buf
+    }
+
+    #[test]
+    fn reads_rdar_index() {
+        let tmp = tempfile::tempdir().unwrap();
+        let p = tmp.path().join("t.archive");
+        let hashes = [depot_hash("base\\a.mesh"), depot_hash("base\\b.xbm")];
+        let buf = rdar_bytes(&hashes);
         std::fs::write(&p, &buf).unwrap();
         assert_eq!(archive_hashes(&p).unwrap(), hashes.to_vec());
 

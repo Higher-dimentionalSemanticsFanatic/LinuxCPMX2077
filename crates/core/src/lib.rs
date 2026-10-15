@@ -45,6 +45,7 @@ pub mod tag_set;
 mod testutil;
 pub mod thumbnails;
 pub mod ultraplus;
+pub mod untracked;
 pub mod updates;
 pub mod vdf;
 pub mod winsys;

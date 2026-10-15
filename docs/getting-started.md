@@ -69,6 +69,14 @@ The **First setup** checklist at the top of **Installed mods** lists the
 next steps (frameworks, Linux setup, Nexus account), each with its button,
 and ticks them off as you go.
 
+**Already have mods in the game folder?** Mods you copied in by hand or
+installed with another manager are listed under **Not installed by
+CPMX2077** below the mod list. They are already included in the
+compatibility check. Click **Adopt** (or **Adopt all**) to let CPMX2077
+track them, so you can switch them off with **Enabled**, verify and
+uninstall them like mods it installed. Adopting doesn't change the game
+folder.
+
 ## 3. Install the core frameworks
 
 Most mods need some of the frameworks, so install them first.

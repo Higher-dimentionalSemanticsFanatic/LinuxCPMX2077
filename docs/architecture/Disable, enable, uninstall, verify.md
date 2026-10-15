@@ -38,6 +38,31 @@ flowchart TD
 Uninstall leaves files that changed after install in the game folder and
 then forgets them, because the mod row is deleted. See [[Known gaps]].
 
+## Adopting untracked mods
+
+`untracked::scan` lists mods in the game folder with no `mod_files` row
+(command `untracked_mods`, section *Not installed by CPMX2077* in
+`app.js`). Units: each `archive/pc/mod/*.archive` with `<stem>.xl` /
+`<name>.archive.xl`, leftover `.xl` files alone, and one per entry under
+`mods/`, CET `mods/`, `red4ext/plugins/` (minus ArchiveXL, TweakXL,
+Codeware), `r6/scripts/`, `r6/tweaks/`. `.log` and `.disabled` files are
+ignored; a folder unit holding any tracked file is skipped (it is a tracked
+mod's runtime files). Symlinks are not followed.
+
+`untracked::adopt` (command `adopt_mods`) re-scans, finds the unit by key,
+inserts a `mods` row with source `adopted` and `archive_name` = the unit's
+path, copies each file to `staging/MOD_ID/<rel_path>`, records its SHA-256
+in `mod_files` and dates `installed_at` by the newest file. Nothing is
+deployed and no backups are made, since the files are already in place.
+From then on Disable / Enable / Uninstall / Verify above apply unchanged.
+On failure the row and staging folder are removed.
+
+Unadopted units still feed the analysis: `analysis::untracked_indexes`
+scans them in place (archive scans cached by path, size and mtime) and adds
+them to `report_for_game` / `report_from_index` with negative ids and the
+name suffix *(untracked)*; `file_tree::build` adds their resource touches to
+the wins/loses counts.
+
 ## Mod profiles
 
 `profiles::apply` (command `apply_profile`, card in `ui/profiles.js`) runs
