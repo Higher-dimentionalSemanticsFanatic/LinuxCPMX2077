@@ -208,6 +208,50 @@ fn list_mods(state: State<'_, AppState>, game_id: i64) -> Result<Vec<ModRow>> {
     state.db.lock().unwrap().mods(game_id)
 }
 
+/// Thumbnails for the mod list, as data: URLs keyed by Nexus mod id (`None`:
+/// no picture). Picture URLs come from Nexus in batches and are kept in the
+/// db; images are saved once in `paths::thumbnails_dir()`.
+#[tauri::command]
+async fn mod_thumbnails(app: AppHandle, nexus_ids: Vec<i64>) -> Result<HashMap<i64, Option<String>>> {
+    use base64::Engine;
+    use cp2077mm_core::thumbnails;
+    blocking(move || {
+        let now = thumbnails::now();
+        let stale = thumbnails::stale_ids(&app.state::<AppState>().db.lock().unwrap(), &nexus_ids, now)?;
+        // Without a Nexus key the saved pictures still show.
+        if !stale.is_empty()
+            && let Ok(c) = nexus_client()
+        {
+            match c.pictures(&stale) {
+                Ok(got) => thumbnails::store_urls(&app.state::<AppState>().db.lock().unwrap(), &stale, &got, now)?,
+                Err(e) => log::warn!("mod pictures: {e}"),
+            }
+        }
+        let urls = thumbnails::urls(&app.state::<AppState>().db.lock().unwrap(), &nexus_ids)?;
+        let dir = paths::thumbnails_dir()?;
+        let encode = |(mime, bytes): (&str, Vec<u8>)| format!("data:{mime};base64,{}", base64::engine::general_purpose::STANDARD.encode(bytes));
+        let one = |(id, url): &(i64, Option<String>)| {
+            let img = url.as_deref().and_then(|u| {
+                let path = thumbnails::cache_path(&dir, *id, u);
+                thumbnails::read_cached(&path).or_else(|| {
+                    thumbnails::fetch(u, &path).map_err(|e| log::warn!("mod picture {id}: {e}")).ok()
+                })
+            });
+            (*id, img.map(encode))
+        };
+        // A few at a time: the first load fetches every picture.
+        let mut out = HashMap::new();
+        for chunk in urls.chunks(6) {
+            std::thread::scope(|s| {
+                let handles: Vec<_> = chunk.iter().map(|u| s.spawn(move || one(u))).collect();
+                out.extend(handles.into_iter().filter_map(|h| h.join().ok()));
+            });
+        }
+        Ok(out)
+    })
+    .await
+}
+
 #[tauri::command]
 fn list_downloads(state: State<'_, AppState>) -> Result<Vec<DownloadRow>> {
     state.db.lock().unwrap().downloads()
@@ -1632,6 +1676,7 @@ fn main() {
             redmod_state,
             set_redmod,
             list_mods,
+            mod_thumbnails,
             list_downloads,
             list_download_groups,
             downloads_location,

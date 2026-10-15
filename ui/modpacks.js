@@ -139,7 +139,7 @@ function deficitRows() {
     const cls = `deficit ${optional ? "rec" : "dep"}`;
     return [
       el("tr", { class: `${cls} deficit-head` }, el("td", { colspan: 2 }),
-        el("td", { colspan: 7 }, el("b", {}, `${optional ? "Missing recommendations" : "Missing dependencies"} (${list.length})`),
+        el("td", { colspan: 9 }, el("b", {}, `${optional ? "Missing recommendations" : "Missing dependencies"} (${list.length})`),
           el("span", { class: "muted small" }, " · sorted by how many installed mods list each one"))),
       ...list.map(({ dep, by }) => el("tr", { class: cls },
         el("td", { colspan: 2, class: "deficit-count", title: plural(by.length, "installed mod") }, String(by.length)),
@@ -147,7 +147,7 @@ function deficitRows() {
           el("span", { class: "dep-name" }, dep.dlc ? `${dep.name} (expansion)` : dep.name), " ",
           el("span", { class: "badge bad" }, "missing"), " ",
           el("span", { class: "muted small" }, `${optional ? "recommended" : "needed"} by ${names(by).join(", ")}`)),
-        el("td", { class: "actions" }, dependencyAction(dep)))),
+        el("td", { colspan: 3, class: "actions" }, dependencyAction(dep)))),
     ];
   });
 }
@@ -172,7 +172,7 @@ function dependencyRows(m) {
     if (!ids.length) return;
     const names = ids.map((id) => mods.find((x) => x.id === id)?.name).filter(Boolean);
     rows.push(el("tr", { class: `${optional ? "rec" : "dep"}${off}` }, el("td", { colspan: 2 }),
-      el("td", { colspan: 7, class: "muted small" }, `↰ ${optional ? "Recommended" : "Needed"} by ${names.join(", ")}`)));
+      el("td", { colspan: 9, class: "muted small" }, `↰ ${optional ? "Recommended" : "Needed"} by ${names.join(", ")}`)));
   };
   if (depsOn.deps) byLine(d.required_by, false);
   if (depsOn.recs) byLine(d.recommended_by || [], true);
@@ -190,10 +190,10 @@ function dependencyRows(m) {
         el("span", { class: `badge ${cls}` }, label), " ",
         el("span", { class: "muted small" }, why),
         dep.notes ? el("div", { class: "muted small dep-note" }, `Author's note: ${dep.notes}`) : null),
-      el("td", { class: "actions" }, dependencyAction(dep))));
+      el("td", { colspan: 3, class: "actions" }, dependencyAction(dep))));
   }
   if (depsOn.deps && !d.deps.length && !d.required_by.length) {
-    rows.push(el("tr", { class: `dep${off}` }, el("td", { colspan: 2 }), el("td", { colspan: 7, class: "muted small" }, m.nexus_mod_id
+    rows.push(el("tr", { class: `dep${off}` }, el("td", { colspan: 2 }), el("td", { colspan: 9, class: "muted small" }, m.nexus_mod_id
       ? "↳ No requirements listed on its Nexus page; no framework use found in its files"
       : "↳ No Nexus page to read requirements from; no framework use found in its files")));
   }

@@ -234,6 +234,14 @@ input.switch:checked { border-color: var(--yellow); background: rgba(246, 207, 6
 input.switch:checked::before { transform: translateX(14px); background: var(--yellow); }
 input.switch:disabled { opacity: .5; cursor: progress; }
 input.switch:focus-visible { outline: 1px solid var(--yellow); outline-offset: 2px; }
+/* Installed mods: thumbnail column, Enabled next to Uninstall. */
+.thumb-col { width: 72px; padding-right: 0; }
+.mod-thumb { display: block; width: 72px; height: 40px; object-fit: cover; border: 1px solid var(--border); }
+tr.off .mod-thumb { opacity: .45; }
+th.enabled-col, td.enabled-col { text-align: center; white-space: nowrap; }
+th.enabled-col { cursor: help; }
+.help-mark { display: inline-block; width: 14px; height: 14px; line-height: 14px; border: 1px solid currentColor;
+  border-radius: 50%; font-size: 10px; text-align: center; opacity: .7; }
 th.pick-col { width: 1%; }
 input.pick { cursor: pointer; }
 .bulk-bar {

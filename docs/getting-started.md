@@ -183,8 +183,8 @@ sidebar. **Pop out** moves it to its own window.
 
 ## Next steps
 
-- Turn mods off and on with the switch in the **On** column instead of
-  uninstalling them.
+- Turn mods off and on with the switch in the **Enabled** column (next to
+  **Uninstall**) instead of uninstalling them.
 - Click **Check for updates** in **Installed mods** now and then (it also
   runs at start-up).
 - After a game update, open **Patch-note check** under **Installed

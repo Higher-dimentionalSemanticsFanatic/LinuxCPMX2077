@@ -88,7 +88,7 @@
         <div class="row mods-sub" data-sub="list">
           <label class="check"><input type="checkbox" id="overwrite"> Allow overwriting other mods</label>
           <button id="check-updates">Check for updates</button>
-          <button id="update-all" class="update hidden">Update all</button>
+          <button id="update-all" title="Check every mod from Nexus or GitHub for a newer file, list them, then download and install the updates after confirmation">Update all</button>
           <button id="install-file" class="primary">Install from archive…</button>
         </div>
       </header>
@@ -129,12 +129,14 @@
       <table>
         <thead><tr>
           <th class="pick-col"><input type="checkbox" id="mods-select-all" class="pick" aria-label="Select all shown mods" title="Select all shown mods"></th>
-          <th title="Enabled: files are in the game. Disabled: files are taken out, the mod stays installed">On</th>
+          <th class="thumb-col"></th>
           <th class="sortable" data-sort="name">Name</th>
           <th class="sortable" data-sort="category" title="Your tags, with the Nexus category under them">Tags &amp; category</th>
           <th class="sortable" data-sort="version">Mod version</th>
           <th class="sortable" data-sort="source">Source</th>
           <th>Files</th><th>Installed on game</th><th></th>
+          <th class="enabled-col" title="Enabled: the mod's files are in the game folder and load.&#10;Disabled: its files are moved out of the game folder. The mod stays installed and tracked, its stored copy is kept; enable it again to put the files back.&#10;Uninstall: removes its files, stored copy and record, and restores game files it replaced. The archive stays in Downloads for reinstalling.">Enabled <span class="help-mark" aria-hidden="true">?</span></th>
+          <th></th>
         </tr></thead>
         <tbody id="mods-body"></tbody>
       </table>

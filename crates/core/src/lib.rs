@@ -40,6 +40,7 @@ pub mod sso;
 pub mod startup;
 #[cfg(test)]
 mod testutil;
+pub mod thumbnails;
 pub mod ultraplus;
 pub mod updates;
 pub mod vdf;

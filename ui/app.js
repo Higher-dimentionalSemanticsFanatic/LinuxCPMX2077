@@ -461,6 +461,7 @@ async function loadMods() {
   await loadModExtras().catch((e) => toast(String(e), true));
   await loadVersionRibbon().catch(() => {});
   renderMods();
+  loadThumbs().catch(() => {});
   showLoadout().catch(() => {});
   loadProfiles().catch((e) => toast(String(e), true));
   loadUltraPlus().catch(() => {});
@@ -532,12 +533,14 @@ function modRow(m) {
   const stale = m.game_build_id && currentGame.install.build_id && m.game_build_id !== currentGame.install.build_id;
   const on = m.status === "installed";
   const up = updatesByMod.get(m.id);
-  const sw = el("input", { type: "checkbox", class: "switch", title: on ? "Enabled: click to take its files out of the game" : "Disabled: click to put its files back" });
+  const sw = el("input", { type: "checkbox", class: "switch", "aria-label": `${m.name} enabled`,
+    title: on ? "Enabled: files are in the game folder. Click to disable: files move out of the game, the mod stays installed"
+      : "Disabled: files are out of the game folder, the mod stays installed. Click to enable: files go back in" });
   sw.checked = on;
   sw.addEventListener("change", () => busy(sw, () => setEnabled(m, sw.checked)).finally(loadMods));
   return el("tr", { class: on ? "" : "off" },
     el("td", {}, modSel.box([m.id], m.name)),
-    el("td", {}, sw),
+    el("td", { class: "thumb-col" }, modThumb(m)),
     el("td", {}, el("b", {}, m.name), on ? null : el("span", { class: "badge" }, "disabled"),
       el("div", { class: "muted mono" }, m.archive_name)),
     el("td", {}, tagEditor(m), el("div", { class: "muted small" }, m.category || "")),
@@ -554,9 +557,38 @@ function modRow(m) {
         onclick: (e) => busy(e.target, () => applyUpdate(up)),
       }, up.to_stable ? `Switch to stable ${up.latest}` : `Update to ${up.latest}`) : null, " ",
       modPageButton(m), " ",
-      on ? el("button", { onclick: (e) => busy(e.target, () => verify(m)) }, "Verify") : null, " ",
-      el("button", { class: "danger", onclick: (e) => busy(e.target, () => uninstall(m)) }, "Uninstall")),
+      on ? el("button", { onclick: (e) => busy(e.target, () => verify(m)) }, "Verify") : null),
+    el("td", { class: "enabled-col" }, sw),
+    el("td", { class: "actions" },
+      el("button", { class: "danger", title: "Remove its files, stored copy and record; restore game files it replaced. The archive stays in Downloads",
+        onclick: (e) => busy(e.target, () => uninstall(m)) }, "Uninstall")),
   );
+}
+
+// ---- thumbnails -------------------------------------------------------------
+// Nexus mod id -> data: URL, or null when the mod page has no picture.
+const thumbs = new Map();
+let thumbsLoading = false;
+
+function modThumb(m) {
+  const src = m.nexus_mod_id && thumbs.get(m.nexus_mod_id);
+  if (src) return el("img", { class: "mod-thumb", src, alt: "" });
+  return el("div", { class: "mod-thumb noimg",
+    title: m.nexus_mod_id ? (thumbs.has(m.nexus_mod_id) ? "No picture on its Nexus page" : "Picture loading") : "No Nexus page: no picture" });
+}
+
+// Fetch the pictures not loaded yet (saved on disk after the first time).
+async function loadThumbs() {
+  const ids = [...new Set(mods.map((m) => m.nexus_mod_id).filter((id) => id && !thumbs.has(id)))];
+  if (!ids.length || thumbsLoading) return;
+  thumbsLoading = true;
+  try {
+    const got = await invoke("mod_thumbnails", { nexusIds: ids });
+    for (const id of ids) thumbs.set(id, got[id] || null);
+  } finally {
+    thumbsLoading = false;
+  }
+  renderMods();
 }
 
 document.querySelectorAll("#tab-mods th.sortable").forEach((th) => th.addEventListener("click", () => {
@@ -670,12 +702,16 @@ async function checkUpdates(quiet = false) {
   if (currentGame?.id !== gameId) return;
   updatesByMod = new Map(r.updates.map((u) => [u.mod_id, u]));
   lastCheck = r;
+  lastCheckAt = Date.now();
+  lastCheckGame = gameId;
   const note = updatesChanged();
   if ($("#tab-downloads").classList.contains("active")) loadDownloads().catch(() => {});
   if (!quiet) toast([note, ...r.errors.slice(0, 5)].join("\n"), r.errors.length > 0 && !r.updates.length);
 }
 
 let lastCheck = null;
+let lastCheckAt = 0;
+let lastCheckGame = null;
 
 // Redraw what depends on the known updates; returns the summary line.
 function updatesChanged() {
@@ -688,16 +724,32 @@ function updatesChanged() {
   if (lastCheck.errors.length) parts.push(`${lastCheck.errors.length} couldn't be checked`);
   $("#updates-note").textContent = parts.join(" · ");
   $("#updates-note").title = lastCheck.errors.join("\n");
-  $("#update-all").classList.toggle("hidden", n < 2);
-  $("#update-all").textContent = `Update all (${n})`;
+  $("#update-all").textContent = n ? `Update all (${n})` : "Update all";
   renderMods();
   return parts.join(" · ");
 }
 $("#check-updates").addEventListener("click", (e) => busy(e.target, () => checkUpdates()));
-$("#update-all").addEventListener("click", () => busy(null, async () => {
-  enqueue([...updatesByMod.values()].map(updateSeed));
-  $("#update-all").classList.add("hidden");
-}));
+$("#update-all").addEventListener("click", (e) => busy(e.target, () => updateAll()));
+
+// Check (unless just checked), list what would change, then queue it all.
+async function updateAll() {
+  if (!currentGame) throw "Select a game first";
+  if (lastCheckGame !== currentGame.id || Date.now() - lastCheckAt > 10 * 60 * 1000) await checkUpdates(true);
+  const list = sortMods(mods.filter((m) => updatesByMod.has(m.id))).map((m) => [m, updatesByMod.get(m.id)]);
+  if (!list.length) {
+    toast($("#updates-note").textContent || "No updates available");
+    return;
+  }
+  const lines = list.map(([m, u]) => `${m.name}: ${m.version || "?"} → ${u.to_stable ? "stable " : ""}${u.latest}`);
+  const viaWindow = !nexusUser?.is_premium && list.some(([, u]) => u.source === "nexus");
+  const ok = await dialog.ask(`Update ${list.length} mod${list.length === 1 ? "" : "s"}?\n\n${nameList(lines, 20)}\n\n`
+    + "Each update is downloaded and replaces the installed version; its tags are kept. "
+    + (viaWindow ? "Nexus files: free account, one Mod Manager Download click each in the Nexus window. " : "")
+    + "Progress shows in the download queue.",
+  { title: "Update all", kind: "info", okLabel: "Proceed", cancelLabel: "Cancel" });
+  if (!ok) return;
+  enqueue(list.map(([, u]) => updateSeed(u)));
+}
 
 // A queue entry that replaces the installed mod with its update.
 function updateSeed(u) {
@@ -762,8 +814,9 @@ async function verify(m) {
 }
 
 async function uninstall(m) {
-  const ok = await dialog.ask(`Uninstall “${m.name}”? Its files are removed and any game files it replaced are restored. Files changed after install (settings) stay in the game.`,
-    { title: "Uninstall mod", kind: "warning" });
+  const ok = await dialog.ask(`Uninstall “${m.name}”? Its files, stored copy and record are removed and any game files it replaced are restored. Files changed after install (settings) stay in the game. The archive stays in Downloads.\n\n`
+    + "To keep the mod installed but out of the game, switch Enabled off instead.",
+  { title: "Uninstall mod", kind: "warning", okLabel: "Uninstall", cancelLabel: "Cancel" });
   if (!ok) return;
   await invoke("uninstall_mod", { modId: m.id });
   toast(`Uninstalled ${m.name}`);

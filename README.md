@@ -260,7 +260,10 @@ Screenshots show sample data, with file locations blurred.
   and sorting by any column. “Check for updates” (also run at start-up) asks
   Nexus and GitHub for newer files; outdated mods get an Update button in the
   Installed and Downloads tabs, and an update replaces the old version in
-  place.
+  place. “Update all” lists every pending update and asks before queueing
+  them.
+- **Mod list**: each Installed mod shows its Nexus thumbnail (saved locally
+  after the first load) and an Enabled switch next to Uninstall.
 - **API quota**: the app reads Nexus' `X-RL-*` rate-limit headers, shows how
   many requests are left, stops sending when Nexus says the quota is used up
   (or returns 429) until it resets, and pauses browsing when fewer than 25

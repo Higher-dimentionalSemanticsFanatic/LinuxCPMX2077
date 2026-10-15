@@ -205,17 +205,19 @@ removes it; the same buttons stay in the Game panel and Get mods.
 | Column / control | What it does |
 |---|---|
 | Selection box (first column) | Selects the mod for the actions in the selection bar. It changes nothing on its own; see *Selecting several mods* below. |
-| **On** switch | The slider. Turns a mod off without uninstalling it: its files leave the game, whatever they replaced comes back, and a checked copy is kept. Turning it on puts them back without a download. Files the mod changed after install (its own settings) are kept. Disabled mods are left out of compatibility and crash checks. |
+| Picture | The mod's thumbnail from its Nexus page, fetched once and saved in `~/.cache/cp2077-modmanager/thumbnails/` (Windows: `%LOCALAPPDATA%\cp2077-modmanager\thumbnails`), so the list shows it offline. Needs a connected Nexus account the first time; a plain box stands in for mods without a Nexus page or picture. The picture URL is checked against Nexus again after 30 days. |
 | **Name / Tags & category / Mod version / Source** | Click a heading to sort (*Tags & category* sorts by a mod's first tag, then its Nexus category). **Mod version** is the mod's own version (the game version is under **Installed on game**). A mod's tags show as chips: **+ Tag** (or **+** once it has one) adds one of your tags (see [Modpacks](#modpacks)), **×** on a chip takes it off. A mod can have any number of tags. The Nexus category is shown under them. |
 | **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since: red when an update or the patch-note check names the mod, plain when neither does (hover for both builds). A second badge comes from the [patch-note check](#patch-note-check): *predates game 2.31* (a core framework older than a game patch), *before game 2.0* (released before a patch that reworked the systems mods build on), *in base game 2.1?* (a patch added what the mod does), *unlisted on Nexus*. Hover it for the details. |
 | **Update to …** | Appears when a newer file is available. *Switch to stable …* appears when you run a pre-release and a stable release is out. |
 | **Mod page** | Opens the mod's page in **Get mods** (description, files, requirements), for mods from Nexus or GitHub. From there **Open on nexusmods.com** opens the website. Not shown for mods installed from an archive on disk. |
 | **Verify** | Re-hashes the mod's files and reports missing, edited or overridden ones. |
-| **Uninstall** | Removes the mod and its stored copy and restores what it replaced. Files changed after install (the mod's own settings) stay in the game and are no longer tracked. |
+| **Enabled** switch | The slider next to **Uninstall**. Off disables a mod without uninstalling it: its files leave the game, whatever they replaced comes back, and a checked copy is kept. On puts them back without a download. Files the mod changed after install (its own settings) are kept. Disabled mods are left out of compatibility and crash checks. Hover the **Enabled** heading for the difference to **Uninstall**. |
+| **Uninstall** | Removes the mod and its stored copy and restores what it replaced. Files changed after install (the mod's own settings) stay in the game and are no longer tracked. The downloaded archive stays in **Downloads**, so the mod can be installed again from there. |
 
-**On** vs **Uninstall**: switching a mod off keeps it in the list with a
-stored copy, so it can come back without a download. **Uninstall** deletes
-the stored copy and removes the mod from the list.
+**Enabled** vs **Uninstall**: switching **Enabled** off keeps the mod in the
+list with a stored copy, so it can come back without a download.
+**Uninstall** deletes the stored copy and removes the mod from the list; the
+confirmation says so and points at **Enabled** for keeping it.
 
 ### Selecting several mods
 
@@ -225,7 +227,7 @@ the stored copy and removes the mod from the list.
 - With at least one mod selected, a bar above the list shows the count and:
   - **Enable**: switches the selected disabled mods on. A mod whose files
     conflict with an enabled mod is left off and named in the report; switch
-    it on with its own **On** switch to choose which mod's files win.
+    it on with its own **Enabled** switch to choose which mod's files win.
   - **Disable**: switches the selected enabled mods off.
   - **Add tag…** / **Remove tag…**: puts one of your tags on every selected
     mod, or takes it off (shown once you have tags).
@@ -242,7 +244,13 @@ Above the list:
   belong to another mod. Uninstalling the winner later restores the loser's
   copy.
 - **Check for updates** asks Nexus and GitHub for newer files (also runs at
-  start-up). **Update all** queues every available update.
+  start-up). **Update all** checks first (unless a check ran in the last
+  10 minutes), then lists every mod with a newer file, current version →
+  new version, and asks **Proceed** or **Cancel**. **Proceed** puts them all
+  in the download queue: GitHub files and Nexus files on a Premium account
+  download through the API; on a free account the Nexus window steps
+  through the files, one **Mod Manager Download** click each. Each update
+  replaces the installed version and keeps its tags.
 - **Install from archive…** installs a `.zip`, `.7z` or `.rar` from disk.
 - **Game version and profiles**: one column per game version the app has
   seen, oldest on the left, with that version's mod profiles (named lists
@@ -413,7 +421,7 @@ installed*. Click the heading to open or fold the card.
   ReShade at `bin/x64/reshade-shaders/` for effects and textures. An existing
   `ReShade.ini` is left alone.
 - ReShade is listed in the mod table like any mod (source *reshade.me*), so
-  the **On** switch, **Verify**, **Uninstall** and the File map work on it.
+  the **Enabled** switch, **Verify**, **Uninstall** and the File map work on it.
   The card has **Disable**/**Enable** and **Uninstall** too.
 - **Check for updates** reads the newest version from reshade.me and the
   newest commit of each installed shader pack. When ReShade is newer,
@@ -572,7 +580,7 @@ Buttons per station:
   station made here: from then on it is tracked like any mod.
 - **Open folder** opens the station's folder.
 - **Disable** / **Enable** and **Delete** (stations made here): the same
-  as the mod list's **On** switch and **Uninstall**.
+  as the mod list's **Enabled** switch and **Uninstall**.
 
 Stations installed with another mod aren't edited here; change them through
 that mod. Archives of radioExt stations from Nexus install like any other
@@ -1188,6 +1196,7 @@ logs are only readable from a fixed list of known locations.
 | AMD's FSR 4.1.1 upscaler DLL (OptiScaler archives are deleted after install) | `~/.local/share/cp2077-modmanager/optiscaler/` |
 | FSR 4 shader overrides | `~/.local/share/cp2077-modmanager/fsr4-shader-overrides/` (`prebuilt/`, `prebuilt-lossy/`) |
 | Saved Nexus pages | `~/.cache/cp2077-modmanager/nexus/` |
+| Mod thumbnails | `~/.cache/cp2077-modmanager/thumbnails/` |
 | Refreshed Ultra+ recommendations | In the library database (settings) |
 | Release dates for the patch-note check | In the library database (`release_dates`) |
 | Nexus API key | System keyring (Secret Service) only |
@@ -1254,7 +1263,7 @@ clicked the download in CPMX2077's own Nexus window, or that CPMX2077 handles
 **The game crashes.** Open Netrunner → *Crashes & logs* and start with the
 step marked **Start here** under *Last start, step by step*, then *Known
 problems*. Mods named in errors from the last session are listed; turn them
-off with the **On** switch to test, start the game again, then **Check
+off with the **Enabled** switch to test, start the game again, then **Check
 again**. The compatibility list may also name a clash.
 
 **Something went wrong and you want to see exactly what happened.** Tick
