@@ -90,7 +90,7 @@ code, .mono { font-family: ui-monospace, "JetBrains Mono", monospace; font-size:
 .progress { position: relative; height: 22px; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 14px; overflow: hidden; }
 .progress-bar { height: 100%; width: 0; background: var(--cyan); opacity: .35; }
 .progress-text { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 10px; font-size: 12px; }
-#toast { position: fixed; right: 20px; bottom: 20px; max-width: 460px; background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--cyan); padding: 12px 14px; border-radius: 4px; white-space: pre-wrap; }
+#toast { position: fixed; right: 20px; bottom: calc(20px + var(--popup-h, 0px)); z-index: 7; max-width: 460px; background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--cyan); padding: 12px 14px; border-radius: 4px; white-space: pre-wrap; }
 #toast.error { border-left-color: var(--red); }
 #game-info, .warnings li { overflow-wrap: anywhere; }
 
@@ -194,6 +194,8 @@ details.card[open] summary { margin-bottom: 10px; }
 #patch-notes td:first-child { width: 24%; }
 #patch-notes .badge, #patch-notes td.actions { white-space: nowrap; }
 #patch-notes td.actions { text-align: right; }
+#patch-notes td.nowrap, .badge.patch-age { white-space: nowrap; }
+#patch-notes details { margin-top: 10px; }
 #reshade details[open] summary { margin-bottom: 10px; }
 #reshade .req-table { width: 100%; }
 #reshade .req-table td:first-child { width: 170px; }
@@ -234,6 +236,14 @@ input.switch:checked { border-color: var(--yellow); background: rgba(246, 207, 6
 input.switch:checked::before { transform: translateX(14px); background: var(--yellow); }
 input.switch:disabled { opacity: .5; cursor: progress; }
 input.switch:focus-visible { outline: 1px solid var(--yellow); outline-offset: 2px; }
+/* Installed mods: thumbnail column, Enabled next to Uninstall. */
+.thumb-col { width: 72px; padding-right: 0; }
+.mod-thumb { display: block; width: 72px; height: 40px; object-fit: cover; border: 1px solid var(--border); }
+tr.off .mod-thumb { opacity: .45; }
+th.enabled-col, td.enabled-col { text-align: center; white-space: nowrap; }
+th.enabled-col { cursor: help; }
+.help-mark { display: inline-block; width: 14px; height: 14px; line-height: 14px; border: 1px solid currentColor;
+  border-radius: 50%; font-size: 10px; text-align: center; opacity: .7; }
 th.pick-col { width: 1%; }
 input.pick { cursor: pointer; }
 .bulk-bar {
@@ -258,7 +268,7 @@ button.update { border-color: var(--cyan); color: var(--cyan); }
 .notice { border-left: 3px solid var(--cyan); }
 
 /* Download queue and picking several mods. */
-#queue { position: sticky; top: -20px; z-index: 5; border-left: 3px solid var(--yellow); box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+#queue { position: fixed; bottom: 12px; z-index: 6; margin: 0; border-left: 3px solid var(--yellow); box-shadow: 0 -6px 18px rgba(0, 0, 0, .45); }
 /* One line, so the popup keeps its height whatever it says or shows. */
 #queue > .row { flex-wrap: nowrap; min-height: 36px; }
 #queue-title { white-space: nowrap; }
@@ -565,3 +575,22 @@ button.link.author { padding: 0; margin: 0; font-size: inherit; }
 #net-list tr.net-drag { cursor: grab; }
 #net-list tr.net-drag.drop td { box-shadow: inset 0 2px var(--yellow); }
 .net-order-info .row { margin-top: 8px; flex-wrap: wrap; }
+
+/* Installed mods › Overview: List or Canvas view (mods_canvas.js). */
+#tab-mods[data-view="canvas"] .list-only, #tab-mods:not([data-view="canvas"]) .canvas-only { display: none !important; }
+#mods-view button { padding: 6px 14px; }
+#mods-canvas { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 18px 12px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: rgba(8, 10, 12, .55); }
+#mods-canvas:empty { display: none; }
+.canvas-col { flex: 0 0 210px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.canvas-col h4 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 4px; padding-bottom: 4px; border-bottom: 2px solid var(--c); font-size: 14px; letter-spacing: 1px; text-transform: uppercase; color: var(--c); }
+.canvas-col h4 button.link { color: var(--c); font: inherit; letter-spacing: inherit; text-transform: inherit; padding: 0; text-align: left; }
+.canvas-count { margin-left: auto; color: var(--muted); }
+button.canvas-tile { display: flex; align-items: center; gap: 4px; width: 100%; margin: 0; padding: 5px 8px; text-align: left; text-transform: none; letter-spacing: 0; font-family: inherit; font-size: 12px; font-weight: 400; color: var(--text); clip-path: none;
+  --fill: rgba(20, 24, 28, .9); background: var(--fill); border: 1px solid var(--border); border-left: 3px solid var(--c); border-radius: 3px; }
+button.canvas-tile:hover { --fill: rgba(246, 207, 60, .12); background: var(--fill); border-color: var(--yellow); border-left-color: var(--c); }
+button.canvas-tile.off { opacity: .5; border-style: dashed; border-left-style: dashed; }
+.canvas-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.canvas-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.canvas-up { flex: none; color: var(--yellow); font-size: 10px; }
+.canvas-files { flex: none; margin-left: auto; padding-left: 6px; color: var(--muted); font-size: 11px; }
+#tab-mods #mods-filter { min-width: 180px; }

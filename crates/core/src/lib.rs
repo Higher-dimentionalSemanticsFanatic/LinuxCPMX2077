@@ -41,6 +41,7 @@ pub mod startup;
 pub mod tag_set;
 #[cfg(test)]
 mod testutil;
+pub mod thumbnails;
 pub mod ultraplus;
 pub mod updates;
 pub mod vdf;

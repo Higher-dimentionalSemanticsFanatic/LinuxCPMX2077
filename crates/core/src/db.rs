@@ -149,6 +149,13 @@ CREATE TABLE IF NOT EXISTS nexus_requirements (
     requirements TEXT NOT NULL,
     fetched_at   INTEGER NOT NULL           -- unix seconds
 );
+-- Each Nexus mod's picture URL (NULL: none) for the Installed mods
+-- thumbnails; the images themselves are in paths::thumbnails_dir().
+CREATE TABLE IF NOT EXISTS mod_thumbnails (
+    nexus_mod_id INTEGER PRIMARY KEY,
+    url          TEXT,
+    checked_at   INTEGER NOT NULL           -- unix seconds
+);
 -- Release dates and Nexus page facts per source mod (modpacks::mod_key), for
 -- the patch-note check (see patch_notes.rs). `info` is JSON.
 CREATE TABLE IF NOT EXISTS release_dates (
