@@ -337,6 +337,7 @@ async function loadSetup(offer = false) {
   if (currentGame?.id !== id) return;
   setupChecks = checks;
   renderWarnings();
+  window.loadLaunchExplain?.(); // a fix may have changed the launch options
   const problems = checks.filter((c) => c.state === "problem" && c.fix);
   if (setupGameId !== id || !setupSeen) {
     setupGameId = id;
@@ -805,6 +806,7 @@ async function runDiagnostics() {
   await loadSetup().catch(() => {});
   window.graphPending();
   window.loadFileTree();
+  window.loadLaunchExplain();
   const [analysis, crash] = await Promise.allSettled([
     invoke("analyze_game", { gameId: currentGame.id }),
     invoke("crash_analysis", { gameId: currentGame.id }),

@@ -210,6 +210,7 @@
             <button class="link" data-jump="diag-graph">Graph</button>
             <button class="link" data-jump="diag-compat">Compatibility</button>
             <button class="link" data-jump="diag-crashes">Crashes &amp; logs</button>
+            <button class="link" data-jump="net-launch">Launch options</button>
           </div>
           <button id="run-diagnostics" class="primary">Check again</button>
         </div>
@@ -319,6 +320,19 @@
           <thead><tr><th>Log</th><th>Size</th><th>Last written</th><th></th></tr></thead>
           <tbody id="crash-logs"></tbody>
         </table>
+      </section>
+
+      <section id="net-launch" class="diag-section">
+        <header>
+          <h3>Launch options</h3>
+          <div class="row"><button id="launch-current" disabled>Current line</button></div>
+        </header>
+        <p class="muted">The game's Steam launch options, one bracket per part. Select a part for what it does and which
+          Game panel item adds it. Edit the line or paste one from a guide or another launcher to check it; nothing here is written to Steam.</p>
+        <textarea id="launch-line" class="mono" rows="2" spellcheck="false" aria-label="Launch options line" placeholder="WINEDLLOVERRIDES=&quot;winmm,version=n,b&quot; %command% --launcher-skip"></textarea>
+        <p id="launch-source" class="muted small"></p>
+        <div id="launch-parts" role="listbox" aria-label="Parts of the launch options"></div>
+        <div id="launch-note" class="hidden" aria-live="polite"></div>
       </section>
     </section>
 
@@ -649,6 +663,7 @@
   <script src="modpacks.js"></script>
   <script src="graph.js"></script>
   <script src="netrunner.js"></script>
+  <script src="launch.js"></script>
   <script src="profiles.js"></script>
   <script src="ultraplus.js"></script>
   <script src="patchnotes.js"></script>

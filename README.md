@@ -173,8 +173,10 @@ Screenshots show sample data, with file locations blurred.
 - **Netrunner tab** (formerly Diagnostics): one place for overview and
   diagnosis. It opens with a summary of what needs attention (game setup
   warnings, recent crashes, mods named in log errors, compatibility
-  problems), followed by the file map, the graph, the compatibility findings
-  and the crash/log check.
+  problems), followed by the file map, the graph, the compatibility findings,
+  the crash/log check and a launch options explainer (a bracket under each
+  part of the Steam launch options, with what it does and which setup fix
+  adds it).
 - **File map**: a registry-editor style tree of every file mods installed,
   by game folder or by mod, showing which mod owns each file, where it is
   installed and whether it is in use, overridden by a newer mod, missing or

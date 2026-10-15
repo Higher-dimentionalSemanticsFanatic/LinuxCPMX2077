@@ -669,8 +669,8 @@ fixes still open (each with its fix button, such as **Install vcrun2022**)
 and frameworks that are installed without what they need (with **Install
 missing frameworks**). **Show in
 graph** next to a finding lights up the mods involved. The links under the
-title (**Files**, **Graph**, **Compatibility**, **Crashes & logs**) jump to
-each section.
+title (**Files**, **Graph**, **Compatibility**, **Crashes & logs**,
+**Launch options**) jump to each section.
 
 ### File map
 
@@ -850,6 +850,37 @@ logs and Proton's `steam-1091500.log`.
 **Logs found** lists every log with **View** (with **Copy all** and **Open
 folder**). It includes RED4ext's dated logs, ArchiveXL's and TweakXL's dated
 logs and other RED4ext plugins' own logs.
+
+### Launch options
+
+The game's Steam launch options (read from Steam's `localconfig.vdf`), split
+into parts with a curly bracket under each: environment variables such as
+`WINEDLLOVERRIDES`, wrapper programs such as `gamescope … --` or `mangohud`,
+`%command%` (the game's start command) and game arguments such as
+`--launcher-skip` and `-modded`. The label under each bracket names the part.
+Click a part (or use the left and right arrow keys) to show a box with:
+
+- what it does;
+- the entries inside it: each DLL in `WINEDLLOVERRIDES` with its load order
+  (*native, then builtin*) and the mod it is for (`version` = CET, `winmm` =
+  RED4ext, ReShade's and OptiScaler's DLL names as found in `bin/x64`,
+  `d3dcompiler_47` = ReShade's shader compiler), or each `gamescope` option;
+- **Added by**: the Game panel item that writes it (*Steam launch options*,
+  *HDR*, *FSR 4 shader overrides* or the *REDmod switch*), or *Not added by
+  CPMX2077*;
+- warnings, labelled red with `!`: a variable after `%command%` or in a line
+  without `%command%` (Steam passes it to the game as an argument and does not
+  set it), a `gamescope` wrapper without `--`, or a shader-override path that
+  is not a `Z:/` path.
+
+Parts not in the app's list (other variables, programs or arguments) get a
+grey bracket and a generic explanation. The text box above the brackets holds
+the line: edit it, or paste a line from a guide or from Heroic's environment
+variables, to check it. Nothing is written to Steam; **Current line** puts
+Steam's line back. The section reloads after every Linux setup fix. For GOG,
+Epic and manual installs no Steam line is read; paste the launcher's settings
+instead. On Windows the game loads mod DLLs without overrides, so Wine and
+Proton parts are marked *no effect on Windows*.
 
 ## Get mods
 

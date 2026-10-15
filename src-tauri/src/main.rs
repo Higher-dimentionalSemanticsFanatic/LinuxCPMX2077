@@ -20,7 +20,7 @@ use cp2077mm_core::sources::{self, Details, ListingPage, SourceInfo, SourceQuery
 use cp2077mm_core::linux_setup::{self, Check};
 use cp2077mm_core::downloads::{self as dl_store, DownloadGroup, FileKey, Location, MoveReport};
 use cp2077mm_core::game_versions::{self, Loadout, VersionEntry};
-use cp2077mm_core::{Error, Result, activity, desktop, file_tree, paths, secrets, sso, updates};
+use cp2077mm_core::{Error, Result, activity, desktop, file_tree, launch_explain, paths, secrets, sso, updates};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_deep_link::DeepLinkExt;
@@ -661,6 +661,30 @@ async fn set_redmod(app: AppHandle, game_id: i64, on: bool) -> Result<String> {
         let out = with_setup(&app, game_id, |ctx| linux_setup::set_redmod(ctx, on));
         log_outcome(&out);
         out
+    })
+    .await
+}
+
+/// Netrunner's Launch options section: `line` explained part by part, or
+/// the game's Steam launch options when `line` is `None`.
+#[derive(Serialize)]
+struct LaunchExplained {
+    line: String,
+    /// Read from Steam's localconfig.vdf (Steam installs only).
+    steam: bool,
+    windows: bool,
+    parts: Vec<launch_explain::Part>,
+}
+
+#[tauri::command]
+async fn launch_options_explain(app: AppHandle, game_id: i64, line: Option<String>) -> Result<LaunchExplained> {
+    blocking(move || {
+        with_setup(&app, game_id, |ctx| {
+            let g = ctx.game;
+            let line = line.unwrap_or_else(|| g.launch_options.clone().unwrap_or_default());
+            let parts = launch_explain::explain(&line, &launch_explain::Owners::of_game(&g.path));
+            Ok(LaunchExplained { line, steam: g.store == game::Store::Steam, windows: cfg!(windows), parts })
+        })
     })
     .await
 }
@@ -1631,6 +1655,7 @@ fn main() {
             setup_undo,
             redmod_state,
             set_redmod,
+            launch_options_explain,
             list_mods,
             list_downloads,
             list_download_groups,

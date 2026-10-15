@@ -172,7 +172,9 @@ top, anything that needs attention: setup problems, the first step of the
 last start that failed (**Start here**), whether the game crashed, mods
 named in errors from that session, known problem mods, and compatibility
 problems between your mods. Its
-*File map* shows every file your mods installed and where it went.
+*File map* shows every file your mods installed and where it went, and
+*Launch options* explains each part of the line the Linux setup fixes wrote
+to Steam.
 
 If the game crashes or a framework does not load, see
 [Troubleshooting](user-guide.md#troubleshooting).
