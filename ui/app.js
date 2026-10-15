@@ -599,7 +599,7 @@ function modRow(m) {
     el("td", {}, m.version || "—", up ? el("div", { class: "badge ok" }, `${up.to_stable ? "stable " : ""}${up.latest} available`) : null),
     el("td", {}, el("span", { class: "badge" }, sourceLabel(m))),
     el("td", {}, m.file_count),
-    el("td", { class: "date", title: m.installed_at ? `${m.installed_at} UTC` : "" }, fmtDbTime(m.installed_at)),
+    el("td", { class: "date", title: m.installed_at ? `${fmtDbTime(m.installed_at)} (${m.installed_at} UTC)` : "" }, fmtDbDate(m.installed_at)),
     el("td", {}, m.game_version || "—",
       stale ? staleBadge(m, up) : null,
       patchBadge(m)),
@@ -3162,6 +3162,12 @@ function fmtDbTime(s) {
   if (!s) return "—";
   const d = new Date(s.includes("T") ? s : `${s.replace(" ", "T")}Z`);
   return isNaN(d) ? s : d.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
+}
+
+function fmtDbDate(s) {
+  if (!s) return "—";
+  const d = new Date(s.includes("T") ? s : `${s.replace(" ", "T")}Z`);
+  return isNaN(d) ? s : d.toLocaleDateString(undefined, { dateStyle: "short" });
 }
 
 const dateCell = (s) => el("td", { class: "date", title: s ? `${s} UTC` : "" }, fmtDbTime(s));
