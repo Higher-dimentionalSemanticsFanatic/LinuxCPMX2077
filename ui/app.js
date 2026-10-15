@@ -421,7 +421,7 @@ let mods = [];
 let updatesByMod = new Map(); // installed mod id -> update from check_updates
 // The user's own tags and which installed mod has which (modpacks.js):
 // { tags: [{ name, color }], mods: { modId: [tag names] } }.
-let modTags = { tags: [], mods: {} };
+let modTags = { tags: [], mods: {}, groups: [], suggest: true, suggestions: {} };
 let modSort = loadPref("modSort", { key: "name", dir: 1 });
 const NO_CATEGORY = "__none__";
 
@@ -477,9 +477,7 @@ function renderMods() {
   const cats = [...new Set(mods.map((m) => m.category).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const own = modTags.tags;
   sel.replaceChildren(el("option", { value: "" }, "All tags and categories"),
-    own.length ? el("optgroup", { label: "Your tags" },
-      ...own.map((c) => el("option", { value: `tag:${c.name}` }, c.name)),
-      el("option", { value: `tag:${NO_CATEGORY}` }, "No tags")) : null,
+    ...(own.length ? tagOptions(own, { prefix: "tag:", ownLabel: "Your tags", extra: [el("option", { value: `tag:${NO_CATEGORY}` }, "No tags")] }) : []),
     el("optgroup", { label: "Nexus categories" },
       ...cats.map((c) => el("option", { value: c }, c)),
       cats.length && mods.some((m) => !m.category) ? el("option", { value: NO_CATEGORY }, "No category") : null));
@@ -635,10 +633,9 @@ $("#mods-bulk-clear").addEventListener("click", () => modSel.clear());
 
 // Add or remove one of the user's tags on every selected mod.
 function renderBulkTags() {
-  const names = modTags.tags.map((t) => t.name);
   for (const [id, label] of [["#mods-bulk-tag-add", "Add tag…"], ["#mods-bulk-tag-remove", "Remove tag…"]]) {
-    $(id).replaceChildren(el("option", { value: "" }, label), ...names.map((n) => el("option", { value: n }, n)));
-    $(id).classList.toggle("hidden", !names.length);
+    $(id).replaceChildren(el("option", { value: "" }, label), ...tagOptions(modTags.tags));
+    $(id).classList.toggle("hidden", !modTags.tags.length);
   }
 }
 for (const [id, add] of [["#mods-bulk-tag-add", true], ["#mods-bulk-tag-remove", false]]) {

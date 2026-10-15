@@ -236,8 +236,23 @@ async function setModTags(m, tags) {
   tagsChanged();
 }
 
-// A mod's tags as chips (× takes one off) and a picker to add one; nothing
-// until the user makes a tag.
+// Tags as <option>s: the user's own tags, then one <optgroup> per predefined
+// tag set group. `ownLabel` puts the own tags in an <optgroup> too, with
+// `extra` options at its end.
+function tagOptions(tags, { prefix = "", ownLabel = null, extra = [] } = {}) {
+  const opt = (t) => el("option", { value: prefix + t.name }, t.name);
+  const groups = (modTags.groups || []).filter((g) => tags.some((t) => t.group === g.id));
+  const known = new Set(groups.map((g) => g.id));
+  const own = tags.filter((t) => !known.has(t.group));
+  const label = ownLabel || (groups.length ? "Your tags" : null);
+  const out = [];
+  if (own.length || extra.length) out.push(...(label ? [el("optgroup", { label }, ...own.map(opt), ...extra)] : [...own.map(opt), ...extra]));
+  for (const g of groups) out.push(el("optgroup", { label: g.name }, ...tags.filter((t) => t.group === g.id).map(opt)));
+  return out;
+}
+
+// A mod's tags as chips (× takes one off), the tags suggested for it (click
+// to add, × to dismiss) and a picker to add one; nothing until the user has a tag.
 function tagEditor(m) {
   const own = modTags.tags;
   if (!own.length) return null;
@@ -250,24 +265,74 @@ function tagEditor(m) {
     if (color && COLOR.test(color)) chip.style.borderLeftColor = color;
     return chip;
   });
+  const suggested = (modTags.suggestions?.[m.id] || []).filter((s) => !current.includes(s.tag)).map((s) =>
+    el("span", { class: "tag-chip tag-suggest" },
+      el("button", { class: "tag-accept", title: `Suggested tag. Matched ${s.reason}. Click to add.`,
+        "aria-label": `Add the suggested tag ${s.tag} to ${m.name}`,
+        onclick: (e) => busy(e.target, () => setModTags(m, [...current, s.tag])) }, `+ ${s.tag}`),
+      el("button", { class: "tag-remove", title: `Dismiss: stop suggesting ${s.tag} for this mod`,
+        "aria-label": `Dismiss the suggested tag ${s.tag} for ${m.name}`,
+        onclick: (e) => busy(e.target, async () => {
+          await invoke("dismiss_tag_suggestion", { modId: m.id, tag: s.tag });
+          modTags.suggestions[m.id] = modTags.suggestions[m.id].filter((x) => x.tag !== s.tag);
+          tagsChanged();
+        }) }, "×")));
   const left = own.filter((t) => !current.includes(t.name));
   let add = null;
   if (left.length) {
     add = el("select", { class: "inline tag-add", "aria-label": `Add a tag to ${m.name}`, title: "Add a tag" },
-      el("option", { value: "" }, current.length ? "+" : "+ Tag"), ...left.map((t) => el("option", { value: t.name }, t.name)));
+      el("option", { value: "" }, current.length ? "+" : "+ Tag"), ...tagOptions(left));
     add.addEventListener("change", () => add.value && busy(add, () => setModTags(m, [...current, add.value])));
   }
-  return el("div", { class: "tag-cell" }, ...chips, add);
+  return el("div", { class: "tag-cell" }, ...chips, ...suggested, add);
 }
 
 async function renderCategories() {
   if (!currentGame) return;
-  modTags = await invoke("mod_tags", { gameId: currentGame.id });
+  const [tags, groups] = await Promise.all([invoke("mod_tags", { gameId: currentGame.id }), invoke("tag_set_groups")]);
+  modTags = tags;
   const counts = {};
   for (const names of Object.values(modTags.mods)) for (const n of names) counts[n] = (counts[n] || 0) + 1;
-  $("#cat-list").replaceChildren(...modTags.tags.map((c) => categoryItem(c, counts[c.name] || 0)));
+  const item = (c) => categoryItem(c, counts[c.name] || 0);
+  const known = new Set(modTags.groups.map((g) => g.id));
+  const items = modTags.tags.filter((t) => !known.has(t.group)).map(item);
+  for (const g of modTags.groups) {
+    const list = modTags.tags.filter((t) => t.group === g.id);
+    if (list.length) items.push(el("li", { class: "cat-group" }, g.name), ...list.map(item));
+  }
+  $("#cat-list").replaceChildren(...items);
   $("#cat-color").value = nextTagColor();
+  $("#tag-suggest").checked = modTags.suggest;
+  $("#tag-set-list").replaceChildren(...groups.map(tagSetItem));
 }
+
+// One group of the predefined tag set: a switch, its name and its tags.
+function tagSetItem(g) {
+  const box = el("input", { type: "checkbox", "aria-label": `Tag group ${g.name}` });
+  box.checked = g.enabled;
+  box.addEventListener("change", () => busy(box, async () => {
+    if (!box.checked) {
+      const n = await invoke("tag_set_usage", { group: g.id });
+      const ok = !n || await dialog.ask(`Remove the ${g.name} tags? They come off ${n} mod${n === 1 ? "" : "s"}; the mods stay installed.`,
+        { title: "Remove tag group", kind: "warning" });
+      if (!ok) return void (box.checked = true);
+    }
+    await invoke("tag_set_toggle", { group: g.id, on: box.checked });
+    await renderCategories();
+    tagsChanged();
+  }));
+  const swatch = el("span", { class: "tag-swatch" });
+  swatch.style.background = g.color;
+  return el("li", {}, el("label", { class: "check" }, box, swatch, el("b", {}, g.name)),
+    el("span", { class: "muted small", title: g.tags.map((t) => `${t.name}: ${t.about}`).join("\n") },
+      g.tags.map((t) => t.name).join(", ")));
+}
+
+$("#tag-suggest").addEventListener("change", (e) => busy(e.target, async () => {
+  await invoke("set_tag_suggestions", { on: e.target.checked });
+  await renderCategories();
+  tagsChanged();
+}));
 
 // A new tag starts with the first colour no tag uses yet.
 const TAG_COLORS = ["#00f0ff", "#f6cf3c", "#ff5a6a", "#7cff6b", "#b48cff", "#ff9a4d", "#ff6bd6", "#4f8cff", "#d9e021", "#a0a0b4"];

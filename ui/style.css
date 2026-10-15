@@ -307,6 +307,12 @@ input[type=color] { flex: 0 0 auto !important; width: 32px; height: 28px; paddin
   background: var(--panel-2); border-left: 4px solid var(--border); }
 .tag-chip .tag-remove { background: none; border: 0; padding: 0 4px; min-width: 0; color: var(--muted); font-size: 13px; line-height: 1; cursor: pointer; }
 .tag-chip .tag-remove:hover { color: var(--red); }
+.cat-list li.cat-group { font-weight: 600; color: var(--muted); padding-top: 12px; }
+.tag-swatch { display: inline-block; width: 10px; height: 10px; margin: 0 6px 0 2px; border-radius: 2px; }
+.tag-chip.tag-suggest { background: none; border: 1px dashed var(--border); border-left-width: 1px; opacity: .85; }
+.tag-chip .tag-accept { background: none; border: 0; padding: 0; min-width: 0; color: var(--muted); font: inherit; font-size: 12px;
+  text-transform: none; letter-spacing: 0; cursor: pointer; }
+.tag-chip .tag-accept:hover { color: var(--text); }
 select.tag-add { width: auto; max-width: 120px; margin: 0; padding: 1px 4px; font-size: 12px; }
 tr.dep td, tr.rec td { border-bottom: 0; padding-top: 1px; padding-bottom: 1px; }
 tr.dep td:nth-child(2), tr.rec td:nth-child(2) { padding-left: 26px; }
