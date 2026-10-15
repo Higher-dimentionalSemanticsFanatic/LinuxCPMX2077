@@ -1162,7 +1162,7 @@ fn fsr4_check(ctx: &Ctx) -> Option<Check> {
             };
             if !c.folder.is_dir() {
                 check.state = State::Problem;
-                check.detail = format!("The {name} shader overrides are missing from {}. Download them again on the OptiScaler page.", c.folder.display());
+                check.detail = format!("The {name} shader overrides are missing from {}. Download them again on the OptiScaler FSR4.1.1 Lite page.", c.folder.display());
                 return Some(check);
             }
             if now.as_deref() == Some(want.as_str()) {

@@ -52,7 +52,7 @@ flowchart LR
 | Downloads | `app.js` | `list_downloads`, `install_download`, `delete_download`, `organize_downloads` | `downloads`, `install` |
 | Settings | `app.js` | `nexus_set_key`, `nexus_sso_login`, `set_downloads_location`, `register_nxm_handler` | `secrets`, `sso`, `desktop`, `downloads` |
 | Game panel | `app.js` | `detect_games`, `add_game_path`, `setup_checks`, `setup_fix`, `setup_undo` | `game`, `linux_setup`, `winsys` |
-| Debug terminal | `debug.js` | `activity_log`, `nexus_requests` | `activity`, `nexus_cache` |
+| Terminal | `debug.js` | `activity_log`, `nexus_requests` | `activity`, `nexus_cache` |
 
 The install-related commands are traced in [[Entry points]].
 

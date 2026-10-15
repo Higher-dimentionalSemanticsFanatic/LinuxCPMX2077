@@ -138,7 +138,7 @@ frameworks), a *Missing requirements* dialog lists them first. Click
 **Queue requirements first** and the app installs them, then the mod.
 
 You stay on **Get mods** while it downloads; the download's bar is on the
-mod's card and in the downloads panel at the top of the window, one bar per
+mod's card and in the downloads panel at the bottom of the window, one bar per
 file when several download at once. For a quick install from the list, click the **⬇** button on a mod's
 picture and pick one of its main files. Click an author's name to see all
 their mods.
@@ -157,7 +157,7 @@ Install from archive…** and pick a `.zip`, `.7z` or `.rar`.
 GitHub mods and Premium downloads run straight through. With a free account,
 one Nexus window steps through the file pages ("Mod 3 of 12"): click the
 download button on each page and the app installs that mod in the background
-while it moves on to the next. The panel at the top of the window shows
+while it moves on to the next. The panel at the bottom of the window shows
 progress and has **Skip this mod** and **Cancel**.
 
 Prefer a ready-made setup? **Modpacks** (under **Get mods** in the menu) lists Nexus collections. Open
@@ -178,7 +178,7 @@ If the game crashes or a framework does not load, see
 [Troubleshooting](user-guide.md#troubleshooting).
 To watch what the app does step by step (API requests, downloads,
 extractions, files moved), tick *Debug mode* in **Settings**: the
-[debug terminal](user-guide.md#debug-terminal) opens at the foot of the
+[terminal](user-guide.md#terminal) opens at the foot of the
 sidebar. **Pop out** moves it to its own window.
 
 ## Next steps

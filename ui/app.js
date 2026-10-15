@@ -125,7 +125,7 @@ function fmtSize(n) {
 // patch notes) and Get mods holds Modpacks, each a collapsible submenu in
 // the sidebar.
 let modsSub = "list";
-const MODS_TITLES = { list: "Installed mods", reshade: "ReShade", optiscaler: "OptiScaler", radio: "RadioEXT", ultraplus: "Ultra+ recommendations", patchnotes: "Patch-note check" };
+const MODS_TITLES = { list: "Installed mods", reshade: "ReShade", optiscaler: "OptiScaler FSR4.1.1 Lite", radio: "RadioEXT", ultraplus: "Ultra+ recommendations", patchnotes: "Patch-note check" };
 document.querySelectorAll("nav button[data-tab]").forEach((b) =>
   b.addEventListener("click", () => showTab(b.dataset.tab, b.dataset.sub)));
 const navOpen = loadPref("navOpen", { mods: true, nexus: true });
@@ -622,8 +622,12 @@ $("#mods-bulk-enable").addEventListener("click", (e) => busy(e.target, async () 
 $("#mods-bulk-uninstall").addEventListener("click", (e) => busy(e.target, async () => {
   const list = sortMods(selectedMods());
   if (!list.length) return;
+  const kept = await keptDownloads(list);
+  const withDl = list.filter((m) => kept.get(m.id)).length;
   const ok = await dialog.ask(`Uninstall ${list.length} mod${list.length === 1 ? "" : "s"}?\n\n${nameList(list.map((m) => m.name))}\n\n`
-    + "Their files are removed and game files they replaced are restored. Files changed after install (settings) stay in the game.",
+    + "Their files are removed and game files they replaced are restored. Files changed after install (settings) stay in the game.\n\n"
+    + (withDl ? `Downloads kept for ${withDl} of ${list.length}: Downloads › Install reinstalls them.`
+      : "None of their archives are in Downloads: reinstall with Install from archive… or download them again."),
   { title: "Uninstall mods", kind: "warning", okLabel: "Uninstall", cancelLabel: "Cancel" });
   if (!ok) return;
   // Newest install first, so files one mod overrode go back in order.
@@ -761,12 +765,22 @@ async function verify(m) {
   toast(lines.join("\n"), r.missing.length + r.modified.length > 0);
 }
 
+// Downloads (on disk) holding the archive each mod was installed from.
+async function keptDownloads(mods) {
+  const groups = await invoke("list_download_groups").catch(() => []);
+  const bySha = new Map(groups.flatMap((g) => g.entries).filter((d) => d.on_disk).map((d) => [d.sha256, d]));
+  return new Map(mods.map((m) => [m.id, bySha.get(m.archive_sha256)]));
+}
+
 async function uninstall(m) {
-  const ok = await dialog.ask(`Uninstall “${m.name}”? Its files are removed and any game files it replaced are restored. Files changed after install (settings) stay in the game.`,
+  const d = (await keptDownloads([m])).get(m.id);
+  const kept = d ? `The download ${d.file_name} is kept: Downloads › Install reinstalls it.`
+    : "No download of this archive in Downloads: reinstall with Install from archive… or download it again.";
+  const ok = await dialog.ask(`Uninstall “${m.name}”? Its files are removed and any game files it replaced are restored. Files changed after install (settings) stay in the game.\n\n${kept}`,
     { title: "Uninstall mod", kind: "warning" });
   if (!ok) return;
   await invoke("uninstall_mod", { modId: m.id });
-  toast(`Uninstalled ${m.name}`);
+  toast(d ? `Uninstalled ${m.name}. Download kept: Downloads › Install reinstalls it.` : `Uninstalled ${m.name}`);
   loadMods();
 }
 
@@ -1779,7 +1793,7 @@ function showDock(on) {
   $("#sidebar").classList.toggle("has-dock", on);
   $("#debug-terminal-side").classList.toggle("on", on);
   // A fresh frame reads the whole log again; a hidden one isn't kept polling.
-  if (on && !box.querySelector("iframe")) box.append(el("iframe", { src: "debug.html?docked", title: "Debug terminal", allow: "clipboard-write" }));
+  if (on && !box.querySelector("iframe")) box.append(el("iframe", { src: "debug.html?docked", title: "Terminal", allow: "clipboard-write" }));
   if (!on) box.replaceChildren();
 }
 
@@ -2898,17 +2912,35 @@ function queueProgress(match, done, total) {
   if (!progressFrame) progressFrame = requestAnimationFrame(() => { progressFrame = 0; renderQueue(); });
 }
 
-// Show or hide the popup at the top. While the page is scrolled, the scroll
-// position absorbs its height, so what's on screen stays where it is.
+// The downloads panel floats at the bottom of the page area. While it is
+// shown, the page gets that much empty space at its end, so nothing stays
+// hidden under it; nothing above moves when it opens, grows or closes.
+function placePopup() {
+  const pop = $("#queue");
+  const main = $("main");
+  const root = document.documentElement.style;
+  if (pop.classList.contains("hidden")) {
+    main.style.paddingBottom = "";
+    root.removeProperty("--popup-h");
+    return;
+  }
+  const r = main.getBoundingClientRect();
+  const pad = parseFloat(getComputedStyle(main).paddingLeft) || 0;
+  pop.style.left = `${r.left + pad}px`;
+  pop.style.width = `${main.clientWidth - 2 * pad}px`;
+  main.style.paddingBottom = `${pop.offsetHeight + 24}px`;
+  // Toasts sit above the panel.
+  root.setProperty("--popup-h", `${pop.offsetHeight + 12}px`);
+}
+const popupObserver = new ResizeObserver(placePopup);
+popupObserver.observe($("main"));
+popupObserver.observe($("#queue"));
+
 function setPopupShown(show) {
   const pop = $("#queue");
   if (pop.classList.contains("hidden") !== show) return;
-  const main = $("main");
-  const ref = document.querySelector("main > .tab.active");
-  const y0 = ref?.getBoundingClientRect().top;
-  const scrolled = main.scrollTop > 0;
   pop.classList.toggle("hidden", !show);
-  if (ref && scrolled) main.scrollTop += ref.getBoundingClientRect().top - y0;
+  placePopup();
 }
 
 // The popup when only single downloads run (no queue).
@@ -3053,7 +3085,7 @@ function downloadMatches(d, q) {
 
 // A file still downloading: a row with its progress bar on top of the list.
 function transferRow(t) {
-  const row = el("tr", { class: "downloading" },
+  const row = el("tr", { class: "downloading", "data-key": `t:${t.key}` },
     el("td", {}),
     el("td", {}, el("b", { class: "transfer-row-name" }, transferName(t)), el("div", { class: "muted mono transfer-row-file" }, t.name ? t.file : "")),
     el("td", { colspan: 8 }, el("div", { class: "progress row-progress" },
@@ -3098,7 +3130,7 @@ function renderDownloads() {
       renderDownloads();
     };
     const channels = ["stable", "beta", "nightly"].filter((c) => entries.some((e) => e.channel === c));
-    rows.push(el("tr", { class: "folder", onclick: (e) => { if (e.target.tagName !== "BUTTON" || e.target.classList.contains("twisty")) toggle(); } },
+    rows.push(el("tr", { class: "folder", "data-key": `g:${g.key}`, onclick: (e) => { if (e.target.tagName !== "BUTTON" || e.target.classList.contains("twisty")) toggle(); } },
       el("td", {}, dlSel.box(entries.map((e) => e.id), `all ${entries.length} versions of ${g.name}`)),
       el("td", {},
         el("button", { class: "twisty", "aria-expanded": String(open), title: open ? "Hide versions" : "Show versions" }, open ? "▾" : "▸"),
@@ -3123,7 +3155,16 @@ function renderDownloads() {
     th.classList.toggle("asc", th.dataset.sort === dlSort.key && dlSort.dir > 0);
     th.classList.toggle("desc", th.dataset.sort === dlSort.key && dlSort.dir < 0);
   });
+  // Rows added or removed above the visible part (a download starting or
+  // finishing) don't move the rows on screen: the first visible row keeps
+  // its place.
+  const main = $("main");
+  const top = main.getBoundingClientRect().top;
+  const anchor = main.scrollTop > 0 ? [...$("#downloads-body").children].find((r) => r.getBoundingClientRect().bottom > top) : null;
+  const before = anchor?.getBoundingClientRect().top;
   $("#downloads-body").replaceChildren(...rows);
+  const again = anchor && rows.find((r) => r.dataset.key === anchor.dataset.key);
+  if (again) main.scrollTop += again.getBoundingClientRect().top - before;
   dlSel.render(shownIds);
 }
 
@@ -3135,11 +3176,12 @@ function downloadRow(d, depth) {
   const m = installedFor(d);
   const up = m && updatesByMod.get(m.id);
   const checked = d.checked || (d.verified ? "MD5 matches Nexus" : "unverified");
-  return el("tr", { class: depth ? "child" : "" },
+  return el("tr", { class: depth ? "child" : "", "data-key": `d:${d.id}` },
     el("td", {}, dlSel.box([d.id], d.file_name)),
     el("td", {}, el("div", { class: depth ? "indent" : "" },
       depth ? null : el("b", {}, d.mod_name || d.file_name),
-      m ? el("span", { class: "badge ok" }, m.status === "installed" ? "installed" : "installed, off") : null,
+      m ? el("span", { class: "badge ok" }, m.status === "installed" ? "installed" : "installed, off")
+        : d.on_disk ? el("span", { class: "badge", title: "Not installed in the selected game. Install puts it in." }, "not installed") : null,
       d.on_disk ? null : el("span", { class: "badge bad", title: d.path }, "file missing"),
       el("div", { class: "muted mono", title: d.path }, d.file_name))),
     el("td", {}, d.version || "—", " ", channelBadge(d.channel),

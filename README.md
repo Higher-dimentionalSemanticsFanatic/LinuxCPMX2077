@@ -145,7 +145,7 @@ Screenshots show sample data, with file locations blurred.
   switches between them, names effect files a preset needs but that
   aren't installed, and repairs `ReShade.ini` search paths a preset mod
   replaced.
-- **OptiScaler**: a section under Installed mods installs OptiScaler from its
+- **OptiScaler FSR4.1.1 Lite**: a section under Installed mods installs OptiScaler from its
   GitHub releases as a tracked mod (as `wininet.dll`, clear of CET, RED4ext
   and ReShade), optionally with AMD's FSR 4.1.1 upscaler DLL (4.1.1.2740,
   checked against AMD's repository). On Linux it adds OptiScaler's DLL
@@ -235,7 +235,7 @@ Screenshots show sample data, with file locations blurred.
   Settings). Pasting a mod URL, ID or `nxm://` link still works. The ⬇ button
   on a mod's card offers its two newest main files, and the download's
   progress shows on the card, on its row in Downloads and in a panel at the
-  top with one bar per file, side by side. A file you already downloaded is never
+  bottom with one bar per file, side by side. A file you already downloaded is never
   fetched twice: the app installs the copy you have.
 - **GitHub as a second source**: the core frameworks (CET, RED4ext,
   redscript, ArchiveXL, TweakXL, Codeware) and many mods ship as GitHub
@@ -267,7 +267,7 @@ Screenshots show sample data, with file locations blurred.
   (or returns 429) until it resets, and pauses browsing when fewer than 25
   requests remain so downloads and checksum checks still work. Lists and mod
   pages are cached for a few minutes.
-- **Debug terminal**: Settings → *Debug mode* opens a terminal, docked in
+- **Terminal**: Settings → *Debug mode* opens a terminal, docked in
   the sidebar or popped out into its own window, that streams every Nexus and GitHub API request and every operation on
   your machine (downloads, checksum checks, extractions, files copied,
   backed up, moved or deleted, Linux setup fixes), with filters, Copy and
