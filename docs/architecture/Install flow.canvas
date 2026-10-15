@@ -170,7 +170,7 @@
 		{
 			"id": "later",
 			"type": "text",
-			"text": "### Later\n**Disable** / **Enable** / **Uninstall** / **Verify**: undeploy restores the next owner's copy or the backup; changed files are left in place\n\n[[Disable, enable, uninstall, verify]]",
+			"text": "### Later\n**Disable** / **Enable** / **Uninstall** / **Verify**: undeploy restores the next owner's copy or the backup; changed files are left in place\n**Adopt**: untracked game-folder mods get a stored copy and mod_files rows without a deploy\n\n[[Disable, enable, uninstall, verify]]",
 			"x": -560,
 			"y": 2600,
 			"width": 440,

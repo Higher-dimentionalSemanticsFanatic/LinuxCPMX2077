@@ -149,13 +149,32 @@
           <th class="sortable" data-sort="category" title="Your tags, with the Nexus category under them">Tags &amp; category</th>
           <th class="sortable" data-sort="version">Mod version</th>
           <th class="sortable" data-sort="source">Source</th>
-          <th>Files</th><th>Installed on game</th><th></th>
-          <th class="enabled-col" title="Enabled: the mod's files are in the game folder and load.&#10;Disabled: its files are moved out of the game folder. The mod stays installed and tracked, its stored copy is kept; enable it again to put the files back.&#10;Uninstall: removes its files, stored copy and record, and restores game files it replaced. A download in Downloads is kept for reinstalling.">Enabled <span class="help-mark" aria-hidden="true">?</span></th>
+          <th>Files</th>
+          <th class="sortable" data-sort="installed" title="When the mod went into this game (adopted mods: the date of their newest file). Click to sort, newest first">Installed</th>
+          <th>Installed on game</th><th></th>
+          <th class="enabled-col" title="Enabled: the mod's files are in the game folder and load.&#10;Disabled: its files are removed from the game folder; the stored copy CPMX2077 made at install stays in its storage folder. Game files the mod replaced are restored; files it changed after install (settings) stay in the game. Enable puts the files back from the stored copy, no download needed.&#10;Uninstall: removes its files, stored copy and record, and restores game files it replaced. A download in Downloads is kept for reinstalling.">Enabled <span class="help-mark" aria-hidden="true">?</span></th>
           <th></th>
         </tr></thead>
         <tbody id="mods-body"></tbody>
       </table>
       </div>
+      <details id="enable-explainer" class="card small">
+        <summary>What Enabled and Uninstall do</summary>
+        <ul>
+          <li><b>Enabled</b> off: the mod's files are removed from the game folder. CPMX2077 keeps the copy it stored at install (<span id="stored-copy-path" class="mono"></span>), restores game files the mod replaced and leaves files the mod changed after install (its settings) in the game. The mod stays in this list; switching Enabled on puts the files back from the stored copy, no download needed. <b>Open stored copy</b> on a disabled mod shows that folder.</li>
+          <li><b>Uninstall</b>: removes the files, the stored copy and the mod's record, and restores game files it replaced. Settings files stay in the game. The archive in Downloads is kept for reinstalling.</li>
+          <li>Both only work on mods in this list. Mods put into the game folder another way are listed under <b>Not installed by CPMX2077</b>; <b>Adopt</b> adds them here.</li>
+        </ul>
+      </details>
+      <details id="untracked" class="card hidden">
+        <summary><b>Not installed by CPMX2077</b> <span id="untracked-count" class="muted"></span></summary>
+        <p class="muted small">Mods found in the game folder without a CPMX2077 record: copied in by hand or by another manager. They are included in Compatibility, the Graph and the File map's wins/loses, marked <i>(untracked)</i>. <b>Adopt</b> records their files and keeps a stored copy, so Enabled, Verify and Uninstall work on them; the game folder is not changed.</p>
+        <div class="row"><button id="untracked-adopt-all" title="Adopt every mod listed here">Adopt all</button></div>
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>Location</th><th>Files</th><th>Size</th><th title="Date of the newest file">Modified</th><th></th></tr></thead>
+          <tbody id="untracked-body"></tbody>
+        </table>
+      </details>
       <p id="mods-none-shown" class="muted hidden">No installed mod matches the filters.</p>
       <p id="mods-empty" class="muted">No mods installed yet. Install an archive (.zip, .7z, .rar) or get one from Nexus or GitHub.</p>
       </div>

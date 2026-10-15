@@ -432,6 +432,7 @@ function sourceLabel(m) {
   if (m.source === "reshade") return "reshade.me";
   if (m.source === "optiscaler") return `GitHub ${m.source_ref || "optiscaler/OptiScaler"}`;
   if (m.source === "radioext") return "Radio station";
+  if (m.source === "adopted") return "Adopted";
   const info = sourceInfos.find((s) => s.id === m.source);
   if (info) return m.source_ref ? `${info.label} ${m.source_ref}` : info.label;
   return "Manual";
@@ -443,6 +444,7 @@ const SORT_KEYS = {
   category: (m) => modTags.mods[m.id]?.[0] || m.category || "",
   version: (m) => m.version || "",
   source: (m) => sourceLabel(m),
+  installed: (m) => m.installed_at || "",
 };
 
 function sortMods(list) {
@@ -471,8 +473,56 @@ async function loadMods() {
   loadReShade().catch(() => {});
   loadOptiScaler().catch(() => {});
   loadRadio().catch(() => {});
+  loadUntracked().catch((e) => toast(String(e), true));
   refreshGame().catch(() => {});
 }
+
+// ---- mods not installed by CPMX2077 ----------------------------------------
+let untracked = [];
+
+async function loadUntracked() {
+  if (!currentGame) return;
+  untracked = await invoke("untracked_mods", { gameId: currentGame.id });
+  renderUntracked();
+}
+
+function renderUntracked() {
+  $("#untracked").classList.toggle("hidden", !untracked.length);
+  $("#untracked-count").textContent = `(${untracked.length})`;
+  $("#untracked-body").replaceChildren(...untracked.map((u) => el("tr", {},
+    el("td", {}, el("b", {}, u.name)),
+    el("td", {}, el("span", { class: "badge" }, UNTRACKED_KIND[u.kind] || u.kind)),
+    el("td", { class: "mono small" }, u.key),
+    el("td", {}, u.files.length),
+    el("td", {}, fmtSize(u.size)),
+    el("td", { class: "date" }, fmtDate(u.modified)),
+    el("td", { class: "actions" },
+      el("button", { title: "Open the folder that holds it",
+        onclick: (e) => busy(e.target, () => invoke("open_game_folder", { gameId: currentGame.id, path: u.files.includes(u.key) ? u.key.split("/").slice(0, -1).join("/") : u.key })) }, "Open folder"), " ",
+      el("button", { title: "Record its files and keep a stored copy, so Enabled, Verify and Uninstall work on it. The game folder is not changed",
+        onclick: (e) => busy(e.target, () => adopt([u])) }, "Adopt")))));
+}
+
+const UNTRACKED_KIND = { archive: "Archive", redmod: "REDmod", cet: "CET", red4ext: "RED4ext plugin", redscript: "Redscript", tweak: "TweakXL" };
+
+async function adopt(list) {
+  if (!list.length) return;
+  try {
+    const ids = await invoke("adopt_mods", { gameId: currentGame.id, keys: list.map((u) => u.key) });
+    toast(`Adopted ${plural(ids.length, "mod")}`);
+  } finally {
+    await loadMods();
+  }
+}
+
+$("#untracked-adopt-all").addEventListener("click", (e) => busy(e.target, async () => {
+  const ok = await dialog.ask(`Adopt ${plural(untracked.length, "mod")} found in the game folder?\n\n${nameList(untracked.map((u) => u.name))}\n\n`
+    + "CPMX2077 records their files and keeps a stored copy of each, so Enabled, Verify and Uninstall work on them. The game folder is not changed.",
+  { title: "Adopt mods", okLabel: "Adopt", cancelLabel: "Cancel" });
+  if (ok) await adopt(untracked);
+}));
+
+invoke("stored_copies_dir").then((p) => { $("#stored-copy-path").textContent = p; }).catch(() => {});
 
 function renderMods() {
   const sel = $("#mods-category");
@@ -536,8 +586,8 @@ function modRow(m) {
   const on = m.status === "installed";
   const up = updatesByMod.get(m.id);
   const sw = el("input", { type: "checkbox", class: "switch", "aria-label": `${m.name} enabled`,
-    title: on ? "Enabled: files are in the game folder. Click to disable: files move out of the game, the mod stays installed"
-      : "Disabled: files are out of the game folder, the mod stays installed. Click to enable: files go back in" });
+    title: on ? "Enabled: files are in the game folder. Click to disable: files are removed from the game, the stored copy is kept, game files it replaced are restored, its settings files stay"
+      : "Disabled: files are removed from the game folder; the stored copy is kept in CPMX2077's storage. Click to enable: files go back from the stored copy" });
   sw.checked = on;
   sw.addEventListener("change", () => busy(sw, () => setEnabled(m, sw.checked)).finally(loadMods));
   return el("tr", { class: on ? "" : "off" },
@@ -549,6 +599,7 @@ function modRow(m) {
     el("td", {}, m.version || "—", up ? el("div", { class: "badge ok" }, `${up.to_stable ? "stable " : ""}${up.latest} available`) : null),
     el("td", {}, el("span", { class: "badge" }, sourceLabel(m))),
     el("td", {}, m.file_count),
+    el("td", { class: "date", title: m.installed_at ? `${m.installed_at} UTC` : "" }, fmtDbTime(m.installed_at)),
     el("td", {}, m.game_version || "—",
       stale ? staleBadge(m, up) : null,
       patchBadge(m)),
@@ -559,7 +610,9 @@ function modRow(m) {
         onclick: (e) => busy(e.target, () => applyUpdate(up)),
       }, up.to_stable ? `Switch to stable ${up.latest}` : `Update to ${up.latest}`) : null, " ",
       modPageButton(m), " ",
-      on ? el("button", { onclick: (e) => busy(e.target, () => verify(m)) }, "Verify") : null),
+      on ? el("button", { onclick: (e) => busy(e.target, () => verify(m)) }, "Verify")
+        : el("button", { title: "Open the folder with this mod's stored copy, the files Enabled puts back",
+          onclick: (e) => busy(e.target, () => invoke("open_stored_copy", { modId: m.id })) }, "Open stored copy")),
     el("td", { class: "enabled-col" }, sw),
     el("td", { class: "actions" },
       el("button", { class: "danger", title: "Remove its files and stored copy; restore game files it replaced. A download in Downloads is kept",
@@ -594,7 +647,9 @@ async function loadThumbs() {
 }
 
 document.querySelectorAll("#tab-mods th.sortable").forEach((th) => th.addEventListener("click", () => {
-  modSort = { key: th.dataset.sort, dir: modSort.key === th.dataset.sort ? -modSort.dir : 1 };
+  // Dates start newest first.
+  const first = th.dataset.sort === "installed" ? -1 : 1;
+  modSort = { key: th.dataset.sort, dir: modSort.key === th.dataset.sort ? -modSort.dir : first };
   savePref("modSort", modSort);
   renderMods();
 }));
@@ -828,7 +883,8 @@ async function keptDownloads(mods) {
 async function uninstall(m) {
   const d = (await keptDownloads([m])).get(m.id);
   const kept = d ? `The download ${d.file_name} is kept: Downloads › Install reinstalls it.`
-    : "No download of this archive in Downloads: reinstall with Install from archive… or download it again.";
+    : m.source === "adopted" ? "Adopted from the game folder: no archive exists, so the files can't be reinstalled from CPMX2077."
+      : "No download of this archive in Downloads: reinstall with Install from archive… or download it again.";
   const ok = await dialog.ask(`Uninstall “${m.name}”? Its files and stored copy are removed and any game files it replaced are restored. Files changed after install (settings) stay in the game.\n\n${kept}\n\n`
     + "To keep the mod installed but out of the game, switch Enabled off instead.",
   { title: "Uninstall mod", kind: "warning", okLabel: "Uninstall", cancelLabel: "Cancel" });

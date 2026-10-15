@@ -229,8 +229,9 @@
       }
       case "category": return m?.category ? [[m.category, m.category]] : [["~none", "No Nexus category"]];
       case "source": {
-        if (!m) return [];
-        const label = m.source === "nexus" ? "Nexus" : sourceInfos.find((s) => s.id === m.source)?.label || "Installed by hand";
+        if (!m) return n.mod_id < 0 ? [["~untracked", "Not installed by CPMX2077"]] : [];
+        const label = m.source === "nexus" ? "Nexus" : m.source === "adopted" ? "Adopted from game folder"
+          : sourceInfos.find((s) => s.id === m.source)?.label || "Installed by hand";
         return [[label, label]];
       }
     }

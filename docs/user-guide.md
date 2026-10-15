@@ -210,11 +210,13 @@ removes it; the same buttons stay in the Game panel and Get mods.
 | Selection box (first column) | Selects the mod for the actions in the selection bar. It changes nothing on its own; see *Selecting several mods* below. |
 | Picture | The mod's thumbnail from its Nexus page, fetched once and saved in `~/.cache/cp2077-modmanager/thumbnails/` (Windows: `%LOCALAPPDATA%\cp2077-modmanager\thumbnails`), so the list shows it offline. Needs a connected Nexus account the first time; a plain box stands in for mods without a Nexus page or picture. The picture URL is checked against Nexus again after 30 days. |
 | **Name / Tags & category / Mod version / Source** | Click a heading to sort (*Tags & category* sorts by a mod's first tag, then its Nexus category). **Mod version** is the mod's own version (the game version is under **Installed on game**). A mod's tags show as chips: **+ Tag** (or **+** once it has one) adds one of your tags (see [Modpacks](#modpacks)), **×** on a chip takes it off. Dashed chips are suggested tags from the predefined tag set: click to add, **×** to dismiss. A mod can have any number of tags. The Nexus category is shown under them. |
+| **Installed** | When the mod went into this game, in your local time (hover for UTC). Click the heading to sort newest first, for example to find what was added before the game started crashing. For adopted mods (see [Not installed by CPMX2077](#not-installed-by-cpmx2077)) it is the date of their newest file. |
 | **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since: red when an update or the patch-note check names the mod, plain when neither does (hover for both builds). A second badge comes from the [patch-note check](#patch-note-check): *updated before 2.1* (the mod's last update is older than that game patch; red for a warning), *predates game 2.31* (a core framework's file is older than a game patch and a newer release exists), *unlisted on Nexus*. Hover it for the details. |
 | **Update to …** | Appears when a newer file is available. *Switch to stable …* appears when you run a pre-release and a stable release is out. |
 | **Mod page** | Opens the mod's page in **Get mods** (description, files, requirements), for mods from Nexus or GitHub. From there **Open on nexusmods.com** opens the website. Not shown for mods installed from an archive on disk. |
 | **Verify** | Re-hashes the mod's files and reports missing, edited or overridden ones. |
-| **Enabled** switch | The slider next to **Uninstall**. Off disables a mod without uninstalling it: its files leave the game, whatever they replaced comes back, and a checked copy is kept. On puts them back without a download. Files the mod changed after install (its own settings) are kept. Disabled mods are left out of compatibility and crash checks. Hover the **Enabled** heading for the difference to **Uninstall**. |
+| **Open stored copy** | Shown instead of **Verify** on a disabled mod. Opens the folder with the copy **Enabled** puts back (`~/.local/share/cp2077-modmanager/staging/<number>/`; Windows: `%APPDATA%\cp2077-modmanager\staging\<number>\`). |
+| **Enabled** switch | The slider next to **Uninstall**. Off disables a mod without uninstalling it: its files are removed from the game folder, game files it replaced are restored, and the copy CPMX2077 stored at install stays in its storage folder (see **Open stored copy**). On puts the files back from that copy, no download needed. Files the mod changed after install (its own settings) stay in the game. Disabled mods are left out of compatibility and crash checks. Hover the **Enabled** heading for the difference to **Uninstall**. |
 | **Uninstall** | Removes the mod and its stored copy and restores what it replaced. Files changed after install (the mod's own settings) stay in the game and are no longer tracked. The downloaded archive is not deleted: the confirmation names it, and **Install** on its row in [Downloads](#downloads) reinstalls the mod. |
 
 **Enabled** vs **Uninstall**: switching **Enabled** off keeps the mod in the
@@ -225,6 +227,35 @@ confirmation points at **Enabled** for keeping the mod. The archive in
 download; delete it there to free the space. Mods put in with **Install from
 archive…** have no Downloads entry: the archive stays where you picked it,
 and **Install from archive…** reinstalls it.
+
+**What Enabled and Uninstall do**, under the list, opens the same
+explanation in the app, with the storage folder's full path.
+
+### Not installed by CPMX2077
+
+A section under the list, shown when the game folder holds mods CPMX2077
+has no record of: copied in by hand, or put there by another mod manager.
+They are grouped the way they are installed: one `.archive` in
+`archive/pc/mod` with the ArchiveXL `.xl` files named after it, one REDmod
+folder in `mods/`, one CET mod folder, one RED4ext plugin folder (ArchiveXL,
+TweakXL and Codeware are frameworks and are listed in the Game panel
+instead), and one entry in `r6/scripts` or `r6/tweaks`. Log files and
+`.disabled` files are left out. A folder that holds a file of an installed
+mod belongs to that mod (files it wrote itself, such as settings) and is
+not listed.
+
+| Column / control | What it does |
+|---|---|
+| **Name / Type / Location** | The archive or folder name, what kind of mod it is, and where it is in the game folder. |
+| **Files / Size / Modified** | How many files it has, their total size and the date of the newest one. |
+| **Open folder** | Opens the folder that holds it. |
+| **Adopt** | Records its files and their SHA-256 hashes and stores a copy, the same as an install. It then appears in the list above with the source *Adopted*, and **Enabled**, **Verify** and **Uninstall** work on it. Nothing in the game folder changes. Uninstalling an adopted mod deletes its files: there is no archive to reinstall it from. |
+| **Adopt all** | Adopts every mod in the section after one confirmation listing them. |
+
+These mods are included in [Compatibility](#compatibility), the
+[Graph](#graph) and the File map's **wins N / loses M** counts with
+*(untracked)* after their name, whether or not you adopt them. They can't
+be switched off until they are adopted.
 
 ### Canvas view
 
@@ -827,7 +858,7 @@ The **Load order** column shows each loaded archive's position (**#3**),
 counted over every archive in those folders, including ones not installed
 by CPMX2077. **REDmod** marks REDmod archives. **wins N / loses M** counts
 the resources the archive shares with other mods' archives that it wins
-(loads first) and loses; click it for the archives involved, each with its
+(loads first) and loses, counting archives not installed by CPMX2077 too; click it for the archives involved, each with its
 position and which one is used (needs **Check again** to have run). In **By
 mod**, a mod's archive positions show next to its name (**#3**, or
 **#3–#5** for several archives). **Sort: load order** sorts folders, mods
@@ -907,6 +938,9 @@ Lists, by severity:
 - **Shared hooks (chained, all run)**: several mods hook the same function.
   Hooks are chained, so every one runs; they only clash if they change the
   same return value.
+
+Mods in the game folder that CPMX2077 didn't install are checked too,
+marked *(untracked)*; see [Not installed by CPMX2077](#not-installed-by-cpmx2077).
 
 **Show what's affected** lists the exact resources or records. Base-game
 resources are shown by hash. *What each mod changes* is a per-mod summary

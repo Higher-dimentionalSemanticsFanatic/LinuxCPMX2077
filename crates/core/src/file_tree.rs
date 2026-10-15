@@ -120,6 +120,10 @@ pub fn build(db: &Db, game: &GameRow, group: Group) -> Result<FileTree> {
     for m in mods.iter().filter(|m| m.enabled()) {
         resource_touches.extend(db.touches(m.id)?.into_iter().filter(|t| t.kind == crate::analysis::Kind::Resource));
     }
+    // Archives in the game folder that CPMX2077 didn't install count too.
+    for u in crate::untracked::scan(db, game)? {
+        resource_touches.extend(crate::untracked::touches(game_dir, &u).into_iter().filter(|t| t.kind == crate::analysis::Kind::Resource));
+    }
     let contests = crate::load_order::contests(resource_touches.iter().map(|t| (t.file.as_str(), t.key.as_str())), &pos);
 
     let entries: Vec<TreeFile> = files

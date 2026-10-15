@@ -165,12 +165,17 @@ Screenshots show sample data, with file locations blurred.
   A station icon can be made from a PNG: CPMX2077 writes the texture,
   atlas and `.archive` itself and installs them with the station.
   Installs radioExt from GitHub when it's missing.
-- **Enable/disable** without uninstalling: switching a mod off takes its files
-  out of the game (bringing back whatever they replaced) and keeps a checked
-  copy, so switching it on again needs no re-download. Files the mod changed
+- **Enable/disable** without uninstalling: switching a mod off removes its files
+  from the game (bringing back whatever they replaced) and keeps the checked
+  copy stored at install (**Open stored copy** shows it), so switching it on again needs no re-download. Files the mod changed
   after install, such as its own settings, stay in place and are kept when it
   comes back. Disabled mods are left out of the compatibility check and crash
   analysis.
+- **Mods installed by hand**: mods already in the game folder (copied in by
+  hand or by another manager) are listed under Installed mods, grouped per
+  archive or folder, and included in the compatibility check, graph and
+  load-order wins/losses. **Adopt** starts tracking them in place, so they
+  can be switched off, verified and uninstalled.
 - **Mod profiles**: named lists of enabled mods, filed under each game
   version. Applying one enables its mods and disables every other installed
   mod in the same game folder; mods updated since still match. The current
