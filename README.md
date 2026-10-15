@@ -127,12 +127,12 @@ Screenshots show sample data, with file locations blurred.
   section under Installed mods lists what the Ultra+ team's page recommends next to
   it and what conflicts with it, marks what you have, and queues the missing
   ones. Installed conflicts also show as known problems in Netrunner.
-- **Patch-note check**: a section under Installed mods compares each mod's file
-  and release dates with the official patch notes (built in, 1.04 to 2.31):
-  core frameworks older than a game patch, mods released before Update 2.0's
-  rework, mods whose feature a patch added to the base game (metro,
-  Radioport, transmog, AutoDrive, …), and mods no longer published on Nexus.
-  Hints only, offline after one "Read release dates".
+- **Patch-note check**: a section under Installed mods lists each mod's last
+  update (Nexus page or newest release) against the official patch notes
+  (built in, 1.04 to 2.31): which game patches came out since, warnings for
+  script mods older than Update 2.0's rework and outdated core frameworks,
+  plus notes on features a patch added to the base game (metro, Radioport,
+  transmog, AutoDrive, …) and mods no longer published on Nexus. Hints only.
 - **ReShade**: a section under Installed mods installs ReShade from reshade.me
   (or a setup file you downloaded), checks the DLL inside the setup before
   using it, loads it as `dxgi.dll` (or `d3d12.dll` when that name is taken),
