@@ -24,8 +24,8 @@ async function loadUltraPlus(refresh = false) {
 
 function ultraState(it, conflict) {
   const [label, cls] = ULTRA_STATE[it.state] || [it.state, ""];
-  // An installed conflict is the bad case; a missing one is fine.
-  const c = conflict ? (it.state === "missing" ? "ok" : "bad") : cls;
+  // An active conflict is the bad case; a missing or turned-off one is fine.
+  const c = conflict ? (it.state === "missing" || it.state === "disabled" ? "ok" : "bad") : cls;
   return el("span", { class: `badge ${c}` }, conflict && it.state === "missing" ? "not installed" : label);
 }
 

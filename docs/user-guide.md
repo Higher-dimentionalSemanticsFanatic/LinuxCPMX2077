@@ -364,7 +364,8 @@ requirement).
 
 - **Conflicts with Ultra+ path tracing**: mods the Ultra+ team says don't
   work with its path tracing. Ones you have are marked *installed* in red,
-  with **Turn off**. Also listed: RedHotTools, which Ultra+ itself checks for
+  with **Turn off**; ones you turned off or don't have are marked green
+  (*turned off*, *not installed*). Also listed: RedHotTools, which Ultra+ itself checks for
   at start-up because it turns Ultra+'s V5 lighting off.
 - **Recommended for path tracing and ray tracing**: mods the Ultra+ team
   suggests alongside it, with notes such as The Nullifier's "set 'Fix Broken
