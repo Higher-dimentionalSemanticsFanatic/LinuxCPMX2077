@@ -32,7 +32,7 @@ flowchart TD
 |---|---|---|
 | **Disable** | status set to disabled first (so it no longer owns files), then `undeploy` | staged copy kept; changed files saved in `kept_files` with their hash |
 | **Enable** | staged copies re-checked against recorded SHA-256 (refuses if missing/changed: "reinstall the mod"); files still in `kept_files` with an unchanged hash are left alone; conflicts checked as on install; then `deploy` | status enabled, `kept_files` cleared |
-| **Uninstall** | `undeploy` if enabled | `mods` row and `staging/MOD_ID` deleted; rows cascade |
+| **Uninstall** | `undeploy` if enabled | `mods` row and `staging/MOD_ID` deleted; rows cascade. The `downloads` row and its archive are untouched, so `install_download` reinstalls it |
 | **Verify** | read-only | reports ok / missing / modified / overridden per file |
 
 Uninstall leaves files that changed after install in the game folder and

@@ -90,7 +90,7 @@ code, .mono { font-family: ui-monospace, "JetBrains Mono", monospace; font-size:
 .progress { position: relative; height: 22px; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 14px; overflow: hidden; }
 .progress-bar { height: 100%; width: 0; background: var(--cyan); opacity: .35; }
 .progress-text { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 10px; font-size: 12px; }
-#toast { position: fixed; right: 20px; bottom: 20px; max-width: 460px; background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--cyan); padding: 12px 14px; border-radius: 4px; white-space: pre-wrap; }
+#toast { position: fixed; right: 20px; bottom: calc(20px + var(--popup-h, 0px)); z-index: 7; max-width: 460px; background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--cyan); padding: 12px 14px; border-radius: 4px; white-space: pre-wrap; }
 #toast.error { border-left-color: var(--red); }
 #game-info, .warnings li { overflow-wrap: anywhere; }
 
@@ -194,6 +194,8 @@ details.card[open] summary { margin-bottom: 10px; }
 #patch-notes td:first-child { width: 24%; }
 #patch-notes .badge, #patch-notes td.actions { white-space: nowrap; }
 #patch-notes td.actions { text-align: right; }
+#patch-notes td.nowrap, .badge.patch-age { white-space: nowrap; }
+#patch-notes details { margin-top: 10px; }
 #reshade details[open] summary { margin-bottom: 10px; }
 #reshade .req-table { width: 100%; }
 #reshade .req-table td:first-child { width: 170px; }
@@ -258,7 +260,7 @@ button.update { border-color: var(--cyan); color: var(--cyan); }
 .notice { border-left: 3px solid var(--cyan); }
 
 /* Download queue and picking several mods. */
-#queue { position: sticky; top: -20px; z-index: 5; border-left: 3px solid var(--yellow); box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+#queue { position: fixed; bottom: 12px; z-index: 6; margin: 0; border-left: 3px solid var(--yellow); box-shadow: 0 -6px 18px rgba(0, 0, 0, .45); }
 /* One line, so the popup keeps its height whatever it says or shows. */
 #queue > .row { flex-wrap: nowrap; min-height: 36px; }
 #queue-title { white-space: nowrap; }

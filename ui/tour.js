@@ -45,7 +45,7 @@ function tourSteps() {
           el("li", {}, el("b", {}, "Netrunner"), ": setup problems, crashes and logs, file map, graph, compatibility."),
           el("li", {}, el("b", {}, "Get mods"), ": Nexus Mods and GitHub. Section Modpacks: Nexus collections, tags, mod list import and export."),
           el("li", {}, el("b", {}, "Downloads"), ": downloaded archives per mod and version; reinstall or switch."),
-          el("li", {}, el("b", {}, "Settings"), ": game installs, download location, nxm:// links, debug terminal.")),
+          el("li", {}, el("b", {}, "Settings"), ": game installs, download location, nxm:// links, terminal.")),
         "▾ next to a tab shows or hides its sections.",
       ],
     },
