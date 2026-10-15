@@ -186,3 +186,23 @@ pub async fn reshade_find_packs(files: Vec<String>) -> Result<EffectSearch> {
     })
     .await
 }
+
+/// Folders under reshade-shaders that ReShade.ini's search paths skip.
+#[tauri::command]
+pub async fn reshade_unsearched(app: AppHandle, game_id: i64) -> Result<Vec<String>> {
+    blocking(move || {
+        let game = app.state::<AppState>().db.lock().unwrap().game(game_id)?;
+        Ok(reshade::unsearched_dirs(&game))
+    })
+    .await
+}
+
+/// Add reshade-shaders back to ReShade.ini's search paths.
+#[tauri::command]
+pub async fn reshade_fix_search_paths(app: AppHandle, game_id: i64) -> Result<()> {
+    blocking(move || {
+        let game = app.state::<AppState>().db.lock().unwrap().game(game_id)?;
+        reshade::fix_search_paths(&game)
+    })
+    .await
+}

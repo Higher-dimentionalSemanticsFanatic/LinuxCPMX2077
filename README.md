@@ -142,8 +142,9 @@ Screenshots show sample data, with file locations blurred.
   Shader packs (Standard effects, SweetFX, qUINT, iMMERSE, prod80, AstrayFX,
   FXShaders) install from their GitHub repositories, shaders and textures
   only, one folder per pack. The preset list shows which preset is active,
-  switches between them, and names effect files a preset needs but that
-  aren't installed.
+  switches between them, names effect files a preset needs but that
+  aren't installed, and repairs `ReShade.ini` search paths a preset mod
+  replaced.
 - **OptiScaler**: a section under Installed mods installs OptiScaler from its
   GitHub releases as a tracked mod (as `wininet.dll`, clear of CET, RED4ext
   and ReShade), optionally with AMD's FSR 4.1.1 upscaler DLL (4.1.1.2740,

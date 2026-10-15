@@ -1759,6 +1759,8 @@ fn main() {
             reshade_cmd::reshade_presets,
             reshade_cmd::reshade_set_preset,
             reshade_cmd::reshade_find_packs,
+            reshade_cmd::reshade_unsearched,
+            reshade_cmd::reshade_fix_search_paths,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -19,15 +19,16 @@ async function loadReShade() {
   const box = $("#reshade");
   if (!currentGame) return box.classList.add("hidden");
   const gameId = currentGame.id;
-  const [s, launch, packs, presets] = await Promise.all([
+  const [s, launch, packs, presets, unsearched] = await Promise.all([
     invoke("reshade_status", { gameId }),
     invoke("reshade_launch", { gameId }).catch(() => null),
     invoke("reshade_packs", { gameId }),
     invoke("reshade_presets", { gameId }),
+    invoke("reshade_unsearched", { gameId }),
   ]);
   if (currentGame?.id !== gameId) return;
   box.classList.remove("hidden");
-  renderReShade(s, launch, packs, presets);
+  renderReShade(s, launch, packs, presets, unsearched);
 }
 
 async function reshadeInstall(args) {
@@ -112,6 +113,30 @@ function reshadeMissing(p, packs) {
   ];
 }
 
+// Shader folders ReShade.ini's search paths skip, usually after a preset
+// mod replaced ReShade.ini with its own.
+function reshadeUnsearched(dirs) {
+  if (!dirs.length) return null;
+  return el("div", { class: "small" },
+    el("span", { class: "badge bad" }, `${dirs.length} shader folder${dirs.length === 1 ? "" : "s"} not in search paths`),
+    ` ReShade.ini's EffectSearchPaths / TextureSearchPaths skip: ${dirs.join(", ")}. ReShade does not load effects from them. `,
+    el("button", { title: "Append reshade-shaders\\Shaders\\** and reshade-shaders\\Textures\\** to ReShade.ini; existing entries stay",
+      onclick: (e) => busy(e.target, async () => {
+        await invoke("reshade_fix_search_paths", { gameId: currentGame.id });
+        toast("Added reshade-shaders to ReShade.ini's search paths");
+        loadReShade();
+      }) }, "Add to search paths"));
+}
+
+async function browsePresetMods() {
+  await selectSource("nexus", false);
+  showTab("nexus");
+  $("#nexus-search").value = "reshade preset";
+  $("#nexus-sort").value = "endorsements";
+  $("#nexus-category").value = "";
+  await runBrowse(searchFromInputs());
+}
+
 function reshadePresets(presets, packs) {
   if (!presets.length) {
     return el("p", { class: "muted small" }, "No presets in bin/x64 or its subfolders. ReShade saves one there (ReShadePreset.ini) the first time you change effects in its overlay; preset mods install there too.");
@@ -167,7 +192,7 @@ function reshadeProton(launch) {
   return el("table", { class: "req-table" }, el("tbody", {}, ...rows));
 }
 
-function renderReShade(s, launch, packs, presets) {
+function renderReShade(s, launch, packs, presets, unsearched) {
   const i = s.installed;
   const m = i ? mods.find((x) => x.id === i.mod_id) : null;
   const newer = i && reshadeLatest && compareVersions(reshadeLatest, i.version || "0") > 0;
@@ -212,7 +237,11 @@ function renderReShade(s, launch, packs, presets) {
       "From each author's GitHub repository, pinned to the newest commit. Only shader (.fx, .fxh) and texture files are installed, each pack in its own folder under bin/x64/reshade-shaders. GitHub publishes no checksums for these archives."),
     reshadePacks(packs),
     el("h3", {}, "Presets"),
-    reshadePresets(presets, packs));
+    reshadeUnsearched(unsearched),
+    reshadePresets(presets, packs),
+    el("p", { class: "small" }, el("button", {
+      title: "Search Nexus for ReShade preset mods in Get mods; install them like any other mod",
+      onclick: (e) => busy(e.target, () => browsePresetMods()) }, "Browse preset mods")));
   $("#reshade").replaceChildren(details);
 }
 

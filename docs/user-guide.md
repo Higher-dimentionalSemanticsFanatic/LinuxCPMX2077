@@ -457,8 +457,10 @@ loads, whether you picked it here or in ReShade's overlay; **Use** makes
 another one active by setting `PresetPath` in `ReShade.ini`, from the next
 game start.
 
-*N effect files missing* names the effect files a preset uses that aren't
-under `reshade-shaders/Shaders`. **Find shader packs** reads each listed
+*N effect files missing* names the effect files a preset uses that ReShade
+does not reach through the `EffectSearchPaths` in `ReShade.ini` (by default
+everything under `reshade-shaders/Shaders`; a preset mod's own folders count
+when its `ReShade.ini` lists them). **Find shader packs** reads each listed
 pack's file list on GitHub and shows which pack has each missing file, with
 an **Install** button for a pack you don't have yet. Files no listed pack
 ships show *not in a listed pack*; the preset's mod page says where to get
@@ -472,7 +474,15 @@ line and goes to `bin/x64`, not to the engine config folder like other loose
 clashes with the ReShade installed here: the install stops and names the
 file, and **Allow overwriting other mods** lets the mod's copy win. A
 `ReShade.ini` in a preset mod replaces the one in the game folder; the old one
-is backed up and comes back when you uninstall the preset mod.
+is backed up and comes back when you uninstall the preset mod. When that
+`ReShade.ini`'s search paths skip folders under `reshade-shaders` (for
+example the shader packs installed here), *N shader folders not in search
+paths* lists them above the presets; **Add to search paths** appends
+`reshade-shaders\Shaders\**` and `reshade-shaders\Textures\**` to
+`ReShade.ini` and keeps the mod's own entries.
+
+**Browse preset mods** opens Get mods with a Nexus search for "reshade
+preset", most endorsed first.
 
 In game, the Home key opens ReShade's overlay.
 
