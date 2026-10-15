@@ -15,7 +15,7 @@ add the case to `install::tests::plans_common_layouts`, move the entry to
 
 1. Read the install toast: the layout name in brackets and the **Skipped**
    list. Wrong layout or a mod file under Skipped → a gap below.
-2. Debug terminal (Settings → Debug terminal, or the sidebar): every
+2. Terminal (Settings → Open terminal, or the sidebar): every
    `Copied … to <path>` line shows where each file went.
 3. Netrunner → File map → By mod: the installed tree, with missing files
    marked.
@@ -37,7 +37,7 @@ add the case to `install::tests::plans_common_layouts`, move the entry to
 | 8 | RED4ext plugin folder **without** `red4ext/plugins/` around it | `MyPlugin/MyPlugin.dll`, `MyPlugin/config.toml` | Refused: "unrecognised archive layout" | yes |
 | 9 | CET files without `init.lua` at their level (a CET addon or module only) | `MyCet/main.lua` | Refused: "unrecognised archive layout" | yes |
 | 10 | Loose ASI plugin | `plugin.asi` | Refused: "unrecognised archive layout" | yes |
-| 11 | Skipped list in the toast | any archive with > 5 skipped files | Toast shows the first 5 only; the rest are visible only in the debug terminal | from `app.js` |
+| 11 | Skipped list in the toast | any archive with > 5 skipped files | Toast shows the first 5 only; the rest are visible only in the terminal | from `app.js` |
 
 Most of rows 1–6 come from one design choice: `plan` picks **one** rule for
 the whole archive and skips whatever that rule doesn't place. A fix would plan
