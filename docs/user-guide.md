@@ -211,11 +211,15 @@ removes it; the same buttons stay in the Game panel and Get mods.
 | **Update to …** | Appears when a newer file is available. *Switch to stable …* appears when you run a pre-release and a stable release is out. |
 | **Mod page** | Opens the mod's page in **Get mods** (description, files, requirements), for mods from Nexus or GitHub. From there **Open on nexusmods.com** opens the website. Not shown for mods installed from an archive on disk. |
 | **Verify** | Re-hashes the mod's files and reports missing, edited or overridden ones. |
-| **Uninstall** | Removes the mod and its stored copy and restores what it replaced. Files changed after install (the mod's own settings) stay in the game and are no longer tracked. |
+| **Uninstall** | Removes the mod and its stored copy and restores what it replaced. Files changed after install (the mod's own settings) stay in the game and are no longer tracked. The downloaded archive is not deleted: the confirmation names it, and **Install** on its row in [Downloads](#downloads) reinstalls the mod. |
 
 **On** vs **Uninstall**: switching a mod off keeps it in the list with a
 stored copy, so it can come back without a download. **Uninstall** deletes
-the stored copy and removes the mod from the list.
+the stored copy and removes the mod from the list. The archive in
+**Downloads** stays, so the mod can be reinstalled from there without a new
+download; delete it there to free the space. Mods put in with **Install from
+archive…** have no Downloads entry: the archive stays where you picked it,
+and **Install from archive…** reinstalls it.
 
 ### Selecting several mods
 
@@ -1004,6 +1008,9 @@ Every archive you downloaded, grouped by mod with each version under it.
 - **Install** or **Switch to this** installs that file, replacing the version
   you have. **Delete** removes the file from disk. An installed mod stays
   installed; only the archive goes.
+- *installed* / *installed, off* / *not installed*: whether that archive is
+  installed in the selected game. Uninstalling a mod keeps its download, so
+  the row shows *not installed* and **Install** reinstalls it.
 - **Deleting several**: tick the box in the first column of each download.
   A folder's box selects all its versions, **Shift**-click selects a range and
   the header box selects everything the channel filter and search show. The bar above
