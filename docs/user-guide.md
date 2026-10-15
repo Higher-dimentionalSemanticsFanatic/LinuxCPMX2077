@@ -9,12 +9,12 @@ ARCHIVE…); this guide writes them in normal case (**Install from
 archive…**). The selected tab is the amber one in the left menu.
 
 Two tabs have sections listed under them in the left menu: **Installed
-mods** (**Mod list**, **ReShade**, **OptiScaler**, **RadioEXT**, **Ultra+
+mods** (**Overview**, **ReShade**, **OptiScaler FSR4.1.1 Lite**, **RadioEXT**, **Ultra+
 recommendations**, **Patch-note check**) and **Get mods** (**Browse mods**,
 **Modpacks**). **▾** next to the tab shows or hides its sections; the choice
 is kept. A section shows in the menu once it applies: ReShade and Patch-note
 check once a mod is installed, Ultra+ recommendations once Ultra+ is in the
-game. OptiScaler and RadioEXT show whenever a game is selected.
+game. OptiScaler FSR4.1.1 Lite and RadioEXT show whenever a game is selected.
 
 - [How it works](#how-it-works)
 - [Game panel](#game-panel)
@@ -92,7 +92,7 @@ here only when more than one is found; while none is found, the panel has
 
 To make the left-hand menu wider or narrower, drag the line between it and
 the main area left or right. The width is kept the next time you open the
-app, and a docked debug terminal fills whatever width you choose. Double-click
+app, and a docked terminal fills whatever width you choose. Double-click
 the line to put it back to the default. With the line selected (Tab to
 it), the left and right arrow keys also resize it.
 
@@ -125,7 +125,7 @@ it), the left and right arrow keys also resize it.
     OptiScaler's DLL with OptiScaler installed) to native-then-builtin in the
     prefix.
   - *FSR 4 shader overrides* (only after you pick **Exact** or **Lossy** in
-    the [OptiScaler](#optiscaler) section) → **Set launch option** puts
+    the [OptiScaler FSR4.1.1 Lite](#optiscaler-fsr411-lite) section) → **Set launch option** puts
     `VKD3D_SHADER_OVERRIDE='Z:<folder>'` in front of your launch options,
     keeping everything else. With **Off** picked while the variable is still
     set, **Remove launch option** takes it out. Steam closed only; on Heroic,
@@ -193,8 +193,11 @@ it), the left and right arrow keys also resize it.
 
 ![The Installed mods tab with the game panel on the left](images/installed-mods.png)
 
-The list of mods CPMX2077 installed in the selected game (**Mod list** in
-the menu).
+The mods CPMX2077 installed in the selected game (**Overview** in the
+menu). **List** / **Canvas** above the filters switches between the table
+below and the [Canvas view](#canvas-view); the choice is kept. The name
+filter, **All tags and categories** and the game version filter apply to
+both.
 
 **First setup** checklist: on top of the list while a first-run step is
 open. *Core frameworks* (**Install missing frameworks**), *Linux setup*
@@ -205,17 +208,42 @@ removes it; the same buttons stay in the Game panel and Get mods.
 | Column / control | What it does |
 |---|---|
 | Selection box (first column) | Selects the mod for the actions in the selection bar. It changes nothing on its own; see *Selecting several mods* below. |
-| **On** switch | The slider. Turns a mod off without uninstalling it: its files leave the game, whatever they replaced comes back, and a checked copy is kept. Turning it on puts them back without a download. Files the mod changed after install (its own settings) are kept. Disabled mods are left out of compatibility and crash checks. |
+| Picture | The mod's thumbnail from its Nexus page, fetched once and saved in `~/.cache/cp2077-modmanager/thumbnails/` (Windows: `%LOCALAPPDATA%\cp2077-modmanager\thumbnails`), so the list shows it offline. Needs a connected Nexus account the first time; a plain box stands in for mods without a Nexus page or picture. The picture URL is checked against Nexus again after 30 days. |
 | **Name / Tags & category / Mod version / Source** | Click a heading to sort (*Tags & category* sorts by a mod's first tag, then its Nexus category). **Mod version** is the mod's own version (the game version is under **Installed on game**). A mod's tags show as chips: **+ Tag** (or **+** once it has one) adds one of your tags (see [Modpacks](#modpacks)), **×** on a chip takes it off. A mod can have any number of tags. The Nexus category is shown under them. |
-| **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since: red when an update or the patch-note check names the mod, plain when neither does (hover for both builds). A second badge comes from the [patch-note check](#patch-note-check): *predates game 2.31* (a core framework older than a game patch), *before game 2.0* (released before a patch that reworked the systems mods build on), *in base game 2.1?* (a patch added what the mod does), *unlisted on Nexus*. Hover it for the details. |
+| **Installed on game** | The game version when the mod went in. *game updated since* means the game has been patched since: red when an update or the patch-note check names the mod, plain when neither does (hover for both builds). A second badge comes from the [patch-note check](#patch-note-check): *updated before 2.1* (the mod's last update is older than that game patch; red for a warning), *predates game 2.31* (a core framework's file is older than a game patch and a newer release exists), *unlisted on Nexus*. Hover it for the details. |
 | **Update to …** | Appears when a newer file is available. *Switch to stable …* appears when you run a pre-release and a stable release is out. |
 | **Mod page** | Opens the mod's page in **Get mods** (description, files, requirements), for mods from Nexus or GitHub. From there **Open on nexusmods.com** opens the website. Not shown for mods installed from an archive on disk. |
 | **Verify** | Re-hashes the mod's files and reports missing, edited or overridden ones. |
-| **Uninstall** | Removes the mod and its stored copy and restores what it replaced. Files changed after install (the mod's own settings) stay in the game and are no longer tracked. |
+| **Enabled** switch | The slider next to **Uninstall**. Off disables a mod without uninstalling it: its files leave the game, whatever they replaced comes back, and a checked copy is kept. On puts them back without a download. Files the mod changed after install (its own settings) are kept. Disabled mods are left out of compatibility and crash checks. Hover the **Enabled** heading for the difference to **Uninstall**. |
+| **Uninstall** | Removes the mod and its stored copy and restores what it replaced. Files changed after install (the mod's own settings) stay in the game and are no longer tracked. The downloaded archive is not deleted: the confirmation names it, and **Install** on its row in [Downloads](#downloads) reinstalls the mod. |
 
-**On** vs **Uninstall**: switching a mod off keeps it in the list with a
-stored copy, so it can come back without a download. **Uninstall** deletes
-the stored copy and removes the mod from the list.
+**Enabled** vs **Uninstall**: switching **Enabled** off keeps the mod in the
+list with a stored copy, so it can come back without a download.
+**Uninstall** deletes the stored copy and removes the mod from the list; its
+confirmation points at **Enabled** for keeping the mod. The archive in
+**Downloads** stays, so the mod can be reinstalled from there without a new
+download; delete it there to free the space. Mods put in with **Install from
+archive…** have no Downloads entry: the archive stays where you picked it,
+and **Install from archive…** reinstalls it.
+
+### Canvas view
+
+![Canvas view grouped by tag](images/installed-mods-canvas.png)
+
+**Canvas** shows the same mods as tiles, one column per group, so you can
+see at a glance which mods carry which tag.
+
+- **Group by**: **Tag** (one column per tag in your tag list order, then
+  *No tags*), **Nexus category**, **Source** (Nexus, GitHub, Manual, …) or
+  **Enabled / disabled**. The column heading shows the group's mod count.
+- A mod with several tags shows in each of its tag columns; the dots after
+  its name are its other tags, in their colors.
+- The number on the right of a tile is the mod's file count. **▲** marks an
+  available update. Faded, dashed tiles are disabled mods; untick **Show
+  disabled** to hide them.
+- Click a tile to open that mod in **List** (name filter set to it). Click a
+  tag or category heading to show that group in **List**.
+- Hover a tile for its state, file count, tags and Nexus category.
 
 ### Selecting several mods
 
@@ -225,7 +253,7 @@ the stored copy and removes the mod from the list.
 - With at least one mod selected, a bar above the list shows the count and:
   - **Enable**: switches the selected disabled mods on. A mod whose files
     conflict with an enabled mod is left off and named in the report; switch
-    it on with its own **On** switch to choose which mod's files win.
+    it on with its own **Enabled** switch to choose which mod's files win.
   - **Disable**: switches the selected enabled mods off.
   - **Add tag…** / **Remove tag…**: puts one of your tags on every selected
     mod, or takes it off (shown once you have tags).
@@ -242,7 +270,13 @@ Above the list:
   belong to another mod. Uninstalling the winner later restores the loser's
   copy.
 - **Check for updates** asks Nexus and GitHub for newer files (also runs at
-  start-up). **Update all** queues every available update.
+  start-up). **Update all** checks first (unless a check ran in the last
+  10 minutes), then lists every mod with a newer file, current version →
+  new version, and asks **Proceed** or **Cancel**. **Proceed** puts them all
+  in the download queue: GitHub files and Nexus files on a Premium account
+  download through the API; on a free account the Nexus window steps
+  through the files, one **Mod Manager Download** click each. Each update
+  replaces the installed version and keeps its tags.
 - **Install from archive…** installs a `.zip`, `.7z` or `.rar` from disk.
 - **Game version and profiles**: one column per game version the app has
   seen, oldest on the left, with that version's mod profiles (named lists
@@ -353,37 +387,44 @@ show under **Known problems** in Netrunner's
 
 ### Patch-note check
 
-![The Patch-note check card with two warnings and five hints](images/patch-note-check.png)
+![The Patch-note check section listing mods by last update](images/patch-note-check.png)
 
-The **Patch-note check** section (under Installed mods in the menu) compares each turned-on mod's dates with the
-game's official patch notes (cyberpunk.net), from Hotfix 1.04 to Patch
-2.31. The list is built into the app; the line under the heading says when
-it was last compared with the official notes. The heading line counts
-warnings and hints and shows the game version used (from the game's exe;
-when it can't be read, every listed patch counts). Click it to unfold the
-card. Nothing is changed or turned off: these are hints.
+The **Patch-note check** section (under Installed mods in the menu) compares
+each turned-on mod's **last update** with the game's official patch notes
+(cyberpunk.net), from Hotfix 1.04 to Patch 2.31. The list is built into the
+app; the line under the heading says when it was last compared with the
+official notes. The heading line counts the mods last updated before a game
+patch and the warnings, and shows the game version used (from the game's
+exe; when it can't be read, every listed patch counts). Nothing is changed
+or turned off: these are hints.
 
-Dates used:
+Last update dates:
 
-- **File date**: Nexus puts the upload time in every file name, so mods
-  installed from Nexus are dated without asking Nexus anything.
+- **Nexus page**: the date Nexus gives for the mod page's last update.
+- **newest release**: for GitHub mods, the newest release's date.
+- **installed file**: until the two above are read, the installed file's
+  upload date (Nexus puts it in every file name).
 - **Read release dates** asks Nexus (one request per 50 mods) for each mod
   page's last update, summary and page status, and GitHub for release dates,
-  and keeps them in the library database. Without a Nexus API key only
-  GitHub is read. Mods that couldn't be read are listed under the buttons.
+  and keeps them in the library database. It also runs once by itself the
+  first time you open the section without dates. Without a Nexus API key
+  only GitHub is read. Mods that couldn't be read are listed under the
+  button.
 
-What it reports, warnings first:
+The table lists the mods last updated before a game patch, the longest
+without an update first:
 
-| Finding | When |
+| Column | What it shows |
 |---|---|
-| **… file predates game X** (warning) | A core framework (Cyber Engine Tweaks, RED4ext, redscript, ArchiveXL, TweakXL, Codeware) installed from a file older than a game patch you have, while a newer release exists. The modding wiki's rule: after a game update every core framework needs a release from after that update. Shown as a hint until **Read release dates** confirms the newer release; not shown when the source has nothing newer. |
-| **Released before game 2.0** | The mod's last update (or, before reading dates, its file) is older than Update 2.0, which reworked perk trees, cyberware, the NCPD, vehicle combat and enemy scaling. A warning for mods with scripts, CET, plugins or TweakXL files; a hint for mods with only archives. **Installed file predates game 2.0** means a newer release exists. |
-| **Possibly covered by game X** | The mod's name or Nexus summary matches a feature that patch added (NCART metro, Radioport, wardrobe/transmog, AutoDrive, the vignette toggle, FSR 3 frame generation, …) and the mod wasn't updated after that patch. Some mods are matched by their Nexus id. |
-| **Nexus page status: …** | The Nexus page is hidden, removed or otherwise no longer published (known after **Read release dates**). |
+| **Last update** | The date and where it came from. |
+| **Game patches since** | *before 2.1* is the first game patch released after the mod's last update; then how many patches came out since. **Patch 2.1 notes** opens that patch's official notes. |
+| Notes under it | *Game 2.0 reworked: …* (the mod is older than Update 2.0, which reworked perk trees, cyberware, the NCPD, vehicle combat and enemy scaling). *Possibly covered by game 2.1: …* (the mod's name or Nexus summary matches a feature that patch added, such as the NCART metro, Radioport, transmog, AutoDrive or the vignette toggle; some mods are matched by their Nexus id). *Installed file: …; Nexus page updated since* (check the mod for a newer file). *… file predates game 2.31* for core frameworks. *Nexus page status: removed* (or hidden). |
+| **warning** | Mods with scripts, CET, plugins or TweakXL files last updated before Update 2.0, and core frameworks (Cyber Engine Tweaks, RED4ext, redscript, ArchiveXL, TweakXL, Codeware) whose installed file predates a game patch while a newer release exists. The modding wiki's rule: after a game update every core framework needs a release from after that update. |
 
-Each row links the patch notes or the modding wiki page it is based on.
-Mods without any date (installed from an archive on disk, or from a source
-without dates) are listed at the bottom as *Not checked*.
+Mods updated after every game patch you have are folded under **Updated
+after game 2.31**. Mods without any date (installed from an archive on
+disk, or from a source without dates) are listed at the bottom as *Not
+checked*.
 
 ### ReShade
 
@@ -413,7 +454,7 @@ installed*. Click the heading to open or fold the card.
   ReShade at `bin/x64/reshade-shaders/` for effects and textures. An existing
   `ReShade.ini` is left alone.
 - ReShade is listed in the mod table like any mod (source *reshade.me*), so
-  the **On** switch, **Verify**, **Uninstall** and the File map work on it.
+  the **Enabled** switch, **Verify**, **Uninstall** and the File map work on it.
   The card has **Disable**/**Enable** and **Uninstall** too.
 - **Check for updates** reads the newest version from reshade.me and the
   newest commit of each installed shader pack. When ReShade is newer,
@@ -457,8 +498,10 @@ loads, whether you picked it here or in ReShade's overlay; **Use** makes
 another one active by setting `PresetPath` in `ReShade.ini`, from the next
 game start.
 
-*N effect files missing* names the effect files a preset uses that aren't
-under `reshade-shaders/Shaders`. **Find shader packs** reads each listed
+*N effect files missing* names the effect files a preset uses that ReShade
+does not reach through the `EffectSearchPaths` in `ReShade.ini` (by default
+everything under `reshade-shaders/Shaders`; a preset mod's own folders count
+when its `ReShade.ini` lists them). **Find shader packs** reads each listed
 pack's file list on GitHub and shows which pack has each missing file, with
 an **Install** button for a pack you don't have yet. Files no listed pack
 ships show *not in a listed pack*; the preset's mod page says where to get
@@ -472,13 +515,21 @@ line and goes to `bin/x64`, not to the engine config folder like other loose
 clashes with the ReShade installed here: the install stops and names the
 file, and **Allow overwriting other mods** lets the mod's copy win. A
 `ReShade.ini` in a preset mod replaces the one in the game folder; the old one
-is backed up and comes back when you uninstall the preset mod.
+is backed up and comes back when you uninstall the preset mod. When that
+`ReShade.ini`'s search paths skip folders under `reshade-shaders` (for
+example the shader packs installed here), *N shader folders not in search
+paths* lists them above the presets; **Add to search paths** appends
+`reshade-shaders\Shaders\**` and `reshade-shaders\Textures\**` to
+`ReShade.ini` and keeps the mod's own entries.
+
+**Browse preset mods** opens Get mods with a Nexus search for "reshade
+preset", most endorsed first.
 
 In game, the Home key opens ReShade's overlay.
 
-### OptiScaler
+### OptiScaler FSR4.1.1 Lite
 
-The **OptiScaler** section (under Installed mods in the menu) installs
+The **OptiScaler FSR4.1.1 Lite** section (under Installed mods in the menu) installs
 [OptiScaler](https://github.com/optiscaler/OptiScaler), which takes the
 game's DLSS, XeSS or FSR 3.1 input and runs another upscaler, FSR 4
 included. Single-player only: OptiScaler's own page warns that anti-cheat
@@ -535,7 +586,7 @@ vkd3d-proton loads them through the `VKD3D_SHADER_OVERRIDE` launch option.
   newest commit.
 - **Off**, **Exact** (AMD's picture, byte for byte) or **Lossy** (faster,
   runs FSR 4's network every other frame, so the picture differs; the app
-  asks first and links the repository's `WARNING.txt`). The choice is per
+  asks first and links the repository's `WARNING.txt`; **No** keeps the previous choice). The choice is per
   game.
 - After **Exact** or **Lossy**, the *FSR 4 shader overrides* item appears
   here and in the Game panel with **Set launch option**. OptiScaler keeps
@@ -572,7 +623,7 @@ Buttons per station:
   station made here: from then on it is tracked like any mod.
 - **Open folder** opens the station's folder.
 - **Disable** / **Enable** and **Delete** (stations made here): the same
-  as the mod list's **On** switch and **Uninstall**.
+  as the mod list's **Enabled** switch and **Uninstall**.
 
 Stations installed with another mod aren't edited here; change them through
 that mod. Archives of radioExt stations from Nexus install like any other
@@ -785,7 +836,7 @@ one *Framework* node, not a mod node plus a framework node.
   panning redraw at most once per screen refresh, and far-off groups of
   nodes are counted together while the web layout settles. If the graph
   stops drawing, it says so in red and the error is listed in the
-  [debug terminal](#debug-terminal).
+  [terminal](#terminal).
 
 ### Compatibility
 
@@ -942,7 +993,7 @@ Browse and download mods. The switch at the top right picks the source:
     `nxm://` handler first).
   - You stay on **Get mods** while it downloads. Progress shows on the mod's
     card when you started from the card, on the file's row in **Downloads**,
-    and in the [downloads panel](#downloads-panel) at the top of the window.
+    and in the [downloads panel](#downloads-panel) at the bottom of the window.
 - **No duplicate downloads**: a file that is already in your downloads (same
   Nexus or GitHub file, still on disk and complete) is not downloaded again.
   The app installs the copy you have and says so. Files in your downloads
@@ -958,8 +1009,8 @@ Browse and download mods. The switch at the top right picks the source:
   than 25 requests remain so downloads still work, and nothing is sent once
   Nexus says the quota is used up until it resets.
 - **API requests** (Settings → debug mode) lists every request with timing.
-  Your API key is never shown. **Open debug terminal** there opens the
-  [debug terminal](#debug-terminal).
+  Your API key is never shown. **Open terminal** there opens the
+  [terminal](#terminal).
 - Adult-flagged mods are hidden unless you turn them on in Settings.
 
 ### GitHub
@@ -979,12 +1030,13 @@ The core frameworks and many mods ship as GitHub releases.
 
 ### Downloads panel
 
-A panel at the top of the window appears while files download: one bar per
-file, side by side, each with the mod name, percentage and size. A finished
-bar stays where it is, marked *downloaded*, *already in downloads* or
-*failed*, so the running bars don't move. The panel keeps the same height
-while it is open; when you have scrolled down, the page keeps its place when
-the panel opens or closes. Once every file is finished the bars clear after 8
+A panel at the bottom of the window appears while files download: one bar
+per file, side by side, each with the mod name, percentage and size. A
+finished bar stays where it is, marked *downloaded*, *already in downloads*
+or *failed*, so the running bars don't move. The panel floats over the page
+and the page gets the same amount of empty space at its end, so nothing
+stays hidden under it and nothing on the page moves when it opens or closes.
+Messages show above it. Once every file is finished the bars clear after 8
 seconds, or at once with **Clear**. The download queue shares this panel.
 
 ### Download queue
@@ -1028,13 +1080,18 @@ Every archive you downloaded, grouped by mod with each version under it.
   mod names, file names, versions, game versions, channels and sources.
   Folders with a match open and show only the matching versions.
 - **Files downloading** are listed on top of the list with their own
-  progress bar, and replaced by the finished download.
+  progress bar, and replaced by the finished download. When you have
+  scrolled down, the rows on screen keep their place as these rows come and
+  go.
 - **Channel filter**: stable, beta and nightly; stable only; or beta and
   nightly only. The channel comes from the version and file name and from
   GitHub's pre-release flag.
 - **Install** or **Switch to this** installs that file, replacing the version
   you have. **Delete** removes the file from disk. An installed mod stays
   installed; only the archive goes.
+- *installed* / *installed, off* / *not installed*: whether that archive is
+  installed in the selected game. Uninstalling a mod keeps its download, so
+  the row shows *not installed* and **Install** reinstalls it.
 - **Deleting several**: tick the box in the first column of each download.
   A folder's box selects all its versions, **Shift**-click selects a range and
   the header box selects everything the channel filter and search show. The bar above
@@ -1074,11 +1131,11 @@ Every archive you downloaded, grouped by mod with each version under it.
   the read-only MCP server, with **Copy**.
 - **Nexus browser sign-in**: the application slug Nexus issues for browser
   sign-in.
-- **Nexus browsing**: show adult content, debug mode, *Debug terminal
+- **Nexus browsing**: show adult content, debug mode, *Terminal
   opens* (**In the sidebar**, the default, or **In its own window**), **Open
-  debug terminal** and **Clear saved pages**. Ticking *Debug mode* adds the
-  API request list to Get mods, opens the [debug terminal](#debug-terminal)
-  and adds a **Debug terminal** button under the tabs in the sidebar. Pages and
+  terminal** and **Clear saved pages**. Ticking *Debug mode* adds the
+  API request list to Get mods, opens the [terminal](#terminal)
+  and adds a **Terminal** button under the tabs in the sidebar. Pages and
   searches are saved for a week; lists count as fresh for 5 minutes and mod
   pages for 10.
 - **Nexus account**: **Forget API key** removes it from the keyring.
@@ -1096,15 +1153,14 @@ Every archive you downloaded, grouped by mod with each version under it.
   last step has **Open getting started guide**. Closing it returns to the
   tab you were on.
 
-### Debug terminal
+### Terminal
 
 A terminal that shows, live and oldest first, every Nexus API request and
 everything the app does on your machine. It works the same on Linux and
 Windows and needs no terminal program.
 
 By default it sits at the foot of the main window's sidebar, under the
-**Debug terminal** button. That button shows or hides it, and **Open debug
-terminal** in Settings or in Get mods' *API requests* list shows it too.
+**Terminal** button. That button shows or hides it, and **Open terminal** in Settings or in Get mods' *API requests* list shows it too.
 Drag its bottom-right corner to make it taller.
 
 - **Pop out** (in the docked terminal) moves it to a window of its own.
@@ -1112,7 +1168,7 @@ Drag its bottom-right corner to make it taller.
   sidebar.
 - **Hide** (in the docked terminal) tucks it away; the app remembers this
   until you show it again.
-- To always open it as a window, set *Debug terminal opens* in Settings to
+- To always open it as a window, set *Terminal opens* in Settings to
   **In its own window**.
 
 Docked, it is a compact version: the filter checkboxes are behind
@@ -1219,6 +1275,7 @@ logs are only readable from a fixed list of known locations.
 | AMD's FSR 4.1.1 upscaler DLL (OptiScaler archives are deleted after install) | `~/.local/share/cp2077-modmanager/optiscaler/` |
 | FSR 4 shader overrides | `~/.local/share/cp2077-modmanager/fsr4-shader-overrides/` (`prebuilt/`, `prebuilt-lossy/`) |
 | Saved Nexus pages | `~/.cache/cp2077-modmanager/nexus/` |
+| Mod thumbnails | `~/.cache/cp2077-modmanager/thumbnails/` |
 | Refreshed Ultra+ recommendations | In the library database (settings) |
 | Release dates for the patch-note check | In the library database (`release_dates`) |
 | Nexus API key | System keyring (Secret Service) only |
@@ -1236,7 +1293,7 @@ API key is in Windows Credential Manager.
   Organizer on its own.
 - `.rar` archives are unpacked with the `tar.exe` built into Windows 10
   and 11.
-- The OptiScaler section has no FSR 4.1.1 shader overrides: they are a
+- The OptiScaler FSR4.1.1 Lite section has no FSR 4.1.1 shader overrides: they are a
   vkd3d-proton (Proton) feature. OptiScaler and AMD's DLL install the same
   way.
 
@@ -1285,11 +1342,11 @@ clicked the download in CPMX2077's own Nexus window, or that CPMX2077 handles
 **The game crashes.** Open Netrunner → *Crashes & logs* and start with the
 step marked **Start here** under *Last start, step by step*, then *Known
 problems*. Mods named in errors from the last session are listed; turn them
-off with the **On** switch to test, start the game again, then **Check
+off with the **Enabled** switch to test, start the game again, then **Check
 again**. The compatibility list may also name a clash.
 
 **Something went wrong and you want to see exactly what happened.** Tick
-*Debug mode* in Settings and use the [debug terminal](#debug-terminal): it
+*Debug mode* in Settings and use the [terminal](#terminal): it
 lists each request, download, checksum check, extraction and file the app
 touched. **Save…** gives you a log to attach to a bug report.
 
