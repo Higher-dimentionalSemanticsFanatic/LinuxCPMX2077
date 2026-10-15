@@ -144,7 +144,7 @@ Screenshots show sample data, with file locations blurred.
   only, one folder per pack. The preset list shows which preset is active,
   switches between them, and names effect files a preset needs but that
   aren't installed.
-- **OptiScaler**: a section under Installed mods installs OptiScaler from its
+- **OptiScaler FSR4.1.1 Lite**: a section under Installed mods installs OptiScaler from its
   GitHub releases as a tracked mod (as `wininet.dll`, clear of CET, RED4ext
   and ReShade), optionally with AMD's FSR 4.1.1 upscaler DLL (4.1.1.2740,
   checked against AMD's repository). On Linux it adds OptiScaler's DLL

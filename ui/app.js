@@ -125,7 +125,7 @@ function fmtSize(n) {
 // patch notes) and Get mods holds Modpacks, each a collapsible submenu in
 // the sidebar.
 let modsSub = "list";
-const MODS_TITLES = { list: "Installed mods", reshade: "ReShade", optiscaler: "OptiScaler", radio: "RadioEXT", ultraplus: "Ultra+ recommendations", patchnotes: "Patch-note check" };
+const MODS_TITLES = { list: "Installed mods", reshade: "ReShade", optiscaler: "OptiScaler FSR4.1.1 Lite", radio: "RadioEXT", ultraplus: "Ultra+ recommendations", patchnotes: "Patch-note check" };
 document.querySelectorAll("nav button[data-tab]").forEach((b) =>
   b.addEventListener("click", () => showTab(b.dataset.tab, b.dataset.sub)));
 const navOpen = loadPref("navOpen", { mods: true, nexus: true });

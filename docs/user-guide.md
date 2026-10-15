@@ -9,12 +9,12 @@ ARCHIVE…); this guide writes them in normal case (**Install from
 archive…**). The selected tab is the amber one in the left menu.
 
 Two tabs have sections listed under them in the left menu: **Installed
-mods** (**Mod list**, **ReShade**, **OptiScaler**, **RadioEXT**, **Ultra+
+mods** (**Mod list**, **ReShade**, **OptiScaler FSR4.1.1 Lite**, **RadioEXT**, **Ultra+
 recommendations**, **Patch-note check**) and **Get mods** (**Browse mods**,
 **Modpacks**). **▾** next to the tab shows or hides its sections; the choice
 is kept. A section shows in the menu once it applies: ReShade and Patch-note
 check once a mod is installed, Ultra+ recommendations once Ultra+ is in the
-game. OptiScaler and RadioEXT show whenever a game is selected.
+game. OptiScaler FSR4.1.1 Lite and RadioEXT show whenever a game is selected.
 
 - [How it works](#how-it-works)
 - [Game panel](#game-panel)
@@ -125,7 +125,7 @@ it), the left and right arrow keys also resize it.
     OptiScaler's DLL with OptiScaler installed) to native-then-builtin in the
     prefix.
   - *FSR 4 shader overrides* (only after you pick **Exact** or **Lossy** in
-    the [OptiScaler](#optiscaler) section) → **Set launch option** puts
+    the [OptiScaler FSR4.1.1 Lite](#optiscaler-fsr411-lite) section) → **Set launch option** puts
     `VKD3D_SHADER_OVERRIDE='Z:<folder>'` in front of your launch options,
     keeping everything else. With **Off** picked while the variable is still
     set, **Remove launch option** takes it out. Steam closed only; on Heroic,
@@ -476,9 +476,9 @@ is backed up and comes back when you uninstall the preset mod.
 
 In game, the Home key opens ReShade's overlay.
 
-### OptiScaler
+### OptiScaler FSR4.1.1 Lite
 
-The **OptiScaler** section (under Installed mods in the menu) installs
+The **OptiScaler FSR4.1.1 Lite** section (under Installed mods in the menu) installs
 [OptiScaler](https://github.com/optiscaler/OptiScaler), which takes the
 game's DLSS, XeSS or FSR 3.1 input and runs another upscaler, FSR 4
 included. Single-player only: OptiScaler's own page warns that anti-cheat
@@ -535,7 +535,7 @@ vkd3d-proton loads them through the `VKD3D_SHADER_OVERRIDE` launch option.
   newest commit.
 - **Off**, **Exact** (AMD's picture, byte for byte) or **Lossy** (faster,
   runs FSR 4's network every other frame, so the picture differs; the app
-  asks first and links the repository's `WARNING.txt`). The choice is per
+  asks first and links the repository's `WARNING.txt`; **No** keeps the previous choice). The choice is per
   game.
 - After **Exact** or **Lossy**, the *FSR 4 shader overrides* item appears
   here and in the Game panel with **Set launch option**. OptiScaler keeps
@@ -1205,7 +1205,7 @@ API key is in Windows Credential Manager.
   Organizer on its own.
 - `.rar` archives are unpacked with the `tar.exe` built into Windows 10
   and 11.
-- The OptiScaler section has no FSR 4.1.1 shader overrides: they are a
+- The OptiScaler FSR4.1.1 Lite section has no FSR 4.1.1 shader overrides: they are a
   vkd3d-proton (Proton) feature. OptiScaler and AMD's DLL install the same
   way.
 
