@@ -69,14 +69,20 @@ function upscalerRow(s) {
 }
 
 async function fsr4Choose(variant) {
-  if (variant === "lossy") {
-    const go = await dialog.ask(
-      "The lossy shaders change the picture: FSR 4's network runs on every other frame. Thin distant lines are dimmer while the camera pans, moving foliage is softer, and frame times alternate. Details: WARNING.txt in the repository's prebuilt-lossy folder.\n\nUse the lossy shaders?",
-      { title: "FSR 4 shader overrides", kind: "warning" });
-    if (!go) return;
+  try {
+    if (variant === "lossy") {
+      const go = await dialog.ask(
+        "The lossy shaders change the picture: FSR 4's network runs on every other frame. Thin distant lines are dimmer while the camera pans, moving foliage is softer, and frame times alternate. Details: WARNING.txt in the repository's prebuilt-lossy folder.\n\nUse the lossy shaders?",
+        { title: "FSR 4 shader overrides", kind: "warning" });
+      if (!go) return;
+    }
+    await invoke("fsr4_overrides_choose", { gameId: currentGame.id, variant });
+    await loadSetup();
+  } finally {
+    // Redraw from the saved choice: after No (or an error) the clicked
+    // radio button would otherwise stay selected.
+    await loadOptiScaler().catch(() => {});
   }
-  await invoke("fsr4_overrides_choose", { gameId: currentGame.id, variant });
-  await loadSetup();
 }
 
 function fsr4Section(s, o) {
