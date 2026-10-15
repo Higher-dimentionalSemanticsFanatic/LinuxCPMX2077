@@ -211,6 +211,13 @@ details.card[open] summary { margin-bottom: 10px; }
 .radio-field { display: flex; flex-direction: column; gap: 4px; }
 .radio-field > span:first-child { font-weight: 600; }
 .radio-song-name { width: 100%; }
+.radio-icon-preview { width: 96px; height: 96px; image-rendering: auto; background: repeating-conic-gradient(#3333 0 25%, #0000 0 50%) 0 0 / 16px 16px; border: 1px solid var(--border); }
+.radio-icon-row { display: flex; gap: 14px; align-items: flex-start; margin: 8px 0; }
+#wolvenkit .req-table { width: 100%; }
+#wolvenkit .req-table td:first-child { width: 170px; }
+#wolvenkit td.actions { text-align: right; white-space: nowrap; }
+#wolvenkit .badge { margin-left: 6px; }
+#wolvenkit .wk-listing { max-height: 320px; overflow: auto; font-size: 12px; }
 #ultraplus details[open] summary { margin-bottom: 10px; }
 #ultraplus .req-table { width: 100%; }
 #ultraplus td:first-child { width: 38%; }

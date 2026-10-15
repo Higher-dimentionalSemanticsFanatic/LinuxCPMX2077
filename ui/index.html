@@ -210,6 +210,7 @@
             <button class="link" data-jump="diag-graph">Graph</button>
             <button class="link" data-jump="diag-compat">Compatibility</button>
             <button class="link" data-jump="diag-crashes">Crashes &amp; logs</button>
+            <button class="link" data-jump="net-wolvenkit">WolvenKit</button>
           </div>
           <button id="run-diagnostics" class="primary">Check again</button>
         </div>
@@ -319,6 +320,13 @@
           <thead><tr><th>Log</th><th>Size</th><th>Last written</th><th></th></tr></thead>
           <tbody id="crash-logs"></tbody>
         </table>
+      </section>
+
+      <section id="net-wolvenkit" class="diag-section">
+        <h3>WolvenKit</h3>
+        <p class="muted">The Cyberpunk 2077 modding toolkit, downloaded from its GitHub releases into CPMX2077's data folder.
+          The command-line build (WolvenKit CLI) runs on Linux and Windows with the .NET runtime; the editor is a Windows program.</p>
+        <div id="wolvenkit"></div>
       </section>
     </section>
 
@@ -655,6 +663,7 @@
   <script src="reshade.js"></script>
   <script src="optiscaler.js"></script>
   <script src="radio.js"></script>
+  <script src="wolvenkit.js"></script>
   <script src="app_update.js"></script>
   <script src="tour.js"></script>
 </body>

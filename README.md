@@ -156,6 +156,8 @@ Screenshots show sample data, with file locations blurred.
   volume, icon, web stream, play order, song names from ID3/FLAC/Ogg tags).
   Song files are copied after a content check against their format; each
   station is a tracked mod, so disable, delete and profiles work on it.
+  A station icon can be made from a PNG: CPMX2077 writes the texture,
+  atlas and `.archive` itself and installs them with the station.
   Installs radioExt from GitHub when it's missing.
 - **Enable/disable** without uninstalling: switching a mod off takes its files
   out of the game (bringing back whatever they replaced) and keeps a checked
@@ -197,6 +199,10 @@ Screenshots show sample data, with file locations blurred.
   (`claude mcp add cp2077-mods -- /path/to/AppImage --mcp`). The database is
   opened read-only, there are no tools that change or run anything, and logs
   are only readable from a fixed list of known locations.
+- **WolvenKit**: Netrunner downloads WolvenKit from its GitHub releases
+  (the CLI on Linux and Windows, the editor on Windows), shows whether the
+  .NET runtime the CLI needs is installed, lists an archive's files, and
+  checks radio station icons by reading them back.
 - **Crashes & logs**: reads the game's crash reports in the Proton prefix
   (`REDEngine/ReportQueue`), the CET, RED4ext, ArchiveXL, TweakXL, Codeware and
   redscript logs (plus per-mod CET logs and Proton's `steam-1091500.log`),
@@ -323,7 +329,9 @@ field is the way to connect.
   the file is discarded.
 - GitHub downloads are only fetched over HTTPS from `github.com` and its
   release-asset hosts and must match the asset's published SHA-256 digest.
-  Older assets without a digest are marked unverified.
+  Older assets without a digest are marked unverified. WolvenKit is one of
+  them, unpacked with the same checks as mod archives into the app's data
+  folder.
 - The in-app Nexus window has no access to the app's commands. It only hands
   over `nxm://` links; links to other sites open in your browser.
 

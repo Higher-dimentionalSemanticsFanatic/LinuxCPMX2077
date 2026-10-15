@@ -562,7 +562,7 @@ The station table, sorted by FM number:
 |---|---|
 | **FM** / **Station** | The FM number and in-game name, with the folder name and where the station comes from: *made in CPMX2077*, *from &lt;mod&gt;* (installed with a mod), or *not tracked* (copied in by hand). Red badges name what radioExt would report in its CET console: no `metadata.json`, an unreadable `metadata.json`, no songs on a station that isn't a stream, or a play order naming a missing file. |
 | **Songs** | Number of song files, *stream* for a web-stream station, *fixed order* when a play order is set. |
-| **Icon** | The UIIcon record, or the `.inkatlas` part for a custom icon. |
+| **Icon** | The UIIcon record, *PNG icon* for an icon made here from a PNG, or the `.inkatlas` part for a custom icon from a mod. |
 | **State** | *enabled*, or *disabled* for a station switched off here. |
 
 Buttons per station:
@@ -570,6 +570,11 @@ Buttons per station:
 - **Edit** opens the editor. Shown for stations made here and for
   *not tracked* folders. Saving a *not tracked* folder installs it as a
   station made here: from then on it is tracked like any mod.
+- **Check icon** (stations with a *PNG icon*): reads the station's icon
+  archive back with the WolvenKit CLI and shows, per file, the class
+  WolvenKit read (*CBitmapTexture 256×256*, *inkTextureAtlas part icon*) and
+  whether the extracted bytes are identical to the archive's. Needs the
+  WolvenKit CLI and its .NET runtime ([WolvenKit](#wolvenkit) in Netrunner).
 - **Open folder** opens the station's folder.
 - **Disable** / **Enable** and **Delete** (stations made here): the same
   as the mod list's **On** switch and **Uninstall**.
@@ -588,12 +593,23 @@ radioExt's `radios` folder, one folder per station.
 - **FM**: sorts the station into the radio list (0.1–999.9).
 - **Volume**: multiplier for the whole station (1.0 = unchanged), to match
   vanilla stations.
-- **Icon**: a `UIIcon.` record from the game's TweakDB, such as
-  `UIIcon.alcohol_absynth` (radioExt's template). Suggestions list the icons
-  the other stations use. **Custom icon from an .inkatlas** uses a texture
-  from an installed archive mod instead: **inkatlas path** (resource path
-  with backslashes) and **inkatlas part**. `.inkatlas` files are made with
-  WolvenKit.
+- **Icon source**, one of three:
+  - **Game icon**: a `UIIcon.` record from the game's TweakDB, such as
+    `UIIcon.alcohol_absynth` (radioExt's template), in **UIIcon record**.
+    Suggestions list the icons the other stations use.
+  - **PNG image**: **Choose PNG…** picks any PNG up to 4096×4096 and 32 MB
+    and shows a preview. The image is centred on a transparent square and
+    scaled to 256×256. On save, CPMX2077 writes it as a game texture
+    (`.xbm`, uncompressed RGBA) and an atlas (`.inkatlas`, part *icon*) in
+    `archive/pc/mod/cpmx2077_radio_<station>.archive` and points the
+    station's custom icon at it. The archive belongs to the station: it is
+    disabled, enabled and deleted with it, and kept when you save the
+    station again without picking a new PNG. Built into CPMX2077; WolvenKit
+    is not needed to make it, only to check it (**Check icon**). In-game
+    display is not yet confirmed.
+  - **Mod .inkatlas**: a texture from an installed archive mod:
+    **inkatlas path** (resource path with backslashes) and **inkatlas
+    part**.
 - **Web stream**: plays an internet audio stream (**Stream URL**,
   `http://` or `https://`) instead of song files.
 - **Add songs…** picks files. Accepted: mp3, mp2, flac, ogg, wav, wax, wma,
@@ -669,8 +685,8 @@ fixes still open (each with its fix button, such as **Install vcrun2022**)
 and frameworks that are installed without what they need (with **Install
 missing frameworks**). **Show in
 graph** next to a finding lights up the mods involved. The links under the
-title (**Files**, **Graph**, **Compatibility**, **Crashes & logs**) jump to
-each section.
+title (**Files**, **Graph**, **Compatibility**, **Crashes & logs**,
+**WolvenKit**) jump to each section.
 
 ### File map
 
@@ -850,6 +866,29 @@ logs and Proton's `steam-1091500.log`.
 **Logs found** lists every log with **View** (with **Copy all** and **Open
 folder**). It includes RED4ext's dated logs, ArchiveXL's and TweakXL's dated
 logs and other RED4ext plugins' own logs.
+
+### WolvenKit
+
+[WolvenKit](https://github.com/WolvenKit/WolvenKit) is the Cyberpunk 2077
+modding toolkit. This section downloads it from its GitHub releases into
+CPMX2077's data folder (not into the game) and runs its command-line build.
+
+| Row | What it shows |
+|---|---|
+| **Newest release** | The newest stable release on GitHub, with a link to its release page. |
+| **WolvenKit CLI** | The installed version of WolvenKit's command-line build, and *SHA-256 matches GitHub* when the download matched the digest GitHub published (*no GitHub digest* otherwise). **Install** / **Update** downloads `WolvenKit.ConsoleLinux-<version>.zip` (Windows: `WolvenKit.Console-<version>.zip`); **Remove** deletes it. |
+| **.NET runtime** | The runtime the installed CLI needs (from its `WolvenKit.CLI.runtimeconfig.json`, currently Microsoft.NETCore.App 10), where `dotnet` was found (`DOTNET_ROOT`, `PATH`, `~/.dotnet`, the standard install folders) and which runtimes it lists. *missing* means the CLI can't run: install your distribution's .NET runtime package (`dotnet-runtime-10.0` on Ubuntu and Fedora, `dotnet-runtime` on Arch) or Microsoft's install script into `~/.dotnet`, then **Check again**. CPMX2077 doesn't install .NET itself. |
+| **WolvenKit editor** | Windows only: the editor (`WolvenKit-<version>.zip`, self-contained, no .NET install needed), with **Open WolvenKit**. On Linux the row says it's a Windows program; the CLI covers what CPMX2077 uses. |
+
+Buttons:
+
+- **List archive contents…** picks an `.archive` file and lists the files
+  in it as WolvenKit reads them: by name where WolvenKit's hash list or the
+  archive's own name list has one, else by hash. Up to 5000 lines.
+- **Open folder** opens the folder WolvenKit is kept in.
+- **WolvenKit wiki** opens WolvenKit's documentation.
+
+Used by: **Check icon** in [RadioEXT](#radioext).
 
 ## Get mods
 
@@ -1152,6 +1191,12 @@ part of download links are never shown.
   app and name version 4.1.1.2740. FSR 4 shader overrides come from one
   listed repository; each file must match the git blob id in GitHub's file
   list for that commit.
+- WolvenKit comes only from its GitHub releases, like other GitHub
+  downloads, and is unpacked with the same checks as mod archives into the
+  app's data folder, never into the game. It runs only when you use a
+  WolvenKit button.
+- PNG files for station icons are checked before decoding: PNG signature,
+  at most 32 MB and 4096×4096.
 - ReShade comes only over HTTPS from reshade.me, with no redirects to other
   hosts. The DLL taken out of the setup must be a 64-bit Windows DLL that
   names ReShade in its version information and has the version in the setup's
@@ -1187,6 +1232,8 @@ logs are only readable from a fixed list of known locations.
 | ReShade setups from reshade.me | `~/.local/share/cp2077-modmanager/reshade/` |
 | AMD's FSR 4.1.1 upscaler DLL (OptiScaler archives are deleted after install) | `~/.local/share/cp2077-modmanager/optiscaler/` |
 | FSR 4 shader overrides | `~/.local/share/cp2077-modmanager/fsr4-shader-overrides/` (`prebuilt/`, `prebuilt-lossy/`) |
+| WolvenKit (Netrunner) | `~/.local/share/cp2077-modmanager/tools/wolvenkit/` (`cli/`, `editor/` on Windows; release archives are deleted after unpacking) |
+| Radio station icons made from a PNG | `archive/pc/mod/cpmx2077_radio_<station>.archive` in the game folder |
 | Saved Nexus pages | `~/.cache/cp2077-modmanager/nexus/` |
 | Refreshed Ultra+ recommendations | In the library database (settings) |
 | Release dates for the patch-note check | In the library database (`release_dates`) |
@@ -1205,6 +1252,8 @@ API key is in Windows Credential Manager.
   Organizer on its own.
 - `.rar` archives are unpacked with the `tar.exe` built into Windows 10
   and 11.
+- Netrunner › WolvenKit also offers the WolvenKit editor (it's a Windows
+  program) and downloads the Windows build of the CLI.
 - The OptiScaler section has no FSR 4.1.1 shader overrides: they are a
   vkd3d-proton (Proton) feature. OptiScaler and AMD's DLL install the same
   way.

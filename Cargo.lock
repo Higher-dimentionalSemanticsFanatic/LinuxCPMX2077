@@ -734,12 +734,14 @@ dependencies = [
 name = "cp2077mm-core"
 version = "0.8.0"
 dependencies = [
+ "crc32fast",
  "dirs",
  "hex",
  "keyring",
  "log",
  "md-5",
  "pelite",
+ "png 0.18.1",
  "reqwest",
  "roxmltree",
  "rusqlite",

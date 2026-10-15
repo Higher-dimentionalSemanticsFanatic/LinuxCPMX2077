@@ -32,6 +32,7 @@ mod patch_notes_cmd;
 mod radio_cmd;
 mod reshade_cmd;
 mod ultraplus_cmd;
+mod wolvenkit_cmd;
 
 struct AppState {
     db: Mutex<Db>,
@@ -1742,6 +1743,15 @@ fn main() {
             radio_cmd::radio_status,
             radio_cmd::radio_song_info,
             radio_cmd::radio_save,
+            radio_cmd::radio_icon_preview,
+            radio_cmd::radio_icon_check,
+            wolvenkit_cmd::wolvenkit_status,
+            wolvenkit_cmd::wolvenkit_latest,
+            wolvenkit_cmd::wolvenkit_install,
+            wolvenkit_cmd::wolvenkit_remove,
+            wolvenkit_cmd::wolvenkit_open_editor,
+            wolvenkit_cmd::wolvenkit_open_folder,
+            wolvenkit_cmd::wolvenkit_list_archive,
             optiscaler_cmd::optiscaler_status,
             optiscaler_cmd::optiscaler_latest,
             optiscaler_cmd::optiscaler_install,

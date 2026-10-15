@@ -18,6 +18,7 @@ pub mod game;
 pub mod game_versions;
 pub mod hash;
 pub mod hdr;
+pub mod inkicon;
 pub mod install;
 pub mod known_issues;
 pub mod linux_setup;
@@ -44,6 +45,7 @@ pub mod ultraplus;
 pub mod updates;
 pub mod vdf;
 pub mod winsys;
+pub mod wolvenkit;
 
 pub use error::{Error, Result};
 

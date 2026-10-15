@@ -200,5 +200,10 @@ sidebar. **Pop out** moves it to its own window.
   [ReShade](user-guide.md#reshade) in the user guide.
 - Want your own radio station? Open **RadioEXT** under **Installed
   mods**, click **Install radioExt** if it's missing, then **New station**
-  and **Add songs…**. See [RadioEXT](user-guide.md#radioext).
+  and **Add songs…**. For your own logo, pick **PNG image** as the icon
+  source. See [RadioEXT](user-guide.md#radioext).
+- Modding tools: **Netrunner › WolvenKit** installs WolvenKit from GitHub.
+  Its command-line build needs the .NET 10 runtime (on Linux, your
+  distribution's `dotnet-runtime-10.0` package). See
+  [WolvenKit](user-guide.md#wolvenkit).
 - Read the [user guide](user-guide.md) for everything else.
