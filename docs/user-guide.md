@@ -9,12 +9,12 @@ ARCHIVE…); this guide writes them in normal case (**Install from
 archive…**). The selected tab is the amber one in the left menu.
 
 Two tabs have sections listed under them in the left menu: **Installed
-mods** (**Mod list**, **ReShade**, **OptiScaler**, **RadioEXT**, **Ultra+
+mods** (**Mod list**, **ReShade**, **OptiScaler FSR4.1.1 Lite**, **RadioEXT**, **Ultra+
 recommendations**, **Patch-note check**) and **Get mods** (**Browse mods**,
 **Modpacks**). **▾** next to the tab shows or hides its sections; the choice
 is kept. A section shows in the menu once it applies: ReShade and Patch-note
 check once a mod is installed, Ultra+ recommendations once Ultra+ is in the
-game. OptiScaler and RadioEXT show whenever a game is selected.
+game. OptiScaler FSR4.1.1 Lite and RadioEXT show whenever a game is selected.
 
 - [How it works](#how-it-works)
 - [Game panel](#game-panel)
@@ -92,7 +92,7 @@ here only when more than one is found; while none is found, the panel has
 
 To make the left-hand menu wider or narrower, drag the line between it and
 the main area left or right. The width is kept the next time you open the
-app, and a docked debug terminal fills whatever width you choose. Double-click
+app, and a docked terminal fills whatever width you choose. Double-click
 the line to put it back to the default. With the line selected (Tab to
 it), the left and right arrow keys also resize it.
 
@@ -125,7 +125,7 @@ it), the left and right arrow keys also resize it.
     OptiScaler's DLL with OptiScaler installed) to native-then-builtin in the
     prefix.
   - *FSR 4 shader overrides* (only after you pick **Exact** or **Lossy** in
-    the [OptiScaler](#optiscaler) section) → **Set launch option** puts
+    the [OptiScaler FSR4.1.1 Lite](#optiscaler-fsr411-lite) section) → **Set launch option** puts
     `VKD3D_SHADER_OVERRIDE='Z:<folder>'` in front of your launch options,
     keeping everything else. With **Off** picked while the variable is still
     set, **Remove launch option** takes it out. Steam closed only; on Heroic,
@@ -211,11 +211,15 @@ removes it; the same buttons stay in the Game panel and Get mods.
 | **Update to …** | Appears when a newer file is available. *Switch to stable …* appears when you run a pre-release and a stable release is out. |
 | **Mod page** | Opens the mod's page in **Get mods** (description, files, requirements), for mods from Nexus or GitHub. From there **Open on nexusmods.com** opens the website. Not shown for mods installed from an archive on disk. |
 | **Verify** | Re-hashes the mod's files and reports missing, edited or overridden ones. |
-| **Uninstall** | Removes the mod and its stored copy and restores what it replaced. Files changed after install (the mod's own settings) stay in the game and are no longer tracked. |
+| **Uninstall** | Removes the mod and its stored copy and restores what it replaced. Files changed after install (the mod's own settings) stay in the game and are no longer tracked. The downloaded archive is not deleted: the confirmation names it, and **Install** on its row in [Downloads](#downloads) reinstalls the mod. |
 
 **On** vs **Uninstall**: switching a mod off keeps it in the list with a
 stored copy, so it can come back without a download. **Uninstall** deletes
-the stored copy and removes the mod from the list.
+the stored copy and removes the mod from the list. The archive in
+**Downloads** stays, so the mod can be reinstalled from there without a new
+download; delete it there to free the space. Mods put in with **Install from
+archive…** have no Downloads entry: the archive stays where you picked it,
+and **Install from archive…** reinstalls it.
 
 ### Selecting several mods
 
@@ -476,9 +480,9 @@ is backed up and comes back when you uninstall the preset mod.
 
 In game, the Home key opens ReShade's overlay.
 
-### OptiScaler
+### OptiScaler FSR4.1.1 Lite
 
-The **OptiScaler** section (under Installed mods in the menu) installs
+The **OptiScaler FSR4.1.1 Lite** section (under Installed mods in the menu) installs
 [OptiScaler](https://github.com/optiscaler/OptiScaler), which takes the
 game's DLSS, XeSS or FSR 3.1 input and runs another upscaler, FSR 4
 included. Single-player only: OptiScaler's own page warns that anti-cheat
@@ -535,7 +539,7 @@ vkd3d-proton loads them through the `VKD3D_SHADER_OVERRIDE` launch option.
   newest commit.
 - **Off**, **Exact** (AMD's picture, byte for byte) or **Lossy** (faster,
   runs FSR 4's network every other frame, so the picture differs; the app
-  asks first and links the repository's `WARNING.txt`). The choice is per
+  asks first and links the repository's `WARNING.txt`; **No** keeps the previous choice). The choice is per
   game.
 - After **Exact** or **Lossy**, the *FSR 4 shader overrides* item appears
   here and in the Game panel with **Set launch option**. OptiScaler keeps
@@ -785,7 +789,7 @@ one *Framework* node, not a mod node plus a framework node.
   panning redraw at most once per screen refresh, and far-off groups of
   nodes are counted together while the web layout settles. If the graph
   stops drawing, it says so in red and the error is listed in the
-  [debug terminal](#debug-terminal).
+  [terminal](#terminal).
 
 ### Compatibility
 
@@ -927,8 +931,8 @@ Browse and download mods. The switch at the top right picks the source:
   than 25 requests remain so downloads still work, and nothing is sent once
   Nexus says the quota is used up until it resets.
 - **API requests** (Settings → debug mode) lists every request with timing.
-  Your API key is never shown. **Open debug terminal** there opens the
-  [debug terminal](#debug-terminal).
+  Your API key is never shown. **Open terminal** there opens the
+  [terminal](#terminal).
 - Adult-flagged mods are hidden unless you turn them on in Settings.
 
 ### GitHub
@@ -1007,6 +1011,9 @@ Every archive you downloaded, grouped by mod with each version under it.
 - **Install** or **Switch to this** installs that file, replacing the version
   you have. **Delete** removes the file from disk. An installed mod stays
   installed; only the archive goes.
+- *installed* / *installed, off* / *not installed*: whether that archive is
+  installed in the selected game. Uninstalling a mod keeps its download, so
+  the row shows *not installed* and **Install** reinstalls it.
 - **Deleting several**: tick the box in the first column of each download.
   A folder's box selects all its versions, **Shift**-click selects a range and
   the header box selects everything the channel filter and search show. The bar above
@@ -1046,11 +1053,11 @@ Every archive you downloaded, grouped by mod with each version under it.
   the read-only MCP server, with **Copy**.
 - **Nexus browser sign-in**: the application slug Nexus issues for browser
   sign-in.
-- **Nexus browsing**: show adult content, debug mode, *Debug terminal
+- **Nexus browsing**: show adult content, debug mode, *Terminal
   opens* (**In the sidebar**, the default, or **In its own window**), **Open
-  debug terminal** and **Clear saved pages**. Ticking *Debug mode* adds the
-  API request list to Get mods, opens the [debug terminal](#debug-terminal)
-  and adds a **Debug terminal** button under the tabs in the sidebar. Pages and
+  terminal** and **Clear saved pages**. Ticking *Debug mode* adds the
+  API request list to Get mods, opens the [terminal](#terminal)
+  and adds a **Terminal** button under the tabs in the sidebar. Pages and
   searches are saved for a week; lists count as fresh for 5 minutes and mod
   pages for 10.
 - **Nexus account**: **Forget API key** removes it from the keyring.
@@ -1068,15 +1075,14 @@ Every archive you downloaded, grouped by mod with each version under it.
   last step has **Open getting started guide**. Closing it returns to the
   tab you were on.
 
-### Debug terminal
+### Terminal
 
 A terminal that shows, live and oldest first, every Nexus API request and
 everything the app does on your machine. It works the same on Linux and
 Windows and needs no terminal program.
 
 By default it sits at the foot of the main window's sidebar, under the
-**Debug terminal** button. That button shows or hides it, and **Open debug
-terminal** in Settings or in Get mods' *API requests* list shows it too.
+**Terminal** button. That button shows or hides it, and **Open terminal** in Settings or in Get mods' *API requests* list shows it too.
 Drag its bottom-right corner to make it taller.
 
 - **Pop out** (in the docked terminal) moves it to a window of its own.
@@ -1084,7 +1090,7 @@ Drag its bottom-right corner to make it taller.
   sidebar.
 - **Hide** (in the docked terminal) tucks it away; the app remembers this
   until you show it again.
-- To always open it as a window, set *Debug terminal opens* in Settings to
+- To always open it as a window, set *Terminal opens* in Settings to
   **In its own window**.
 
 Docked, it is a compact version: the filter checkboxes are behind
@@ -1208,7 +1214,7 @@ API key is in Windows Credential Manager.
   Organizer on its own.
 - `.rar` archives are unpacked with the `tar.exe` built into Windows 10
   and 11.
-- The OptiScaler section has no FSR 4.1.1 shader overrides: they are a
+- The OptiScaler FSR4.1.1 Lite section has no FSR 4.1.1 shader overrides: they are a
   vkd3d-proton (Proton) feature. OptiScaler and AMD's DLL install the same
   way.
 
@@ -1261,7 +1267,7 @@ off with the **On** switch to test, start the game again, then **Check
 again**. The compatibility list may also name a clash.
 
 **Something went wrong and you want to see exactly what happened.** Tick
-*Debug mode* in Settings and use the [debug terminal](#debug-terminal): it
+*Debug mode* in Settings and use the [terminal](#terminal): it
 lists each request, download, checksum check, extraction and file the app
 touched. **Save…** gives you a log to attach to a bug report.
 

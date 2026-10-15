@@ -144,7 +144,7 @@ Screenshots show sample data, with file locations blurred.
   only, one folder per pack. The preset list shows which preset is active,
   switches between them, and names effect files a preset needs but that
   aren't installed.
-- **OptiScaler**: a section under Installed mods installs OptiScaler from its
+- **OptiScaler FSR4.1.1 Lite**: a section under Installed mods installs OptiScaler from its
   GitHub releases as a tracked mod (as `wininet.dll`, clear of CET, RED4ext
   and ReShade), optionally with AMD's FSR 4.1.1 upscaler DLL (4.1.1.2740,
   checked against AMD's repository). On Linux it adds OptiScaler's DLL
@@ -266,7 +266,7 @@ Screenshots show sample data, with file locations blurred.
   (or returns 429) until it resets, and pauses browsing when fewer than 25
   requests remain so downloads and checksum checks still work. Lists and mod
   pages are cached for a few minutes.
-- **Debug terminal**: Settings → *Debug mode* opens a terminal, docked in
+- **Terminal**: Settings → *Debug mode* opens a terminal, docked in
   the sidebar or popped out into its own window, that streams every Nexus and GitHub API request and every operation on
   your machine (downloads, checksum checks, extractions, files copied,
   backed up, moved or deleted, Linux setup fixes), with filters, Copy and

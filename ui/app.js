@@ -125,7 +125,7 @@ function fmtSize(n) {
 // patch notes) and Get mods holds Modpacks, each a collapsible submenu in
 // the sidebar.
 let modsSub = "list";
-const MODS_TITLES = { list: "Installed mods", reshade: "ReShade", optiscaler: "OptiScaler", radio: "RadioEXT", ultraplus: "Ultra+ recommendations", patchnotes: "Patch-note check" };
+const MODS_TITLES = { list: "Installed mods", reshade: "ReShade", optiscaler: "OptiScaler FSR4.1.1 Lite", radio: "RadioEXT", ultraplus: "Ultra+ recommendations", patchnotes: "Patch-note check" };
 document.querySelectorAll("nav button[data-tab]").forEach((b) =>
   b.addEventListener("click", () => showTab(b.dataset.tab, b.dataset.sub)));
 const navOpen = loadPref("navOpen", { mods: true, nexus: true });
@@ -622,8 +622,12 @@ $("#mods-bulk-enable").addEventListener("click", (e) => busy(e.target, async () 
 $("#mods-bulk-uninstall").addEventListener("click", (e) => busy(e.target, async () => {
   const list = sortMods(selectedMods());
   if (!list.length) return;
+  const kept = await keptDownloads(list);
+  const withDl = list.filter((m) => kept.get(m.id)).length;
   const ok = await dialog.ask(`Uninstall ${list.length} mod${list.length === 1 ? "" : "s"}?\n\n${nameList(list.map((m) => m.name))}\n\n`
-    + "Their files are removed and game files they replaced are restored. Files changed after install (settings) stay in the game.",
+    + "Their files are removed and game files they replaced are restored. Files changed after install (settings) stay in the game.\n\n"
+    + (withDl ? `Downloads kept for ${withDl} of ${list.length}: Downloads › Install reinstalls them.`
+      : "None of their archives are in Downloads: reinstall with Install from archive… or download them again."),
   { title: "Uninstall mods", kind: "warning", okLabel: "Uninstall", cancelLabel: "Cancel" });
   if (!ok) return;
   // Newest install first, so files one mod overrode go back in order.
@@ -761,12 +765,22 @@ async function verify(m) {
   toast(lines.join("\n"), r.missing.length + r.modified.length > 0);
 }
 
+// Downloads (on disk) holding the archive each mod was installed from.
+async function keptDownloads(mods) {
+  const groups = await invoke("list_download_groups").catch(() => []);
+  const bySha = new Map(groups.flatMap((g) => g.entries).filter((d) => d.on_disk).map((d) => [d.sha256, d]));
+  return new Map(mods.map((m) => [m.id, bySha.get(m.archive_sha256)]));
+}
+
 async function uninstall(m) {
-  const ok = await dialog.ask(`Uninstall “${m.name}”? Its files are removed and any game files it replaced are restored. Files changed after install (settings) stay in the game.`,
+  const d = (await keptDownloads([m])).get(m.id);
+  const kept = d ? `The download ${d.file_name} is kept: Downloads › Install reinstalls it.`
+    : "No download of this archive in Downloads: reinstall with Install from archive… or download it again.";
+  const ok = await dialog.ask(`Uninstall “${m.name}”? Its files are removed and any game files it replaced are restored. Files changed after install (settings) stay in the game.\n\n${kept}`,
     { title: "Uninstall mod", kind: "warning" });
   if (!ok) return;
   await invoke("uninstall_mod", { modId: m.id });
-  toast(`Uninstalled ${m.name}`);
+  toast(d ? `Uninstalled ${m.name}. Download kept: Downloads › Install reinstalls it.` : `Uninstalled ${m.name}`);
   loadMods();
 }
 
@@ -1779,7 +1793,7 @@ function showDock(on) {
   $("#sidebar").classList.toggle("has-dock", on);
   $("#debug-terminal-side").classList.toggle("on", on);
   // A fresh frame reads the whole log again; a hidden one isn't kept polling.
-  if (on && !box.querySelector("iframe")) box.append(el("iframe", { src: "debug.html?docked", title: "Debug terminal", allow: "clipboard-write" }));
+  if (on && !box.querySelector("iframe")) box.append(el("iframe", { src: "debug.html?docked", title: "Terminal", allow: "clipboard-write" }));
   if (!on) box.replaceChildren();
 }
 
@@ -3166,7 +3180,8 @@ function downloadRow(d, depth) {
     el("td", {}, dlSel.box([d.id], d.file_name)),
     el("td", {}, el("div", { class: depth ? "indent" : "" },
       depth ? null : el("b", {}, d.mod_name || d.file_name),
-      m ? el("span", { class: "badge ok" }, m.status === "installed" ? "installed" : "installed, off") : null,
+      m ? el("span", { class: "badge ok" }, m.status === "installed" ? "installed" : "installed, off")
+        : d.on_disk ? el("span", { class: "badge", title: "Not installed in the selected game. Install puts it in." }, "not installed") : null,
       d.on_disk ? null : el("span", { class: "badge bad", title: d.path }, "file missing"),
       el("div", { class: "muted mono", title: d.path }, d.file_name))),
     el("td", {}, d.version || "—", " ", channelBadge(d.channel),
