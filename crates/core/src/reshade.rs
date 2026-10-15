@@ -734,7 +734,7 @@ pub fn packs(db: &Db, game_id: i64) -> Result<Vec<PackState>> {
 pub struct Preset {
     pub file: String,
     pub techniques: usize,
-    /// Effect files the preset uses that aren't under `reshade-shaders/Shaders`.
+    /// Effect files the preset uses that ReShade.ini's `EffectSearchPaths` don't reach.
     pub missing: Vec<String>,
     pub active: bool,
     /// The mod that installed it, if any.
@@ -821,16 +821,115 @@ fn preset_key(path: &str) -> String {
     p.strip_prefix("./").unwrap_or(&p).to_string()
 }
 
+/// A path from `ReShade.ini` as a folder under bin/x64 (lowercase,
+/// `/`-separated, `""` for bin/x64 itself); `None` if it points elsewhere.
+fn bin_rel(path: &str) -> Option<String> {
+    let p = path.trim().trim_matches('"').replace('\\', "/").to_ascii_lowercase();
+    let p = p.trim_end_matches('/');
+    let rel = if p.starts_with('/') || p.as_bytes().get(1) == Some(&b':') {
+        let i = p.rfind("/bin/x64")?;
+        p[i + "/bin/x64".len()..].trim_start_matches('/').to_string()
+    } else {
+        let mut r = p;
+        while let Some(rest) = r.strip_prefix("./") {
+            r = rest;
+        }
+        if r == "." { String::new() } else { r.to_string() }
+    };
+    (!rel.starts_with("..")).then_some(rel)
+}
+
+/// `EffectSearchPaths` or `TextureSearchPaths` from `ReShade.ini` (the
+/// app's defaults if the file or key is missing): folders under bin/x64 and
+/// whether ReShade also searches their subfolders (`\**`).
+fn search_entries(ini: Option<&str>, key: &str) -> Vec<(String, bool)> {
+    let value = ini.and_then(|i| ini_value(i, "GENERAL", key)).or_else(|| ini_value(DEFAULT_INI, "GENERAL", key)).unwrap_or_default();
+    value
+        .split(',')
+        .filter(|e| !e.trim().is_empty())
+        .filter_map(|e| {
+            let e = e.trim().trim_matches('"').replace('\\', "/");
+            let (dir, deep) = match e.strip_suffix("/**") {
+                Some(d) => (d.to_string(), true),
+                None => (e.trim_end_matches('*').to_string(), false),
+            };
+            Some((bin_rel(&dir)?, deep))
+        })
+        .collect()
+}
+
+fn searched(entries: &[(String, bool)], dir: &str) -> bool {
+    entries.iter().any(|(e, deep)| dir == e || (*deep && (e.is_empty() || dir.starts_with(&format!("{e}/")))))
+}
+
+/// Lowercase names of the effect files ReShade finds through
+/// `EffectSearchPaths`.
+fn effect_files(bin: &Path, entries: &[(String, bool)]) -> std::collections::HashSet<String> {
+    let mut out = std::collections::HashSet::new();
+    for (dir, deep) in entries {
+        let root = if dir.is_empty() { bin.to_path_buf() } else { resolve_ci(bin, dir) };
+        let walk = walkdir::WalkDir::new(root).max_depth(if *deep { usize::MAX } else { 1 });
+        out.extend(walk.into_iter().flatten().filter(|e| e.file_type().is_file()).map(|e| e.file_name().to_string_lossy().to_ascii_lowercase()));
+    }
+    out
+}
+
+/// Folders under bin/x64/reshade-shaders that hold shader or texture files
+/// but aren't covered by `ReShade.ini`'s search paths, as `bin/x64/...`
+/// paths. Happens when a preset mod ships its own `ReShade.ini`.
+pub fn unsearched_dirs(game: &GameRow) -> Vec<String> {
+    let bin = resolve_ci(Path::new(&game.path), BIN);
+    let ini = std::fs::read_to_string(bin.join(INI)).ok();
+    let mut out = Vec::new();
+    for (root, key, exts) in [(SHADERS_DIR, "EffectSearchPaths", SHADER_EXTS), (TEXTURES_DIR, "TextureSearchPaths", TEXTURE_EXTS)] {
+        let entries = search_entries(ini.as_deref(), key);
+        let mut dirs = std::collections::BTreeSet::new();
+        for e in walkdir::WalkDir::new(resolve_ci(Path::new(&game.path), root)).into_iter().flatten() {
+            if !e.file_type().is_file() || !exts.contains(&ext_of(&e.file_name().to_string_lossy()).as_str()) {
+                continue;
+            }
+            let Some(dir) = e.path().parent().and_then(|d| d.strip_prefix(&bin).ok()) else { continue };
+            let rel = dir.to_string_lossy().replace('\\', "/");
+            if !searched(&entries, &rel.to_ascii_lowercase()) {
+                dirs.insert(format!("{BIN}/{rel}"));
+            }
+        }
+        out.extend(dirs);
+    }
+    out
+}
+
+/// Add `reshade-shaders\Shaders\**` and `reshade-shaders\Textures\**` to
+/// `ReShade.ini`'s search paths, keeping the entries already there.
+pub fn fix_search_paths(game: &GameRow) -> Result<()> {
+    let ini_path = bin_file(Path::new(&game.path), INI);
+    let mut ini = std::fs::read_to_string(&ini_path).unwrap_or_else(|_| DEFAULT_INI.to_string());
+    for key in ["EffectSearchPaths", "TextureSearchPaths"] {
+        let want = ini_value(DEFAULT_INI, "GENERAL", key).unwrap_or_default();
+        let (target, _) = search_entries(Some(DEFAULT_INI), key).remove(0);
+        let deep_over = |(e, deep): &(String, bool)| *deep && (e.is_empty() || target == *e || target.starts_with(&format!("{e}/")));
+        if search_entries(Some(&ini), key).iter().any(deep_over) {
+            continue;
+        }
+        let value = match ini_value(&ini, "GENERAL", key).filter(|v| !v.trim().is_empty()) {
+            Some(v) => format!("{v},{want}"),
+            None => want,
+        };
+        ini = set_ini_value(&ini, "GENERAL", key, &value);
+    }
+    let tmp = ini_path.with_extension("ini.cpmx-tmp");
+    std::fs::write(&tmp, ini)?;
+    std::fs::rename(&tmp, &ini_path)?;
+    activity::record_path(Kind::Copy, "Added reshade-shaders to ReShade's search paths", &ini_path);
+    Ok(())
+}
+
 pub fn presets(db: &Db, game: &GameRow) -> Result<Vec<Preset>> {
     let game_dir = Path::new(&game.path);
     let bin = resolve_ci(game_dir, BIN);
-    let effects: std::collections::HashSet<String> = walkdir::WalkDir::new(resolve_ci(game_dir, SHADERS_DIR))
-        .into_iter()
-        .flatten()
-        .filter(|e| e.file_type().is_file())
-        .map(|e| e.file_name().to_string_lossy().to_ascii_lowercase())
-        .collect();
-    let active = std::fs::read_to_string(bin.join(INI)).ok().and_then(|ini| ini_value(&ini, "GENERAL", "PresetPath")).map(|p| preset_key(&p));
+    let ini = std::fs::read_to_string(bin.join(INI)).ok();
+    let effects = effect_files(&bin, &search_entries(ini.as_deref(), "EffectSearchPaths"));
+    let active = ini.and_then(|ini| ini_value(&ini, "GENERAL", "PresetPath")).map(|p| preset_key(&p));
     let mut out = Vec::new();
     for (rel, path) in preset_candidates(&bin) {
         if std::fs::metadata(&path).map(|m| m.len()).unwrap_or(u64::MAX) > MAX_PRESET {
@@ -1154,6 +1253,40 @@ pub(crate) mod tests {
 
         let none = zip_at("c.zip", &[("r/readme.md", "x")]);
         assert!(install_pack(&inst, &game, pk, &none, &c2).unwrap_err().to_string().contains("no .fx effects"));
+    }
+
+    #[test]
+    fn effect_check_follows_the_search_paths_in_reshade_ini() {
+        let (_dir, db, game) = setup_game();
+        let g = PathBuf::from(&game.path);
+        let put = |rel: &str, body: &str| {
+            let p = g.join(rel);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, body).unwrap();
+        };
+        put("bin/x64/reshade-shaders/Shaders/qUINT/qUINT_mxao.fx", "");
+        put("bin/x64/reshade-shaders/Textures/qUINT/noise.png", "");
+        put("bin/x64/Night Preset/Shaders/Grade.fx", "");
+        put("bin/x64/Night.ini", "Techniques=MXAO@qUINT_mxao.fx,Grade@Grade.fx\n");
+        // No ReShade.ini: the app's defaults search reshade-shaders deeply.
+        assert!(unsearched_dirs(&game).is_empty());
+        assert_eq!(presets(&db, &game).unwrap()[0].missing, ["Grade.fx"]);
+        // A preset mod's own ReShade.ini: its folder, no subfolders of reshade-shaders.
+        put("bin/x64/ReShade.ini", "[GENERAL]\nEffectSearchPaths=.\\Night Preset\\Shaders,.\\reshade-shaders\\Shaders\nTextureSearchPaths=\nPresetPath=.\\Night.ini\n");
+        assert_eq!(presets(&db, &game).unwrap()[0].missing, ["qUINT_mxao.fx"]);
+        assert_eq!(unsearched_dirs(&game), ["bin/x64/reshade-shaders/Shaders/qUINT", "bin/x64/reshade-shaders/Textures/qUINT"]);
+        fix_search_paths(&game).unwrap();
+        let ini = std::fs::read_to_string(g.join("bin/x64/ReShade.ini")).unwrap();
+        assert!(ini.contains("EffectSearchPaths=.\\Night Preset\\Shaders,.\\reshade-shaders\\Shaders,.\\reshade-shaders\\Shaders\\**"), "{ini}");
+        assert!(ini.contains("TextureSearchPaths=.\\reshade-shaders\\Textures\\**"), "{ini}");
+        assert!(ini.contains("PresetPath=.\\Night.ini"));
+        assert!(unsearched_dirs(&game).is_empty());
+        assert!(presets(&db, &game).unwrap()[0].missing.is_empty());
+        fix_search_paths(&game).unwrap();
+        assert_eq!(std::fs::read_to_string(g.join("bin/x64/ReShade.ini")).unwrap(), ini, "nothing added twice");
+        // Absolute paths as ReShade's overlay writes them.
+        put("bin/x64/ReShade.ini", "[GENERAL]\nEffectSearchPaths=Z:\\Games\\Cyberpunk 2077\\bin\\x64\\reshade-shaders\\**\nTextureSearchPaths=Z:\\Games\\Cyberpunk 2077\\bin\\x64\\reshade-shaders\\Textures\\**\n");
+        assert!(unsearched_dirs(&game).is_empty());
     }
 
     #[test]

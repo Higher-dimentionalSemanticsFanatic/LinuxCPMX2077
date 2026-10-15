@@ -136,12 +136,25 @@ CREATE TABLE IF NOT EXISTS mod_tags (
     tag     TEXT NOT NULL REFERENCES tags (name) ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY (mod_key, tag)
 );
+-- Suggested tags (tag_set) the user dismissed for a mod.
+CREATE TABLE IF NOT EXISTS tag_suggestions_dismissed (
+    mod_key TEXT NOT NULL,
+    tag     TEXT NOT NULL COLLATE NOCASE,
+    PRIMARY KEY (mod_key, tag)
+);
 -- What a Nexus mod's page says it needs (JSON list of
 -- nexus_browse::Requirement), cached between runs.
 CREATE TABLE IF NOT EXISTS nexus_requirements (
     nexus_mod_id INTEGER PRIMARY KEY,
     requirements TEXT NOT NULL,
     fetched_at   INTEGER NOT NULL           -- unix seconds
+);
+-- Each Nexus mod's picture URL (NULL: none) for the Installed mods
+-- thumbnails; the images themselves are in paths::thumbnails_dir().
+CREATE TABLE IF NOT EXISTS mod_thumbnails (
+    nexus_mod_id INTEGER PRIMARY KEY,
+    url          TEXT,
+    checked_at   INTEGER NOT NULL           -- unix seconds
 );
 -- Release dates and Nexus page facts per source mod (modpacks::mod_key), for
 -- the patch-note check (see patch_notes.rs). `info` is JSON.
@@ -219,6 +232,8 @@ const MIGRATIONS: &[(&str, &str, &str)] = &[
     // '' for the game's default order, NULL for profiles saved before load
     // order could be changed (applying them leaves the order alone).
     ("profiles", "load_order", "TEXT"),
+    // Predefined tag set group (tag_set) a tag was added with.
+    ("tags", "grp", "TEXT"),
 ];
 
 pub struct Db {

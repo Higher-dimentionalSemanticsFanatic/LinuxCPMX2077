@@ -256,6 +256,9 @@ pub struct Tag {
     /// `#rrggbb`, or none for the default look.
     #[serde(default)]
     pub color: Option<String>,
+    /// The predefined tag set group the tag belongs to (`tag_set`), if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
 }
 
 /// A tag name as stored: trimmed, single-spaced, no control characters.
@@ -277,8 +280,8 @@ fn clean_color(c: Option<&str>) -> Option<String> {
 }
 
 pub fn tags(db: &Db) -> Result<Vec<Tag>> {
-    let mut st = db.conn.prepare("SELECT name, color FROM tags ORDER BY position, lower(name)")?;
-    let rows = st.query_map([], |r| Ok(Tag { name: r.get(0)?, color: r.get(1)? }))?;
+    let mut st = db.conn.prepare("SELECT name, color, grp FROM tags ORDER BY position, lower(name)")?;
+    let rows = st.query_map([], |r| Ok(Tag { name: r.get(0)?, color: r.get(1)?, group: r.get(2)? }))?;
     Ok(rows.collect::<std::result::Result<_, _>>()?)
 }
 
@@ -504,7 +507,11 @@ pub fn parse_modlist(bytes: &[u8]) -> Result<ModList> {
         let s = s.trim().to_string();
         (!s.is_empty()).then_some(s)
     };
-    l.tags = l.tags.into_iter().filter_map(|t| Some(Tag { name: clean_tag(&t.name).ok()?, color: clean_color(t.color.as_deref()) })).collect();
+    l.tags = l.tags.into_iter().filter_map(|t| {
+            let group = t.group.filter(|g| crate::tag_set::groups().iter().any(|k| &k.id == g));
+            Some(Tag { name: clean_tag(&t.name).ok()?, color: clean_color(t.color.as_deref()), group })
+        })
+        .collect();
     l.mods = l
         .mods
         .into_iter()
@@ -558,6 +565,12 @@ pub fn import(db: &Db, game_id: i64, l: &ModList) -> Result<ImportReport> {
     let wanted = l.tags.iter().map(|t| (t.name.as_str(), t.color.as_deref()));
     for (name, color) in wanted.chain(l.mods.iter().flat_map(|m| m.tags.iter().map(|t| (t.as_str(), None)))) {
         add_tag(db, name, color)?;
+    }
+    // Tags from the predefined set keep their group.
+    for t in &l.tags {
+        if let Some(g) = &t.group {
+            db.conn.execute("UPDATE tags SET grp = ?2 WHERE name = ?1 AND grp IS NULL", params![t.name, g])?;
+        }
     }
     r.tags_added = tags(db)?.len().saturating_sub(before);
     let installed: HashMap<String, ModRow> = db.mods(game_id)?.into_iter().map(|m| (mod_key(&m), m)).collect();
@@ -701,8 +714,8 @@ mod tests {
         assert!(add_tag(&db, "   ", None).is_err());
         assert!(add_tag(&db, &"x".repeat(61), None).is_err());
         assert_eq!(tags(&db).unwrap(), [
-            Tag { name: "Visuals and UI".into(), color: Some("#ff0000".into()) },
-            Tag { name: "Gameplay".into(), color: None },
+            Tag { name: "Visuals and UI".into(), color: Some("#ff0000".into()), group: None },
+            Tag { name: "Gameplay".into(), color: None, group: None },
         ]);
 
         add_mod(&db, g, "CET", "nexus", Some((107, 1)), None);
@@ -769,7 +782,7 @@ mod tests {
                          {"name":"Other","source":"manual"}]}"##,
         )
         .unwrap();
-        assert_eq!(l.tags, [Tag { name: "Core".into(), color: Some("#112233".into()) }]);
+        assert_eq!(l.tags, [Tag { name: "Core".into(), color: Some("#112233".into()), group: None }]);
         assert_eq!(l.mods[0].tags, ["Core"]);
         assert_eq!((l.mods[0].category.as_deref(), l.mods[1].tags.len()), (None, 0));
     }
@@ -789,7 +802,7 @@ mod tests {
                  "collections":[{"slug":"../x"},{"slug":"ABC123","revision":2}]}"#,
         )
         .unwrap();
-        assert_eq!(l.tags, [Tag { name: "ok".into(), color: None }]);
+        assert_eq!(l.tags, [Tag { name: "ok".into(), color: None, group: None }]);
         assert_eq!(l.mods.len(), 1);
         assert_eq!((l.mods[0].name.as_str(), l.mods[0].nexus_mod_id, l.mods[0].enabled), ("ab", None, true));
         assert_eq!(l.collections, [ModListCollection { slug: "abc123".into(), name: None, revision: Some(2) }]);

@@ -554,13 +554,32 @@ fn release_info_from_graphql(data: &Value) -> Vec<ReleaseInfo> {
         .collect()
 }
 
+const PICTURES_QUERY: &str = "query Pictures($ids: [CompositeDomainWithIdInput!]!, $count: Int) {
+  legacyModsByDomain(ids: $ids, count: $count) {
+    nodes { modId thumbnailUrl pictureUrl }
+  }
+}";
+
+/// Each mod's picture (the small thumbnail when Nexus has one), from the
+/// image hosts the UI allows. `None` when the page has no picture.
+fn pictures_from_graphql(data: &Value) -> Vec<(i64, Option<String>)> {
+    let nodes = data.pointer("/legacyModsByDomain/nodes").and_then(Value::as_array).cloned().unwrap_or_default();
+    nodes
+        .iter()
+        .filter_map(|n| {
+            let s = |k: &str| n.get(k).and_then(Value::as_str);
+            Some((n.get("modId").and_then(as_id)?, safe_image(s("thumbnailUrl")).or_else(|| safe_image(s("pictureUrl")))))
+        })
+        .collect()
+}
+
 /// GraphQL ids come back as numbers or strings depending on the field.
 fn as_id(v: &Value) -> Option<i64> {
     v.as_i64().or_else(|| v.as_str()?.parse().ok()).filter(|i| *i > 0)
 }
 
 /// The UI's content security policy only allows images from these hosts.
-fn safe_image(u: Option<&str>) -> Option<String> {
+pub(crate) fn safe_image(u: Option<&str>) -> Option<String> {
     let url = url::Url::parse(u?.trim()).ok()?;
     let host = url.host_str()?;
     (url.scheme() == "https" && (host == "staticdelivery.nexusmods.com" || host == "media.nexusmods.com")).then(|| url.to_string())
@@ -946,6 +965,21 @@ impl Client {
             let list: Vec<Value> = chunk.iter().map(|i| json!({ "gameDomain": NEXUS_GAME_DOMAIN, "modId": i })).collect();
             let data = self.graphql(RELEASE_INFO_QUERY, json!({ "ids": list, "count": chunk.len() }), false)?.value;
             out.extend(release_info_from_graphql(&data));
+        }
+        Ok(out)
+    }
+
+    /// Picture URLs of `mod_ids`, in batches. Mods Nexus doesn't know are
+    /// left out.
+    pub fn pictures(&self, mod_ids: &[i64]) -> Result<Vec<(i64, Option<String>)>> {
+        let mut ids: Vec<i64> = mod_ids.iter().copied().filter(|i| *i > 0).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        let mut out = Vec::new();
+        for chunk in ids.chunks(REQUIREMENTS_BATCH) {
+            let list: Vec<Value> = chunk.iter().map(|i| json!({ "gameDomain": NEXUS_GAME_DOMAIN, "modId": i })).collect();
+            let data = self.graphql(PICTURES_QUERY, json!({ "ids": list, "count": chunk.len() }), false)?.value;
+            out.extend(pictures_from_graphql(&data));
         }
         Ok(out)
     }
@@ -1675,6 +1709,23 @@ mod tests {
         assert_eq!(first["variables"]["ids"].as_array().unwrap().len(), 50);
         assert_eq!(first["variables"]["count"], 50);
         assert_eq!(first["variables"]["ids"][0]["gameDomain"], "cyberpunk2077");
+    }
+
+    #[test]
+    fn reads_pictures() {
+        let data: Value = serde_json::from_str(
+            r#"{"legacyModsByDomain":{"nodes":[
+                {"modId":107,"thumbnailUrl":"https://staticdelivery.nexusmods.com/mods/3333/images/thumbnails/107/107-1.png","pictureUrl":"https://staticdelivery.nexusmods.com/mods/3333/images/107/107-1.png"},
+                {"modId":"9","thumbnailUrl":null,"pictureUrl":"https://staticdelivery.nexusmods.com/mods/3333/images/9/9-1.jpg"},
+                {"modId":5,"thumbnailUrl":"https://evil.example/x.png","pictureUrl":null},
+                {"thumbnailUrl":"https://staticdelivery.nexusmods.com/no-id.png"}]}}"#,
+        )
+        .unwrap();
+        let v = pictures_from_graphql(&data);
+        assert_eq!(v.len(), 3);
+        assert!(v[0].1.as_deref().unwrap().contains("/thumbnails/"));
+        assert!(v[1].1.as_deref().unwrap().ends_with("9-1.jpg"));
+        assert_eq!(v[2], (5, None), "only the allowed image hosts");
     }
 
     #[test]

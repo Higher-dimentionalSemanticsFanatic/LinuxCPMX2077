@@ -20,7 +20,7 @@ use cp2077mm_core::sources::{self, Details, ListingPage, SourceInfo, SourceQuery
 use cp2077mm_core::linux_setup::{self, Check};
 use cp2077mm_core::downloads::{self as dl_store, DownloadGroup, FileKey, Location, MoveReport};
 use cp2077mm_core::game_versions::{self, Loadout, VersionEntry};
-use cp2077mm_core::{Error, Result, activity, desktop, file_tree, paths, secrets, sso, updates};
+use cp2077mm_core::{Error, Result, activity, desktop, file_tree, launch_explain, paths, secrets, sso, updates};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_deep_link::DeepLinkExt;
@@ -207,6 +207,50 @@ async fn add_game_path(app: AppHandle, path: String) -> Result<DetectedGame> {
 #[tauri::command]
 fn list_mods(state: State<'_, AppState>, game_id: i64) -> Result<Vec<ModRow>> {
     state.db.lock().unwrap().mods(game_id)
+}
+
+/// Thumbnails for the mod list, as data: URLs keyed by Nexus mod id (`None`:
+/// no picture). Picture URLs come from Nexus in batches and are kept in the
+/// db; images are saved once in `paths::thumbnails_dir()`.
+#[tauri::command]
+async fn mod_thumbnails(app: AppHandle, nexus_ids: Vec<i64>) -> Result<HashMap<i64, Option<String>>> {
+    use base64::Engine;
+    use cp2077mm_core::thumbnails;
+    blocking(move || {
+        let now = thumbnails::now();
+        let stale = thumbnails::stale_ids(&app.state::<AppState>().db.lock().unwrap(), &nexus_ids, now)?;
+        // Without a Nexus key the saved pictures still show.
+        if !stale.is_empty()
+            && let Ok(c) = nexus_client()
+        {
+            match c.pictures(&stale) {
+                Ok(got) => thumbnails::store_urls(&app.state::<AppState>().db.lock().unwrap(), &stale, &got, now)?,
+                Err(e) => log::warn!("mod pictures: {e}"),
+            }
+        }
+        let urls = thumbnails::urls(&app.state::<AppState>().db.lock().unwrap(), &nexus_ids)?;
+        let dir = paths::thumbnails_dir()?;
+        let encode = |(mime, bytes): (&str, Vec<u8>)| format!("data:{mime};base64,{}", base64::engine::general_purpose::STANDARD.encode(bytes));
+        let one = |(id, url): &(i64, Option<String>)| {
+            let img = url.as_deref().and_then(|u| {
+                let path = thumbnails::cache_path(&dir, *id, u);
+                thumbnails::read_cached(&path).or_else(|| {
+                    thumbnails::fetch(u, &path).map_err(|e| log::warn!("mod picture {id}: {e}")).ok()
+                })
+            });
+            (*id, img.map(encode))
+        };
+        // A few at a time: the first load fetches every picture.
+        let mut out = HashMap::new();
+        for chunk in urls.chunks(6) {
+            std::thread::scope(|s| {
+                let handles: Vec<_> = chunk.iter().map(|u| s.spawn(move || one(u))).collect();
+                out.extend(handles.into_iter().filter_map(|h| h.join().ok()));
+            });
+        }
+        Ok(out)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -666,6 +710,30 @@ async fn set_redmod(app: AppHandle, game_id: i64, on: bool) -> Result<String> {
     .await
 }
 
+/// Netrunner's Launch options section: `line` explained part by part, or
+/// the game's Steam launch options when `line` is `None`.
+#[derive(Serialize)]
+struct LaunchExplained {
+    line: String,
+    /// Read from Steam's localconfig.vdf (Steam installs only).
+    steam: bool,
+    windows: bool,
+    parts: Vec<launch_explain::Part>,
+}
+
+#[tauri::command]
+async fn launch_options_explain(app: AppHandle, game_id: i64, line: Option<String>) -> Result<LaunchExplained> {
+    blocking(move || {
+        with_setup(&app, game_id, |ctx| {
+            let g = ctx.game;
+            let line = line.unwrap_or_else(|| g.launch_options.clone().unwrap_or_default());
+            let parts = launch_explain::explain(&line, &launch_explain::Owners::of_game(&g.path));
+            Ok(LaunchExplained { line, steam: g.store == game::Store::Steam, windows: cfg!(windows), parts })
+        })
+    })
+    .await
+}
+
 /// The end of one log from the Crashes & logs list, by its display name.
 #[tauri::command]
 async fn read_log(app: AppHandle, game_id: i64, name: String) -> Result<String> {
@@ -990,11 +1058,11 @@ async fn open_debug_terminal(app: AppHandle) -> Result<()> {
         return Ok(());
     }
     let window = tauri::WebviewWindowBuilder::new(&app, DEBUG_WINDOW, tauri::WebviewUrl::App("debug.html".into()))
-        .title("CPMX2077 debug terminal")
+        .title("CPMX2077 terminal")
         .inner_size(1000.0, 620.0)
         .min_inner_size(520.0, 300.0)
         .build()
-        .map_err(|e| Error::Other(format!("could not open the debug terminal: {e}")))?;
+        .map_err(|e| Error::Other(format!("could not open the terminal: {e}")))?;
     let _ = window.set_focus();
     Ok(())
 }
@@ -1632,7 +1700,9 @@ fn main() {
             setup_undo,
             redmod_state,
             set_redmod,
+            launch_options_explain,
             list_mods,
+            mod_thumbnails,
             list_downloads,
             list_download_groups,
             downloads_location,
@@ -1728,6 +1798,11 @@ fn main() {
             modpacks_cmd::edit_tag,
             modpacks_cmd::delete_tag,
             modpacks_cmd::set_mod_tags,
+            modpacks_cmd::tag_set_groups,
+            modpacks_cmd::tag_set_toggle,
+            modpacks_cmd::tag_set_usage,
+            modpacks_cmd::set_tag_suggestions,
+            modpacks_cmd::dismiss_tag_suggestion,
             modpacks_cmd::export_modlist,
             modpacks_cmd::import_modlist,
             modpacks_cmd::mod_dependencies,
@@ -1769,6 +1844,8 @@ fn main() {
             reshade_cmd::reshade_presets,
             reshade_cmd::reshade_set_preset,
             reshade_cmd::reshade_find_packs,
+            reshade_cmd::reshade_unsearched,
+            reshade_cmd::reshade_fix_search_paths,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

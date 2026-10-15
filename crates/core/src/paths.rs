@@ -16,6 +16,12 @@ pub fn nexus_cache_dir() -> Result<PathBuf> {
     Ok(base.join(APP_NAME).join("nexus"))
 }
 
+/// `~/.cache/cp2077-modmanager/thumbnails`: mod pictures for the mod list.
+pub fn thumbnails_dir() -> Result<PathBuf> {
+    let base = dirs::cache_dir().ok_or_else(|| Error::Other("no XDG cache dir".into()))?;
+    Ok(base.join(APP_NAME).join("thumbnails"))
+}
+
 pub fn db_path() -> Result<PathBuf> {
     Ok(data_dir()?.join("library.sqlite3"))
 }

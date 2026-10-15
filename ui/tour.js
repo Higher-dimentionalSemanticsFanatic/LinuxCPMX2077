@@ -45,7 +45,7 @@ function tourSteps() {
           el("li", {}, el("b", {}, "Netrunner"), ": setup problems, crashes and logs, file map, graph, compatibility."),
           el("li", {}, el("b", {}, "Get mods"), ": Nexus Mods and GitHub. Section Modpacks: Nexus collections, tags, mod list import and export."),
           el("li", {}, el("b", {}, "Downloads"), ": downloaded archives per mod and version; reinstall or switch."),
-          el("li", {}, el("b", {}, "Settings"), ": game installs, download location, nxm:// links, debug terminal.")),
+          el("li", {}, el("b", {}, "Settings"), ": game installs, download location, nxm:// links, terminal.")),
         "▾ next to a tab shows or hides its sections.",
       ],
     },
@@ -90,8 +90,9 @@ function tourSteps() {
       target: () => "#tab-mods > header",
       body: [
         "Install from archive… installs a .zip, .7z or .rar from disk. Mods from Get mods are installed on download.",
-        "On switch: disables a mod without uninstalling it (files leave the game, a checked copy is kept). Uninstall: removes its files and restores what they replaced.",
+        "Enabled switch (next to Uninstall): disables a mod without uninstalling it (files leave the game, a checked copy is kept). Uninstall: removes its files and stored copy and restores what they replaced.",
         "Tick the first column to Enable, Disable or Uninstall several mods at once.",
+        "List / Canvas: Canvas shows the mods as tiles, one column per tag, Nexus category, source or state.",
       ],
     },
     {
