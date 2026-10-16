@@ -33,6 +33,7 @@ async function loadModExtras(refreshDeps = false) {
   ]);
   if (currentGame?.id !== gameId) return;
   modTags = tags;
+  refreshNexusTags(gameId);
   depsByMod = deps ? new Map(deps.mods.map((d) => [d.mod_id, d])) : null;
   const parts = [];
   let all = [];
@@ -234,6 +235,21 @@ async function setModTags(m, tags) {
   if (tags.length) modTags.mods[m.id] = modTags.tags.map((t) => t.name).filter((n) => tags.includes(n));
   else delete modTags.mods[m.id];
   tagsChanged();
+}
+
+// Once per game and session: fetch Nexus page tags for installed Nexus
+// mods (missing or a week old), then redraw with the suggestions they give.
+const nexusTagsAsked = new Set();
+function refreshNexusTags(gameId) {
+  if (!modTags.suggest || nexusTagsAsked.has(gameId)) return;
+  nexusTagsAsked.add(gameId);
+  invoke("refresh_nexus_tags", { gameId }).then(async (n) => {
+    if (!n || currentGame?.id !== gameId) return;
+    const tags = await invoke("mod_tags", { gameId });
+    if (currentGame?.id !== gameId) return;
+    modTags = tags;
+    tagsChanged();
+  }).catch((e) => console.warn("Nexus page tags", e));
 }
 
 // Tags as <option>s: the user's own tags, then one <optgroup> per predefined

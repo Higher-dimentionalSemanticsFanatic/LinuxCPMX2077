@@ -218,6 +218,24 @@ pub async fn set_tag_suggestions(app: AppHandle, on: bool) -> Result<()> {
     blocking(move || with_db(&app, |db| tag_set::set_suggestions_on(db, on))).await
 }
 
+/// Fetch the Nexus page tags of installed Nexus mods that have none saved
+/// or older than a week; they feed tag suggestions. Returns how many mods
+/// were asked about (0 without a Nexus API key).
+#[tauri::command]
+pub async fn refresh_nexus_tags(app: AppHandle, game_id: i64) -> Result<usize> {
+    blocking(move || {
+        let ids = with_db(&app, |db| tag_set::stale_nexus_ids(db, game_id))?;
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let Ok(client) = nexus_client() else { return Ok(0) };
+        let tags = client.mod_page_tags(&ids)?;
+        with_db(&app, |db| tag_set::store_nexus_tags(db, &ids, &tags))?;
+        Ok(ids.len())
+    })
+    .await
+}
+
 /// Stop suggesting `tag` for an installed mod.
 #[tauri::command]
 pub async fn dismiss_tag_suggestion(app: AppHandle, mod_id: i64, tag: String) -> Result<()> {

@@ -751,6 +751,25 @@ const MOD_EXTRAS_QUERY: &str = "query ModExtras($filter: ModsFilter) {
   }
 }";
 
+/// Mods asked about per tag request.
+pub const TAG_BATCH: usize = 20;
+
+/// `{ m0: { nodes: [{ modId, tags }] }, m1: … }` -> mod id -> tag names.
+fn tags_from_batch(data: &Value) -> std::collections::HashMap<i64, Vec<String>> {
+    let mut out = std::collections::HashMap::new();
+    for part in data.as_object().into_iter().flat_map(|o| o.values()) {
+        let Some(node) = part.pointer("/nodes/0") else { continue };
+        let Some(id) = node.get("modId").and_then(Value::as_i64) else { continue };
+        let tags = node
+            .get("tags")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(|t| clean_line(t.get("name").and_then(Value::as_str), 60)).take(50).collect())
+            .unwrap_or_default();
+        out.insert(id, tags);
+    }
+    out
+}
+
 fn requirements_from_graphql(data: &Value) -> (Option<Requirements>, Vec<String>) {
     let Some(node) = data.pointer("/mods/nodes/0") else { return (None, vec![]) };
     let text = |v: Option<&Value>, max: usize| clean_line(v.and_then(Value::as_str), max);
@@ -980,6 +999,26 @@ impl Client {
             let list: Vec<Value> = chunk.iter().map(|i| json!({ "gameDomain": NEXUS_GAME_DOMAIN, "modId": i })).collect();
             let data = self.graphql(PICTURES_QUERY, json!({ "ids": list, "count": chunk.len() }), false)?.value;
             out.extend(pictures_from_graphql(&data));
+        }
+        Ok(out)
+    }
+
+    /// The tags on these mods' Nexus pages, one request per
+    /// [`TAG_BATCH`] mods. Mods Nexus doesn't return are left out.
+    pub fn mod_page_tags(&self, ids: &[i64]) -> Result<std::collections::HashMap<i64, Vec<String>>> {
+        let mut out = std::collections::HashMap::new();
+        for chunk in ids.chunks(TAG_BATCH) {
+            let parts: Vec<String> = chunk
+                .iter()
+                .enumerate()
+                .map(|(i, id)| {
+                    format!(
+                        "m{i}: mods(filter: {{ gameId: [{{ value: \"{NEXUS_GAME_ID}\", op: EQUALS }}], modId: [{{ value: \"{id}\", op: EQUALS }}] }}, count: 1) {{ nodes {{ modId tags {{ name }} }} }}"
+                    )
+                })
+                .collect();
+            let got = self.graphql(&format!("query ModPageTags {{ {} }}", parts.join(" ")), json!({}), false)?;
+            out.extend(tags_from_batch(&got.value));
         }
         Ok(out)
     }
@@ -1468,6 +1507,18 @@ mod tests {
         let second: Value = serde_json::from_str(&seen[1].body).unwrap();
         assert_eq!(second["variables"]["filter"]["name"][0]["value"], "vehicle");
         assert_eq!(second["variables"]["filter"]["name"][0]["op"], "WILDCARD");
+    }
+
+    #[test]
+    fn batch_tags_parse() {
+        let v = json!({
+            "m0": { "nodes": [{ "modId": 107, "tags": [{ "name": "Modder's Resource" }, { "name": "Quality of Life" }] }] },
+            "m1": { "nodes": [] },
+            "m2": { "nodes": [{ "modId": 9, "tags": null }] },
+        });
+        let t = tags_from_batch(&v);
+        assert_eq!(t[&107], ["Modder's Resource", "Quality of Life"]);
+        assert!(t[&9].is_empty() && t.len() == 2);
     }
 
     #[test]

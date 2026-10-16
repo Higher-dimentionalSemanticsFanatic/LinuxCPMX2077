@@ -30,13 +30,16 @@ pub struct Group {
 pub struct SetTag {
     pub name: String,
     pub about: String,
-    /// Words in the mod name or Nexus category; 4 characters or fewer match
-    /// whole words, longer ones the start of a word.
+    /// Words in the mod name; 4 characters or fewer match whole words,
+    /// longer ones the start of a word.
     #[serde(default)]
     words: Vec<String>,
     /// Nexus categories (any case).
     #[serde(default)]
     categories: Vec<String>,
+    /// Tags on the mod's Nexus page (any case).
+    #[serde(default)]
+    nexus_tags: Vec<String>,
     /// Game-relative globs: `*` within a folder, `**` across folders.
     #[serde(default)]
     paths: Vec<String>,
@@ -157,9 +160,11 @@ const MAX_PER_MOD: usize = 6;
 
 /// What a mod shows, for matching.
 struct Signals<'a> {
-    /// ` word word … ` from the name and Nexus category, lowercase.
+    /// ` word word … ` from the name, lowercase.
     words: String,
     category: Option<String>,
+    /// The mod's Nexus page tags.
+    nexus_tags: Vec<String>,
     source: &'a str,
     repo: Option<String>,
     files: Vec<String>,
@@ -210,11 +215,14 @@ fn evidence(t: &SetTag, s: &Signals) -> Option<String> {
     if let Some(r) = s.repo.as_deref().filter(|r| t.repos.iter().any(|x| x.eq_ignore_ascii_case(r))) {
         return Some(format!("GitHub repo {r}"));
     }
+    if let Some(x) = s.nexus_tags.iter().find(|x| t.nexus_tags.iter().any(|n| n.eq_ignore_ascii_case(x))) {
+        return Some(format!("Nexus tag {x}"));
+    }
     if let Some(c) = s.category.as_deref().filter(|c| t.categories.iter().any(|x| x.eq_ignore_ascii_case(c))) {
         return Some(format!("Nexus category {c}"));
     }
     if let Some(w) = t.words.iter().find(|w| word_match(&s.words, w)) {
-        return Some(format!("name or category: \u{201c}{w}\u{201d}"));
+        return Some(format!("name: \u{201c}{w}\u{201d}"));
     }
     for p in &t.paths {
         let p = p.to_lowercase();
@@ -238,7 +246,13 @@ fn evidence(t: &SetTag, s: &Signals) -> Option<String> {
 
 /// Suggestions for `m` among `available` tags (lowercase names), skipping
 /// the tags in `skip` (lowercase).
-fn suggest_for(db: &Db, m: &ModRow, available: &HashMap<String, String>, skip: &HashSet<String>) -> Result<Vec<Suggestion>> {
+fn suggest_for(
+    db: &Db,
+    m: &ModRow,
+    nexus_tags: Vec<String>,
+    available: &HashMap<String, String>,
+    skip: &HashSet<String>,
+) -> Result<Vec<Suggestion>> {
     let candidates: Vec<&SetTag> = groups()
         .iter()
         .flat_map(|g| &g.tags)
@@ -260,8 +274,9 @@ fn suggest_for(db: &Db, m: &ModRow, available: &HashMap<String, String>, skip: &
     reds.sort();
     reds.dedup();
     let signals = Signals {
-        words: words_of(&format!("{} {}", m.name, m.category.as_deref().unwrap_or(""))),
+        words: words_of(&m.name),
         category: m.category.clone(),
+        nexus_tags,
         source: &m.source,
         repo: m.source_ref.clone(),
         files: db.mod_files(m.id)?.into_iter().map(|f| f.rel_path).collect(),
@@ -288,17 +303,66 @@ pub fn suggestions(db: &Db, game_id: i64) -> Result<HashMap<i64, Vec<Suggestion>
             dismissed.entry(k).or_default().push(t);
         }
     }
+    let mut nexus = stored_nexus_tags(db)?;
     let mut out = HashMap::new();
     for m in db.mods(game_id)? {
         let key = mod_key(&m);
         let skip: HashSet<String> =
             have.remove(&key).unwrap_or_default().into_iter().chain(dismissed.remove(&key).unwrap_or_default()).map(|t| t.to_lowercase()).collect();
-        let s = suggest_for(db, &m, &available, &skip)?;
+        let nt = m.nexus_mod_id.and_then(|id| nexus.remove(&id)).unwrap_or_default();
+        let s = suggest_for(db, &m, nt, &available, &skip)?;
         if !s.is_empty() {
             out.insert(m.id, s);
         }
     }
     Ok(out)
+}
+
+/// Nexus page tags are refreshed after this many seconds.
+pub const NEXUS_TAGS_MAX_AGE: i64 = 7 * 24 * 3600;
+
+fn now() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0)
+}
+
+/// Nexus mod id -> the tags its Nexus page had when last fetched.
+pub fn stored_nexus_tags(db: &Db) -> Result<HashMap<i64, Vec<String>>> {
+    let mut st = db.conn.prepare("SELECT nexus_mod_id, tags FROM nexus_mod_tags")?;
+    let rows = st.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))?;
+    let mut out = HashMap::new();
+    for row in rows {
+        let (id, tags) = row?;
+        out.insert(id, serde_json::from_str(&tags).unwrap_or_default());
+    }
+    Ok(out)
+}
+
+/// Installed Nexus mods of the game whose page tags are missing or older
+/// than [`NEXUS_TAGS_MAX_AGE`].
+pub fn stale_nexus_ids(db: &Db, game_id: i64) -> Result<Vec<i64>> {
+    let mut st = db.conn.prepare(
+        "SELECT DISTINCT m.nexus_mod_id FROM mods m LEFT JOIN nexus_mod_tags t ON t.nexus_mod_id = m.nexus_mod_id
+         WHERE m.game_id = ?1 AND m.nexus_mod_id > 0 AND (t.fetched_at IS NULL OR t.fetched_at < ?2)
+         ORDER BY m.nexus_mod_id",
+    )?;
+    let rows = st.query_map(params![game_id, now() - NEXUS_TAGS_MAX_AGE], |r| r.get(0))?;
+    Ok(rows.collect::<std::result::Result<_, _>>()?)
+}
+
+/// Save the page tags fetched for these Nexus mods (an id with no tags
+/// is saved as none, so it isn't asked again until it's stale).
+pub fn store_nexus_tags(db: &Db, ids: &[i64], tags: &HashMap<i64, Vec<String>>) -> Result<()> {
+    let tx = db.conn.unchecked_transaction()?;
+    for id in ids {
+        let t = tags.get(id).cloned().unwrap_or_default();
+        tx.execute(
+            "INSERT INTO nexus_mod_tags (nexus_mod_id, tags, fetched_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(nexus_mod_id) DO UPDATE SET tags = excluded.tags, fetched_at = excluded.fetched_at",
+            params![id, serde_json::to_string(&t)?, now()],
+        )?;
+    }
+    tx.commit()?;
+    Ok(())
 }
 
 /// Stop suggesting `tag` for the mod with `key`.
@@ -389,7 +453,7 @@ mod tests {
         let a = add_mod(&db, game, "Better Lighting 2.0", None, &[]);
         let b = add_mod(&db, game, "Some preset", None, &["bin/x64/Some.ini", "bin/x64/reshade-shaders/Shaders/a.fx"]);
         let s = suggestions(&db, game).unwrap();
-        assert_eq!(s[&a], vec![Suggestion { tag: "lighting".into(), reason: "name or category: \u{201c}lighting\u{201d}".into() }]);
+        assert_eq!(s[&a], vec![Suggestion { tag: "lighting".into(), reason: "name: \u{201c}lighting\u{201d}".into() }]);
         let tags_b: Vec<&str> = s[&b].iter().map(|x| x.tag.as_str()).collect();
         assert_eq!(tags_b, ["Post-processing", "ReShade preset"]);
 
@@ -410,11 +474,39 @@ mod tests {
     }
 
     #[test]
+    fn nexus_page_tags_suggest_and_are_stored() {
+        let (db, game) = db_with_game();
+        enable_group(&db, "other").unwrap();
+        let id = db
+            .insert_mod(
+                &db.game(game).unwrap(),
+                &NewMod { name: "Some Mod PT-BR".into(), source: "nexus".into(), nexus_mod_id: Some(42), archive_name: "a.zip".into(), ..Default::default() },
+            )
+            .unwrap();
+        assert_eq!(stale_nexus_ids(&db, game).unwrap(), [42]);
+        let tags = HashMap::from([(42, vec!["translation".to_string()])]);
+        store_nexus_tags(&db, &[42], &tags).unwrap();
+        assert!(stale_nexus_ids(&db, game).unwrap().is_empty());
+        let s = suggestions(&db, game).unwrap();
+        assert_eq!(s[&id], vec![Suggestion { tag: "Translation".into(), reason: "Nexus tag translation".into() }]);
+    }
+
+    #[test]
+    fn category_text_is_not_a_name_word() {
+        let (db, game) = db_with_game();
+        enable_group(&db, "clothing").unwrap();
+        let id = add_mod(&db, game, "Cool Jacket", Some("Armour and Clothing"), &[]);
+        let tags: Vec<String> = suggestions(&db, game).unwrap()[&id].iter().map(|s| s.tag.clone()).collect();
+        assert_eq!(tags, ["Outfits"], "Armor stats must not come from the category name");
+    }
+
+    #[test]
     fn tweak_and_reds_evidence() {
         let t = groups().iter().flat_map(|g| &g.tags).find(|t| t.name == "Police & crime").unwrap();
         let s = Signals {
             words: words_of("x"),
             category: None,
+            nexus_tags: vec![],
             source: "nexus",
             repo: None,
             files: vec![],

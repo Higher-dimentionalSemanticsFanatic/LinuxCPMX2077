@@ -1850,6 +1850,7 @@ fn main() {
             modpacks_cmd::tag_set_usage,
             modpacks_cmd::set_tag_suggestions,
             modpacks_cmd::dismiss_tag_suggestion,
+            modpacks_cmd::refresh_nexus_tags,
             modpacks_cmd::export_modlist,
             modpacks_cmd::import_modlist,
             modpacks_cmd::mod_dependencies,

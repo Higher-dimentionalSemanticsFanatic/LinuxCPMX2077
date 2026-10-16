@@ -110,8 +110,9 @@ Screenshots show sample data, with file locations blurred.
   changes and drops, with one button to update. Your own tags (with colors,
   as many per mod as you like) sort installed mods your way and stay with a
   mod through updates. A predefined tag set (Visuals › Textures, Lighting,
-  Weather & sky…, 12 groups) can be enabled per group, with tag suggestions
-  from each mod's name, files, TweakXL records and redscript targets. "Export mod list" saves your mods, tags and followed
+  Weather & sky…, 13 groups) can be enabled per group, with tag suggestions
+  from each mod's Nexus page tags, name, files, TweakXL records and redscript
+  targets. "Export mod list" saves your mods, tags and followed
   collections to a JSON file; "Import mod list" applies its tags and offers
   to get the mods you don't have.
 - **Dependencies and recommendations**: "Dependencies" in Installed mods

@@ -136,6 +136,12 @@ CREATE TABLE IF NOT EXISTS mod_tags (
     tag     TEXT NOT NULL REFERENCES tags (name) ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY (mod_key, tag)
 );
+-- Tags on installed mods' Nexus pages (JSON list), for tag suggestions.
+CREATE TABLE IF NOT EXISTS nexus_mod_tags (
+    nexus_mod_id INTEGER PRIMARY KEY,
+    tags         TEXT NOT NULL,
+    fetched_at   INTEGER NOT NULL           -- unix seconds
+);
 -- Suggested tags (tag_set) the user dismissed for a mod.
 CREATE TABLE IF NOT EXISTS tag_suggestions_dismissed (
     mod_key TEXT NOT NULL,

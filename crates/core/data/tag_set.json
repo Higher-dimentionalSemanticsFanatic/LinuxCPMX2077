@@ -1,5 +1,5 @@
 {
- "_about": "Predefined tag set. Groups are switched on in Modpacks > Your tags. Rules suggest tags: words of 4 characters or fewer match whole words, longer ones the start of a word, in the mod name or Nexus category; paths are game-relative globs (* within a folder, ** across); tweak entries are TweakXL record prefixes, or substrings when they start with *; reds entries are substrings of redscript class names; all case-insensitive.",
+ "_about": "Predefined tag set. Groups are switched on in Modpacks > Your tags. Rules suggest tags: words (mod name and Nexus summary) of 4 characters or fewer match whole words, longer ones the start of a word; categories and nexus_tags (the tags on the Nexus mod page) match exactly, any case; in the mod name or Nexus category; paths are game-relative globs (* within a folder, ** across); tweak entries are TweakXL record prefixes, or substrings when they start with *; reds entries are substrings of redscript class names; all case-insensitive.",
  "groups": [
   {
    "id": "visuals",
@@ -17,6 +17,9 @@
       "2k",
       "hd",
       "decal"
+     ],
+     "nexus_tags": [
+      "Textures"
      ]
     },
     {
@@ -32,6 +35,9 @@
       "path trac",
       "pathtrac",
       "ultra plus"
+     ],
+     "nexus_tags": [
+      "Lighting"
      ]
     },
     {
@@ -49,6 +55,13 @@
       "climate",
       "season",
       "sunset"
+     ],
+     "nexus_tags": [
+      "Weather",
+      "Sky",
+      "Water",
+      "Foliage (Plants)",
+      "Terrain"
      ]
     },
     {
@@ -63,13 +76,15 @@
       "smoke",
       "sparks",
       "gore"
+     ],
+     "nexus_tags": [
+      "Visual Effects/Particles"
      ]
     },
     {
      "name": "Post-processing",
      "about": "ReShade, colour grading, LUTs, film grain, depth of field, sharpening.",
      "words": [
-      "reshade",
       "enb",
       "lut",
       "luts",
@@ -99,7 +114,10 @@
      "name": "ReShade preset",
      "about": "A ReShade preset .ini (needs ReShade).",
      "words": [
-      "reshade preset"
+      "reshade"
+     ],
+     "nexus_tags": [
+      "ReShade"
      ],
      "paths": [
       "bin/x64/*.ini",
@@ -143,6 +161,9 @@
      ],
      "sources": [
       "optiscaler"
+     ],
+     "nexus_tags": [
+      "Performance Optimization"
      ]
     }
    ]
@@ -164,6 +185,9 @@
       "vtk",
       "hyst",
       "solo body"
+     ],
+     "nexus_tags": [
+      "Body"
      ]
     },
     {
@@ -184,6 +208,11 @@
       "facial",
       "eyes",
       "teeth"
+     ],
+     "nexus_tags": [
+      "Hair",
+      "Face",
+      "Eyes"
      ]
     },
     {
@@ -210,6 +239,24 @@
       "eyeshadow",
       "blush",
       "nail polish"
+     ]
+    },
+    {
+     "name": "Character preset",
+     "about": "Saved character looks: Appearance Change Unlocker, AMM and character creator presets.",
+     "words": [
+      "character preset",
+      "cc preset",
+      "appearance preset",
+      "acu preset",
+      "amm preset"
+     ],
+     "categories": [
+      "Appearance Change Unlocker Preset",
+      "Appearance Menu Mod Preset"
+     ],
+     "nexus_tags": [
+      "Character Preset"
      ]
     },
     {
@@ -252,6 +299,14 @@
       "skirt",
       "top",
       "tops"
+     ],
+     "categories": [
+      "Armour and Clothing"
+     ],
+     "nexus_tags": [
+      "Clothing",
+      "Clothing - Female Only",
+      "Clothing - Male Only"
      ]
     },
     {
@@ -292,11 +347,26 @@
      ]
     },
     {
+     "name": "Atelier shop",
+     "about": "Virtual Atelier in-game clothing and item shops.",
+     "words": [
+      "atelier",
+      "virtual atelier"
+     ],
+     "categories": [
+      "Atelier Shop"
+     ]
+    },
+    {
      "name": "Armor stats",
      "about": "Armor values and clothing stats.",
      "words": [
-      "armor",
-      "armour",
+      "armor stat",
+      "armour stat",
+      "armor value",
+      "armour value",
+      "armor rework",
+      "armour rework",
       "clothing stats"
      ]
     }
@@ -349,7 +419,8 @@
       "ammo",
       "magazine",
       "reload",
-      "ballistic"
+      "ballistic",
+      "weapon rebalance"
      ],
      "tweak": [
       "Items.Preset_",
@@ -445,6 +516,17 @@
    "name": "Gameplay",
    "color": "#f6cf3c",
    "tags": [
+    {
+     "name": "Quality of life",
+     "about": "Small convenience changes.",
+     "words": [
+      "qol",
+      "quality of life"
+     ],
+     "nexus_tags": [
+      "Quality of Life"
+     ]
+    },
     {
      "name": "Combat",
      "about": "Combat mechanics: damage, melee, dodging, hit reactions.",
@@ -579,6 +661,9 @@
      ],
      "reds": [
       "PlayerDevelopment"
+     ],
+     "nexus_tags": [
+      "Skills/Perks"
      ]
     },
     {
@@ -624,6 +709,9 @@
      "categories": [
       "Crafting"
      ],
+     "nexus_tags": [
+      "Crafting"
+     ],
      "tweak": [
       "CraftingRecipes",
       "Crafting.",
@@ -664,7 +752,6 @@
       "realism",
       "realistic",
       "survival",
-      "balance",
       "rebalance",
       "overhaul"
      ],
@@ -700,6 +787,9 @@
      ],
      "categories": [
       "Locations"
+     ],
+     "nexus_tags": [
+      "NCZoning"
      ]
     },
     {
@@ -739,6 +829,9 @@
      ],
      "reds": [
       "ReactionComponent"
+     ],
+     "nexus_tags": [
+      "NPC Behaviours (AI)"
      ]
     },
     {
@@ -754,6 +847,27 @@
       "mansion",
       "villa",
       "condo"
+     ],
+     "categories": [
+      "Apartment",
+      "Add-On Apartment"
+     ]
+    },
+    {
+     "name": "Props & decor",
+     "about": "Props, furniture and decorations.",
+     "words": [
+      "prop",
+      "props",
+      "decor",
+      "decoration",
+      "furniture"
+     ],
+     "categories": [
+      "Props and Decorations"
+     ],
+     "nexus_tags": [
+      "Props"
      ]
     },
     {
@@ -768,6 +882,9 @@
       "side job",
       "sidequest",
       "contract"
+     ],
+     "nexus_tags": [
+      "Quests"
      ]
     }
    ]
@@ -812,6 +929,9 @@
       "Menu",
       "Inventory",
       "Tooltip"
+     ],
+     "nexus_tags": [
+      "Menu Replacer"
      ]
     },
     {
@@ -837,11 +957,8 @@
      "words": [
       "font",
       "fonts",
-      "text",
       "subtitle",
-      "translation",
-      "locali",
-      "language"
+      "typo"
      ]
     },
     {
@@ -889,6 +1006,9 @@
      "categories": [
       "Radio station"
      ],
+     "nexus_tags": [
+      "Music"
+     ],
      "paths": [
       "bin/x64/plugins/cyber_engine_tweaks/mods/radioext/**"
      ]
@@ -905,6 +1025,12 @@
      ],
      "paths": [
       "mods/*/customsounds/**"
+     ],
+     "categories": [
+      "Audio Replacer"
+     ],
+     "nexus_tags": [
+      "Sound FX"
      ]
     },
     {
@@ -916,6 +1042,12 @@
       "voiceover",
       "voice over",
       "vo"
+     ],
+     "categories": [
+      "AI Voices"
+     ],
+     "nexus_tags": [
+      "Voice Acting"
      ]
     }
    ]
@@ -941,6 +1073,10 @@
      ],
      "categories": [
       "Animations"
+     ],
+     "nexus_tags": [
+      "Animation - New",
+      "Animation - Modified"
      ]
     },
     {
@@ -950,6 +1086,9 @@
       "pose",
       "poses",
       "posepack"
+     ],
+     "nexus_tags": [
+      "Poses"
      ]
     }
    ]
@@ -972,6 +1111,9 @@
       "unofficial",
       "glitch",
       "restore"
+     ],
+     "nexus_tags": [
+      "Bug Fixes"
      ]
     },
     {
@@ -995,6 +1137,9 @@
       "patch for",
       "addon for",
       "bridge"
+     ],
+     "nexus_tags": [
+      "Compatibility Patch"
      ]
     }
    ]
@@ -1010,17 +1155,7 @@
      "words": [
       "framework",
       "library",
-      "lib",
-      "api",
       "extender",
-      "archivexl",
-      "archive xl",
-      "tweakxl",
-      "tweak xl",
-      "codeware",
-      "red4ext",
-      "cyber engine tweaks",
-      "cet",
       "native settings",
       "mod settings",
       "input loader"
@@ -1044,8 +1179,13 @@
       "base files"
      ],
      "categories": [
-      "Modders Resources",
-      "Modder's Resource"
+      "Modders Resources"
+     ],
+     "nexus_tags": [
+      "Modder's Resource",
+      "Utilities for Modders",
+      "Tutorials for Modders",
+      "Non-Playable Resource"
      ]
     },
     {
@@ -1068,6 +1208,9 @@
      ],
      "categories": [
       "Utilities"
+     ],
+     "nexus_tags": [
+      "Utilities for Players"
      ]
     },
     {
@@ -1085,6 +1228,48 @@
      ],
      "categories": [
       "Cheats"
+     ],
+     "nexus_tags": [
+      "Cheating"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "other",
+   "name": "Other",
+   "color": "#8fb0ab",
+   "tags": [
+    {
+     "name": "Translation",
+     "about": "Translations of other mods or the game.",
+     "words": [
+      "translation",
+      "translated",
+      "localization",
+      "localisation",
+      "traduction",
+      "tradução",
+      "übersetzung",
+      "перевод",
+      "汉化",
+      "中文"
+     ],
+     "nexus_tags": [
+      "Translation"
+     ]
+    },
+    {
+     "name": "Save game",
+     "about": "Save files.",
+     "words": [
+      "save game",
+      "savegame",
+      "save file",
+      "saved game"
+     ],
+     "nexus_tags": [
+      "Saved games"
      ]
     }
    ]

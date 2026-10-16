@@ -754,7 +754,7 @@ connected Nexus account for collections.
   list shows how many mods have each tag. (Older versions had one "custom
   category" per mod; those became tags automatically.)
 - **Predefined tag set** (under Your tags): finer tags than the Nexus
-  categories, in 12 groups. Tick a group to add its tags to your list; untick
+  categories, in 13 groups. Tick a group to add its tags to your list; untick
   it to remove them again (if mods carry them, a dialog asks first, since the
   tags come off those mods). Hover a group to read what each tag covers.
   Added tags work like your own: rename, recolor or delete them. A tag you
@@ -764,28 +764,31 @@ connected Nexus account for collections.
   | Group | Tags |
   |---|---|
   | Visuals | Textures, Lighting, Weather & sky, VFX & particles, Post-processing, ReShade preset, LOD & draw distance, Performance |
-  | Characters | Body, Face & hair, Skin & tattoos, Makeup, NPC appearance |
-  | Clothing | Outfits, Accessories, Wardrobe & transmog, Armor stats |
+  | Characters | Body, Face & hair, Skin & tattoos, Makeup, Character preset, NPC appearance |
+  | Clothing | Outfits, Accessories, Wardrobe & transmog, Atelier shop, Armor stats |
   | Weapons | New weapons, Weapon appearance, Weapon balance |
   | Vehicles | New vehicles, Vehicle appearance, Driving & handling, Vehicle combat |
-  | Gameplay | Combat, Enemy AI, Stealth, Quickhacks, Cyberware, Perks & progression, Loot & economy, Crafting, Police & crime, Difficulty |
-  | World | Locations & interiors, Crowds & traffic, NPC behavior, Apartments, Quests & content |
+  | Gameplay | Quality of life, Combat, Enemy AI, Stealth, Quickhacks, Cyberware, Perks & progression, Loot & economy, Crafting, Police & crime, Difficulty |
+  | World | Locations & interiors, Crowds & traffic, NPC behavior, Apartments, Props & decor, Quests & content |
   | Interface | HUD, Menus, Map, Fonts & text, Photo mode |
   | Audio | Music & radio, Sound effects, Voice |
   | Animation | Animations, Poses |
   | Fixes | Bug fixes, Stability, Compatibility patch |
   | Tools | Framework, Modder's resource, Utility, Cheats |
+  | Other | Translation, Save game |
 
-- **Suggest tags from mod name, Nexus category, installed files, TweakXL
-  records and redscript targets** (on by default): for the tags of enabled
+- **Suggest tags from Nexus page tags, mod name, Nexus category, installed
+  files, TweakXL records and redscript targets** (on by default): for the tags of enabled
   groups, Installed mods shows dashed chips such as *+ Lighting* next to a
-  mod's tags. Hovering one shows what matched (a word in the name or Nexus
-  category, an installed file such as `bin/x64/*.ini` for a ReShade preset, a
+  mod's tags. Hovering one shows what matched (a tag on the mod's Nexus
+  page, its Nexus category, a word in its name, an installed file such as `bin/x64/*.ini` for a ReShade preset, a
   TweakXL record such as `Vehicle.…driveModel`, a redscript class such as
   `PreventionSystem`). Click the chip to add the tag, **×** to dismiss the
   suggestion for that mod. Nothing is tagged without a click. TweakXL and
   redscript matches come from the compatibility index, which is built when a
-  mod is installed. At most six suggestions per mod.
+  mod is installed. Nexus page tags are fetched for installed Nexus mods when
+  Installed mods opens (20 mods per request, again after a week), only with
+  a connected Nexus account. At most six suggestions per mod.
 - **Export mod list…** saves your mods, tags and followed collections to a
   JSON file. **Import mod list…** reads one, adds its tags (and gives your
   installed mods the tags the list has for them, on top of the ones they
