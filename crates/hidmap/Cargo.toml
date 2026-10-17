@@ -1,13 +1,12 @@
 [package]
 name = "cp2077mm-hidmap"
-description = "Bindings format and input merging shared by the CPMX HID Input plugin and the manager"
+description = "Bindings, input merging and the in-game menu of the CPMX2077 HID Input plugin"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61.2", features = [

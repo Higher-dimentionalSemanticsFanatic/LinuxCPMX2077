@@ -14,9 +14,9 @@ manager). It holds:
 - `red4ext/plugins/cpmx_hid_input/cpmx_hid_input.dll`: the plugin
 - `r6/scripts/cpmx_hid_input/HIDInput.reds`: the in-game settings
 
-Needs RED4ext. The in-game settings need
-[Mod Settings](https://www.nexusmods.com/cyberpunk2077/mods/4885), which
-needs redscript and ArchiveXL.
+Needs RED4ext and
+[Mod Settings](https://www.nexusmods.com/cyberpunk2077/mods/4885) (which
+needs redscript and ArchiveXL): bindings are set in Mod Settings' menu.
 
 ## Settings › Mods › HID Input
 
@@ -33,19 +33,31 @@ needs redscript and ArchiveXL.
 The plugin reads the values again within a second of Mod Settings saving
 them, also while the game runs.
 
-**Controller numbers**: game controllers that are not XInput gamepads,
-numbered by USB vendor and product ID (the same numbers every session
-while the same controllers are connected). Axis, button and hat numbers
-are the order the plugin reads the controller in.
-`red4ext/plugins/cpmx_hid_input/status.json`, written while the game
-runs, lists each numbered controller with its axes, so you can look up
-which number is the brake pedal. Many pedals rest at the top of their
-range: turn **Invert** on for those.
+## Finding the numbers
 
-## With CPMX2077
+The menu binds by number: **Controller 1** to **4**, and **Axis**,
+**Button** or **Hat** 1 to n on that controller.
 
-CPMX2077 (Installed mods › HID input) installs the same files, binds by
-moving the input on a gamepad drawing, writes `bindings.json` next to the
-plugin and shows what `status.json` reports. Bindings from both places
-apply; once saved in the game menu, its **General** settings are the ones
-used.
+- **Controller numbers**: game controllers that are not XInput gamepads,
+  numbered by USB vendor and product ID (the same numbers every session
+  while the same controllers are connected).
+- **Input numbers**: the order the plugin reads the controller in.
+
+While the game runs, the plugin writes
+`red4ext/plugins/cpmx_hid_input/status.json`. Each entry under `devices`
+is one controller: `controller` is its number, `axis_names` and
+`axis_values` its axes and where they are now (percent), and
+`recent_inputs` the last inputs moved, newest first. Press the brake pedal
+once and it shows as, for example, `"Axis 3"` at the top of
+`recent_inputs`. Many pedals rest at the top of their range (`axis_values`
+near 100): turn **Invert** on for those.
+
+`missing` lists bound controller numbers with no controller connected,
+`active_bindings` the bindings in use.
+
+## Install with a mod manager
+
+The archive is laid out from the game folder, so mod managers that install
+RED4ext plugins and redscript files take it as is (CPMX2077: **Install
+from archive…**). To uninstall, remove the folders
+`red4ext/plugins/cpmx_hid_input` and `r6/scripts/cpmx_hid_input`.

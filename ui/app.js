@@ -121,11 +121,11 @@ function fmtSize(n) {
 }
 
 // ---- tabs ---------------------------------------------------------------
-// Installed mods has sections (mod list, ReShade, OptiScaler, radio stations, HID input, Ultra+,
+// Installed mods has sections (mod list, ReShade, OptiScaler, radio stations, Ultra+,
 // patch notes) and Get mods holds Modpacks, each a collapsible submenu in
 // the sidebar.
 let modsSub = "list";
-const MODS_TITLES = { list: "Installed mods", reshade: "ReShade", optiscaler: "OptiScaler FSR4.1.1 Lite", radio: "RadioEXT", hid: "HID input", ultraplus: "Ultra+ recommendations", patchnotes: "Patch-note check" };
+const MODS_TITLES = { list: "Installed mods", reshade: "ReShade", optiscaler: "OptiScaler FSR4.1.1 Lite", radio: "RadioEXT", ultraplus: "Ultra+ recommendations", patchnotes: "Patch-note check" };
 document.querySelectorAll("nav button[data-tab]").forEach((b) =>
   b.addEventListener("click", () => showTab(b.dataset.tab, b.dataset.sub)));
 const navOpen = loadPref("navOpen", { mods: true, nexus: true });
@@ -145,12 +145,11 @@ function showModsSub(sub) {
   $("#mods-title").textContent = MODS_TITLES[modsSub];
   document.querySelectorAll("#tab-mods .mods-sub").forEach((x) => x.classList.toggle("hidden", x.dataset.sub !== modsSub));
   if (modsSub === "patchnotes") loadPatchNotes().catch((e) => toast(String(e), true));
-  if (modsSub === "hid") loadHid().catch((e) => toast(String(e), true));
 }
 
 // A section's menu entry shows once its card has something to show.
 function syncModsSubs() {
-  const shown = { reshade: mods.length > 0, optiscaler: !!currentGame, radio: !!currentGame, hid: !!currentGame, ultraplus: !$("#ultraplus").classList.contains("hidden"), patchnotes: mods.length > 0 };
+  const shown = { reshade: mods.length > 0, optiscaler: !!currentGame, radio: !!currentGame, ultraplus: !$("#ultraplus").classList.contains("hidden"), patchnotes: mods.length > 0 };
   for (const [sub, on] of Object.entries(shown)) $(`#nav-sub-mods [data-sub="${sub}"]`).classList.toggle("hidden", !on);
   $("#tab-mods .ultraplus-none").classList.toggle("hidden", shown.ultraplus);
 }
@@ -433,7 +432,6 @@ function sourceLabel(m) {
   if (m.source === "reshade") return "reshade.me";
   if (m.source === "optiscaler") return `GitHub ${m.source_ref || "optiscaler/OptiScaler"}`;
   if (m.source === "radioext") return "Radio station";
-  if (m.source === "cpmx-hid") return "CPMX2077";
   if (m.source === "adopted") return "Adopted";
   const info = sourceInfos.find((s) => s.id === m.source);
   if (info) return m.source_ref ? `${info.label} ${m.source_ref}` : info.label;
@@ -480,7 +478,6 @@ async function loadMods() {
   loadReShade().catch(() => {});
   loadOptiScaler().catch(() => {});
   loadRadio().catch(() => {});
-  loadHid().catch(() => {});
   loadUntracked().catch((e) => toast(String(e), true));
   refreshGame().catch(() => {});
 }

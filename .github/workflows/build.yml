@@ -37,34 +37,12 @@ jobs:
       - name: System dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev libssl-dev patchelf file gcc-mingw-w64-x86-64
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev libssl-dev patchelf file
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-gnu
       - uses: Swatinem/rust-cache@v2
-      # The HID Input plugin is a Windows DLL (the game runs under Proton);
-      # the app carries it for the HID input page to install.
-      - name: HID Input plugin DLL
-        run: cargo build -p cpmx-hid-input --release --target x86_64-pc-windows-gnu
-        env:
-          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
-      # The same plugin as a standalone mod, for players without CPMX2077.
-      - name: HID Input mod archive
-        run: |
-          ver=$(sed -n 's/^pub const PLUGIN_VERSION: &str = "\(.*\)";/\1/p' crates/hidmap/src/lib.rs)
-          mkdir -p pkg/red4ext/plugins/cpmx_hid_input pkg/r6/scripts/cpmx_hid_input
-          cp target/x86_64-pc-windows-gnu/release/cpmx_hid_input.dll crates/hid-plugin/README.md pkg/red4ext/plugins/cpmx_hid_input/
-          cp crates/hidmap/reds/HIDInput.reds pkg/r6/scripts/cpmx_hid_input/
-          (cd pkg && zip -r "../CPMX2077-HID-Input-$ver.zip" .)
-      - uses: actions/upload-artifact@v4
-        with:
-          name: hid-input
-          path: CPMX2077-HID-Input-*.zip
       - run: cargo install tauri-cli --version "^2" --locked
       - run: cargo tauri build --bundles appimage
         working-directory: src-tauri
-        env:
-          CPMX_HID_PLUGIN_DLL: ${{ github.workspace }}/target/x86_64-pc-windows-gnu/release/cpmx_hid_input.dll
       - name: Name the AppImage
         working-directory: target/release/bundle/appimage
         run: for f in *.AppImage; do [ "$f" = "${f// /-}" ] || mv "$f" "${f// /-}"; done
@@ -84,16 +62,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
-      # Static CRT: the plugin then needs no Visual C++ runtime in the game.
-      - name: HID Input plugin DLL
-        run: cargo build -p cpmx-hid-input --release
-        env:
-          RUSTFLAGS: -C target-feature=+crt-static
       - run: cargo install tauri-cli --version "^2" --locked
       - run: cargo tauri build --bundles nsis
         working-directory: src-tauri
-        env:
-          CPMX_HID_PLUGIN_DLL: ${{ github.workspace }}\target\release\cpmx_hid_input.dll
       - name: Name the installer
         shell: bash
         working-directory: target/release/bundle/nsis
@@ -103,11 +74,44 @@ jobs:
           name: windows
           path: target/release/bundle/nsis/*-setup.exe
 
+  # CPMX2077 HID Input, the standalone game mod in crates/hid-plugin (not
+  # part of the app): a Windows DLL, cross-built here since the game runs
+  # under Proton on Linux, plus its in-game menu script, zipped as laid out
+  # in the game folder.
+  hid-input:
+    needs: test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: System dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+      - uses: Swatinem/rust-cache@v2
+      - name: Plugin DLL
+        run: cargo build -p cpmx-hid-input --release --target x86_64-pc-windows-gnu
+        env:
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
+      - name: Mod archive
+        run: |
+          ver=$(sed -n 's/^pub const PLUGIN_VERSION: &str = "\(.*\)";/\1/p' crates/hidmap/src/lib.rs)
+          mkdir -p pkg/red4ext/plugins/cpmx_hid_input pkg/r6/scripts/cpmx_hid_input
+          cp target/x86_64-pc-windows-gnu/release/cpmx_hid_input.dll crates/hid-plugin/README.md pkg/red4ext/plugins/cpmx_hid_input/
+          cp crates/hidmap/reds/HIDInput.reds pkg/r6/scripts/cpmx_hid_input/
+          (cd pkg && zip -r "../CPMX2077-HID-Input-$ver.zip" .)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hid-input
+          path: CPMX2077-HID-Input-*.zip
+
   # Pushing a tag like v0.2.0, or running the workflow by hand with "release"
   # ticked, publishes the AppImage, the Windows installer and the HID Input
   # mod archive as a GitHub release (versions below 1.0 as pre-releases).
   release:
-    needs: [appimage, windows]
+    needs: [appimage, windows, hid-input]
     if: startsWith(github.ref, 'refs/tags/v') || inputs.release
     runs-on: ubuntu-22.04
     permissions:
@@ -135,7 +139,7 @@ jobs:
           case "$tag" in v0.*) pre="--prerelease" ;; esac
           notes="docs/releases/$tag.md"
           [ -f "$notes" ] || notes=/dev/null
-          { cat "$notes"; echo; echo "### Install"; echo "Linux: download the AppImage, make it executable (\`chmod +x\`) and run it. Windows (early preview): run the -setup.exe installer; it isn't code-signed yet, so SmartScreen asks once (More info, Run anyway). CPMX2077-HID-Input-*.zip is the HID Input plugin as a standalone mod for players without CPMX2077 (unpack into the game folder; CPMX2077 installs it from its HID input page). SHA256SUMS lists every file's checksum."; } > release-notes.md
+          { cat "$notes"; echo; echo "### Install"; echo "Linux: download the AppImage, make it executable (\`chmod +x\`) and run it. Windows (early preview): run the -setup.exe installer; it isn't code-signed yet, so SmartScreen asks once (More info, Run anyway). CPMX2077-HID-Input-*.zip is a separate game mod, CPMX2077 HID Input: pedals, wheels and flight sticks added to the gamepad, set up in the game under Settings > Mods > HID Input (unpack it into the game folder or install it like any mod; its README lists the requirements). SHA256SUMS lists every file's checksum."; } > release-notes.md
           gh release create "$tag" $pre --target "$GITHUB_SHA" --title "$tag" --generate-notes \
             --notes-file release-notes.md \
             dist/*.AppImage dist/*.exe dist/*.zip dist/SHA256SUMS

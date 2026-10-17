@@ -28,6 +28,12 @@ check the download against. A Windows installer
 - **Reference:** the [user guide](docs/user-guide.md) explains how the app
   works and what every tab and button does, plus troubleshooting.
 
+The release page also carries `CPMX2077-HID-Input-<version>.zip`, a separate
+game mod built from this repository and not used by the app: **CPMX2077 HID
+Input** adds pedals, wheels, flight sticks and button boxes to the gamepad
+Cyberpunk 2077 reads, set up in the game under Settings › Mods › HID Input.
+Install it like any mod; see [its README](crates/hid-plugin/README.md).
+
 ## Highlights
 
 - **Installs mods properly**: FOMOD installers as an in-app wizard, REDmod,
@@ -166,15 +172,6 @@ Screenshots show sample data, with file locations blurred.
   A station icon can be made from a PNG: CPMX2077 writes the texture,
   atlas and `.archive` itself and installs them with the station.
   Installs radioExt from GitHub when it's missing.
-- **HID input**: a RED4ext plugin carried in CPMX2077 adds pedals, wheels,
-  flight sticks, throttles and button boxes to the XInput gamepad the game
-  reads (triggers take the larger value, stick axes add, buttons combine),
-  next to a real gamepad or alone. Bindings are made on a gamepad drawing
-  by moving the input; connected controllers show as drawings with live
-  axis bars. Per binding: invert, deadzone, response curve, half axis.
-  With Mod Settings, bindings can also be set in the game (Settings ›
-  Mods › HID Input). Also released as a standalone mod archive for
-  players without CPMX2077.
 - **Enable/disable** without uninstalling: switching a mod off removes its files
   from the game (bringing back whatever they replaced) and keeps the checked
   copy stored at install (**Open stored copy** shows it), so switching it on again needs no re-download. Files the mod changed
@@ -379,8 +376,9 @@ On Windows (with the WebView2 runtime, which Windows 10 and 11 include), run
 The AppImage lands in `target/release/bundle/appimage/`. CI builds it on every
 push (see `.github/workflows/build.yml`). Pushing a version tag that matches
 the version in `src-tauri/tauri.conf.json` (e.g. `v0.1.0`), or running the
-workflow from the Actions tab with "release" ticked, publishes the AppImage
-and the Windows installer as a release with a SHA256SUMS file.
+workflow from the Actions tab with "release" ticked, publishes the AppImage,
+the Windows installer and the HID Input mod archive as a release with a
+SHA256SUMS file.
 
 ## Layout
 
@@ -388,6 +386,8 @@ and the Windows installer as a release with a SHA256SUMS file.
   client, secrets); no GUI dependency, fully unit-tested.
 - `src-tauri` – Tauri 2 shell exposing core functions as commands.
 - `ui` – plain HTML/CSS/JS frontend (no build step).
+- `crates/hid-plugin`, `crates/hidmap` – the HID Input game mod (RED4ext
+  plugin and its in-game menu), separate from the app.
 
 ## Roadmap
 

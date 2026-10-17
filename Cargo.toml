@@ -7,6 +7,6 @@ version = "0.8.1"
 edition = "2024"
 license = "GPL-3.0-or-later"
 
-# The HID Input plugin DLL ships inside the app: keep it small.
+# Keep the HID Input mod's DLL small.
 [profile.release.package.cpmx-hid-input]
 strip = true

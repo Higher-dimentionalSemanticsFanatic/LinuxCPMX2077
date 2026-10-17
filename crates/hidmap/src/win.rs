@@ -1,7 +1,6 @@
 //! Game controllers through hid.dll: list them and read their input
 //! reports. The same calls work on Windows and inside Proton, where Wine's
-//! own DirectInput reads joysticks this way. Shared by the plugin and
-//! CPMX2077's Windows build.
+//! own DirectInput reads joysticks this way.
 
 use std::ptr::null_mut;
 

@@ -4,7 +4,6 @@ version = "0.8.1"
 edition = "2024"
 
 [dependencies]
-cp2077mm-hidmap = { path = "../hidmap" }
 dirs = "7.0.0"
 hex = "0.4.3"
 keyring = { version = "3", features = ["sync-secret-service", "crypto-rust", "windows-native"] }
@@ -31,6 +30,3 @@ zip = { version = "8.6.0", default-features = false, features = ["deflate", "def
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56.0"
-
-[target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2.190"

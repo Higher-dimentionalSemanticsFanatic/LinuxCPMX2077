@@ -26,7 +26,6 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 mod app_update_cmd;
-mod hid_cmd;
 mod modpacks_cmd;
 mod optiscaler_cmd;
 mod patch_notes_cmd;
@@ -1869,12 +1868,6 @@ fn main() {
             radio_cmd::radio_save,
             radio_cmd::radio_icon_preview,
             radio_cmd::radio_icon_check,
-            hid_cmd::hid_state,
-            hid_cmd::hid_devices,
-            hid_cmd::hid_poll,
-            hid_cmd::hid_bindings,
-            hid_cmd::hid_save_bindings,
-            hid_cmd::hid_install,
             wolvenkit_cmd::wolvenkit_status,
             wolvenkit_cmd::wolvenkit_latest,
             wolvenkit_cmd::wolvenkit_install,
