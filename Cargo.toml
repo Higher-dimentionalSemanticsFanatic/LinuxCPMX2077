@@ -1,12 +1,8 @@
 [workspace]
 resolver = "3"
-members = ["crates/core", "crates/hidmap", "crates/hid-plugin", "src-tauri"]
+members = ["crates/core", "src-tauri"]
 
 [workspace.package]
 version = "0.9.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
-
-# Keep the HID Input mod's DLL small.
-[profile.release.package.cpmx-hid-input]
-strip = true
