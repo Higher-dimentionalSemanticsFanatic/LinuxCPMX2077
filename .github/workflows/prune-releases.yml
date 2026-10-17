@@ -1,0 +1,19 @@
+name: prune-releases
+
+# Run by hand to delete every release except the newest version. The
+# release job in build.yml does the same after each publish. Tags stay.
+on:
+  workflow_dispatch:
+
+jobs:
+  prune:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Delete older releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: .github/scripts/prune-releases.sh

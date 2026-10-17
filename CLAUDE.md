@@ -141,5 +141,6 @@ section. Write `docs/releases/v<version>.md` first; the
 release job puts it above the install notes and generated changelog.
 Pushing a `vX.Y.Z` tag that matches `tauri.conf.json`, or running the
 `build` workflow with "release" ticked, publishes the AppImage, the NSIS
-installer and `SHA256SUMS` (0.x versions as pre-releases). Only cut a
+installer and `SHA256SUMS` (0.x versions as pre-releases), then deletes
+every older release (tags stay; `prune-releases` workflow does it by hand). Only cut a
 release when the maintainer asks for one.

@@ -388,7 +388,8 @@ The AppImage lands in `target/release/bundle/appimage/`. CI builds it on every
 push (see `.github/workflows/build.yml`). Pushing a version tag that matches
 the version in `src-tauri/tauri.conf.json` (e.g. `v0.1.0`), or running the
 workflow from the Actions tab with "release" ticked, publishes the AppImage
-and the Windows installer as a release with a SHA256SUMS file.
+and the Windows installer as a release with a SHA256SUMS file, then deletes
+the older releases (their git tags stay).
 
 ## Layout
 
