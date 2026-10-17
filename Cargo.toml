@@ -1,8 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["crates/core", "src-tauri"]
+members = ["crates/core", "crates/hidmap", "crates/hid-plugin", "src-tauri"]
 
 [workspace.package]
 version = "0.8.1"
 edition = "2024"
 license = "GPL-3.0-or-later"
+
+# The HID Input plugin DLL ships inside the app: keep it small.
+[profile.release.package.cpmx-hid-input]
+strip = true

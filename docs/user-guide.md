@@ -9,12 +9,12 @@ ARCHIVE…); this guide writes them in normal case (**Install from
 archive…**). The selected tab is the amber one in the left menu.
 
 Two tabs have sections listed under them in the left menu: **Installed
-mods** (**Overview**, **ReShade**, **OptiScaler FSR4.1.1 Lite**, **RadioEXT**, **Ultra+
+mods** (**Overview**, **ReShade**, **OptiScaler FSR4.1.1 Lite**, **RadioEXT**, **HID input**, **Ultra+
 recommendations**, **Patch-note check**) and **Get mods** (**Browse mods**,
 **Modpacks**). **▾** next to the tab shows or hides its sections; the choice
 is kept. A section shows in the menu once it applies: ReShade and Patch-note
 check once a mod is installed, Ultra+ recommendations once Ultra+ is in the
-game. OptiScaler FSR4.1.1 Lite and RadioEXT show whenever a game is selected.
+game. OptiScaler FSR4.1.1 Lite, RadioEXT and HID input show whenever a game is selected.
 
 - [How it works](#how-it-works)
 - [Game panel](#game-panel)
@@ -719,6 +719,102 @@ radioExt's `radios` folder, one folder per station.
   reused from the stored copy, not copied from the game folder. radioExt
   reads stations at game start.
 
+### HID input
+
+Cyberpunk 2077 reads one gamepad through XInput. Pedals, wheels, flight
+sticks, throttles and button boxes that are not gamepads, or that Steam
+Input can't remap, are not read by the game. The **HID input** section
+(under Installed mods in the menu) binds their axes, buttons and hat
+switches to the gamepad the game reads.
+
+The binding is done in the game by **CPMX2077 HID Input**, a RED4ext
+plugin that ships inside CPMX2077 (it needs RED4ext). At game start it
+reads the controllers bound here through Windows' HID interface (under
+Proton: Wine's, the same path the game's other input goes through) and
+adds them to the XInput gamepad on the chosen slot:
+
+- Triggers take the larger value of the gamepad and the bound inputs.
+- Stick axes add up and are clamped to the stick's range.
+- Buttons combine: a button is down when the gamepad's or a bound input's
+  is.
+
+So pedals work next to a gamepad (accelerate with the pedal, steer with
+the stick), or with mouse and keyboard and no gamepad at all.
+
+The top rows:
+
+| Row | What it shows |
+|---|---|
+| **Plugin** | The installed version, and whether it is the one this CPMX2077 build carries (*matches this CPMX2077 build*). *not managed* when `cpmx_hid_input.dll` is in the plugin folder but was not installed by CPMX2077. |
+| **RED4ext** | *installed* when RED4ext is in the game. |
+| **Game input imports** | The input DLLs `bin/x64/Cyberpunk2077.exe` imports (read from its import table): *XInput imported* plus the functions. |
+| **Last game run** | What the plugin wrote to `status.json` in the last game run, and how long ago: hooks set, `XInputGetState` calls, reads that carried bound input, reads where it reported a gamepad, bindings active (bound device connected). *no XInput reads*: the game didn't ask XInput for the gamepad in that run, so bound inputs didn't reach it. *not connected* names bound controllers the plugin didn't find; *bindings file* shows a `bindings.json` it couldn't read (it keeps the bindings it had). The last line lists the controllers the plugin read in the game. |
+
+Buttons:
+
+- **Install plugin** installs the plugin into
+  `red4ext/plugins/cpmx_hid_input/` as a tracked mod (source *CPMX2077*,
+  category *Input*): it shows in the mod list and turns off with the
+  **Enabled** switch like any mod. When an older version is installed
+  the button reads **Update plugin to …** and replaces it. Either takes
+  effect at the next game start.
+- **Open plugin folder** opens `red4ext/plugins/cpmx_hid_input/`.
+
+**Bindings**:
+
+- **Bindings on**: off, the plugin passes the gamepad through unchanged.
+- **Gamepad slot**: the XInput slot bound inputs go to (1 is the first
+  gamepad).
+- **Report a gamepad when none is connected**: with no gamepad on the slot,
+  the plugin reports one while a bound controller is connected, so bound
+  controllers work without a gamepad.
+- **Save bindings** writes `bindings.json` to the plugin folder; the badge
+  *unsaved changes* shows there are edits not yet saved. The plugin reads
+  the file again within a second, also while the game runs.
+
+The gamepad drawing has a box per gamepad input, with what it does when
+driving (**Right trigger**: accelerate, **Left trigger**: brake and
+reverse, **Left stick X**: steer) and the inputs bound to it. To bind:
+click a box, then move or press the input on the controller. An axis
+binds once it moves a quarter of its travel, a button or hat switch once
+pressed; **Esc** cancels. The first move sets the defaults: **Invert** on
+when the axis rests at its top end (most pedals), and **Stick range**
+*Rest to + (right, up)* for a stick target bound to an axis that rests at
+one end. A button bound to a stick axis pushes the stick to the end of
+its **Stick range**. One gamepad input can take several bound inputs. A
+hat switch binds to **D-pad (hat switch)**, all four directions at once
+(also when pushed while a single d-pad direction is listening).
+
+The table below lists each binding:
+
+| Column | What it does |
+|---|---|
+| **Input** | Controller and input (*X axis*, *Button 10*, *Hat 1*). |
+| **Gamepad** | The gamepad input it drives. |
+| **Invert** | Flips the input's direction. |
+| **Deadzone** | Travel ignored at rest (pedals, triggers) or around the middle (whole stick axes), up to half the travel. |
+| **Response** | *Linear*: output follows travel. *Progressive* and *Strong*: finer control near rest, full output at the end. |
+| **Stick range** | For stick targets: *Whole axis*, or one half (*Rest to + (right, up)*, *Rest to − (left, down)*), for example a pedal per steering direction. |
+| **Output** | The value the binding gives now, from the controller's live values. |
+| **Remove** | Deletes the binding (saved with **Save bindings**). |
+
+**Controllers on this computer** lists the connected game controllers
+with a drawing (pedals, wheel, flight stick, throttle, button box), a bar
+per axis and a lamp per button and hat switch, all moving with the live
+values. The drawing is picked from the device's name and inputs; the
+menu next to the name changes it. On Linux the list is read from
+`/dev/input` (devices udev marks as joysticks), and live values need read
+access to the device node: *no live values* shows the error. Proton gives
+the game the same devices. On Windows the list is read through `hid.dll`,
+as the plugin reads it. **Rescan** lists the controllers again.
+
+Controllers are matched by USB vendor and product ID (*046d:c24f*), plus
+a number when two of the same are connected. Under Proton an input's
+number can differ between Linux and the game; the plugin matches axes by
+their HID usage when the game sees the same axis set, and by position
+otherwise. Checked under Wine with the plugin's hooks, not yet with real
+controllers in the game: see *Last game run* after a session.
+
 ## Modpacks
 
 Under **Get mods** in the menu. Nexus collections, your own tags, and mod list import/export. Needs a
@@ -1398,6 +1494,7 @@ logs are only readable from a fixed list of known locations.
 | FSR 4 shader overrides | `~/.local/share/cp2077-modmanager/fsr4-shader-overrides/` (`prebuilt/`, `prebuilt-lossy/`) |
 | WolvenKit (Netrunner) | `~/.local/share/cp2077-modmanager/tools/wolvenkit/` (`cli/`, `editor/` on Windows; release archives are deleted after unpacking) |
 | Radio station icons made from a PNG | `archive/pc/mod/cpmx2077_radio_<station>.archive` in the game folder |
+| HID input bindings and the plugin's last-run report | `red4ext/plugins/cpmx_hid_input/bindings.json` and `status.json` in the game folder |
 | Saved Nexus pages | `~/.cache/cp2077-modmanager/nexus/` |
 | Mod thumbnails | `~/.cache/cp2077-modmanager/thumbnails/` |
 | Refreshed Ultra+ recommendations | In the library database (settings) |

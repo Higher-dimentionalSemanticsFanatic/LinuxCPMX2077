@@ -15,12 +15,12 @@ flowchart LR
     app[app.js<br/>Installed mods, Get mods,<br/>Downloads, Settings, queue, FOMOD wizard]
     mp[modpacks.js]
     nr[netrunner.js + graph.js<br/>+ wolvenkit.js]
-    rs[reshade.js / optiscaler.js /<br/>radio.js / ultraplus.js]
+    rs[reshade.js / optiscaler.js /<br/>radio.js / hid.js / ultraplus.js]
     dbg[debug.html + debug.js]
   end
   subgraph Shell["src-tauri (thin shell)"]
     main[main.rs<br/>AppState: Db mutex, pending FOMOD installs,<br/>in-flight downloads]
-    cmds[modpacks_cmd.rs<br/>reshade_cmd.rs<br/>optiscaler_cmd.rs<br/>radio_cmd.rs<br/>ultraplus_cmd.rs<br/>wolvenkit_cmd.rs]
+    cmds[modpacks_cmd.rs<br/>reshade_cmd.rs<br/>optiscaler_cmd.rs<br/>radio_cmd.rs<br/>hid_cmd.rs<br/>ultraplus_cmd.rs<br/>wolvenkit_cmd.rs]
     mcpbin["--mcp mode<br/>(same binary, no window)"]
   end
   subgraph Core["crates/core (cp2077mm-core)"]
@@ -31,21 +31,36 @@ flowchart LR
     analysis[analysis, dependencies,<br/>file_tree, known_issues]
     diag[crash, startup]
     setup[game, game_versions,<br/>linux_setup, winsys, desktop]
-    extra[reshade, optiscaler, radioext + inkicon,<br/>ultraplus, wolvenkit,<br/>modpacks, updates, downloads]
+    extra[reshade, optiscaler, radioext + inkicon,<br/>hid_input, ultraplus, wolvenkit,<br/>modpacks, updates, downloads]
     mcp[mcp]
+  end
+  subgraph Hid["HID input plugin"]
+    hidmap[crates/hidmap<br/>bindings format, merge rules,<br/>HID descriptor parser, hid.dll reader]
+    plugin[crates/hid-plugin<br/>RED4ext DLL: XInput hooks]
   end
   app & mp & nr & rs & dbg -- invoke --> main & cmds
   main & cmds --> install & nexus & sources & analysis & diag & setup & extra
   install --> db
   analysis --> db
   mcpbin --> mcp --> db
+  extra --> hidmap
+  plugin --> hidmap
+  plugin -. "carried in the app (build.rs)" .-> cmds
 ```
+
+`crates/hid-plugin` builds a Windows DLL only (`cdylib`; empty on other
+targets), cross-compiled from Linux with `x86_64-pc-windows-gnu`.
+`src-tauri/build.rs` embeds it from `CPMX_HID_PLUGIN_DLL`, or from
+`target/x86_64-pc-windows-{gnu,msvc}/release/` when built there. In the
+game it hooks `XInputGetState(Ex)` and `XInputGetCapabilities` in every
+`xinput*.dll`, reads the bound devices through `hid.dll`, and merges them
+with `hidmap::contribution`, the same rules `ui/hid.js` previews.
 
 ## Tabs and what they call
 
 | Tab (button label) | UI file | Main commands | Core modules |
 |---|---|---|---|
-| Installed mods | `app.js`, `profiles.js`, `reshade.js`, `optiscaler.js`, `radio.js`, `ultraplus.js` | `install_archive`, `finish_install`, `uninstall_mod`, `disable_mod`, `enable_mod`, `verify_mod`, `untracked_mods`, `adopt_mods`, `open_stored_copy`, `stored_copies_dir`, `check_updates`, `game_version_history`, `*_profile(s)`, `reshade_*`, `optiscaler_*`, `fsr4_overrides*`, `radio_*`, `ultraplus_*` | `install`, `untracked`, `updates`, `game_versions`, `profiles`, `reshade`, `optiscaler`, `radioext`, `ultraplus` |
+| Installed mods | `app.js`, `profiles.js`, `reshade.js`, `optiscaler.js`, `radio.js`, `hid.js`, `ultraplus.js` | `install_archive`, `finish_install`, `uninstall_mod`, `disable_mod`, `enable_mod`, `verify_mod`, `untracked_mods`, `adopt_mods`, `open_stored_copy`, `stored_copies_dir`, `check_updates`, `game_version_history`, `*_profile(s)`, `reshade_*`, `optiscaler_*`, `fsr4_overrides*`, `radio_*`, `hid_*`, `ultraplus_*` | `install`, `untracked`, `updates`, `game_versions`, `profiles`, `reshade`, `optiscaler`, `radioext`, `hid_input`, `ultraplus` |
 | Modpacks | `modpacks.js` | `nexus_collections`, `collection_view`, `track_collection`, tags, `export_modlist`, `import_modlist`, `mod_dependencies` | `modpacks`, `nexus_browse`, `dependencies` |
 | Netrunner | `netrunner.js`, `graph.js`, `wolvenkit.js` | `analyze_game`, `mod_file_tree`, `load_order_view`, `set_load_order`, `reset_load_order`, `crash_analysis`, `read_log`, `wolvenkit_*` | `analysis`, `file_tree`, `load_order`, `crash`, `startup`, `known_issues`, `wolvenkit` |
 | Get mods | `app.js` | `nexus_search`, `nexus_mod_details`, `nexus_download`, `nexus_open_in_app`, `source_search`, `source_download`, `framework_plan` | `nexus`, `nexus_browse`, `sources::github` |
@@ -70,6 +85,7 @@ All paths come from `core::paths` (XDG on Linux, `dirs` equivalents on Windows).
 | Downloads | Settings → download location (default `<data>/…/downloads/`) | `core::downloads` |
 | Nexus API key | system keyring | `core::secrets` |
 | Nexus page cache | `<cache>/cp2077-modmanager/nexus/` | `core::nexus_cache` |
+| HID input bindings, plugin last-run report | `<game>/red4ext/plugins/cpmx_hid_input/bindings.json`, `status.json` | `core::hid_input::save_bindings`; the plugin in the game |
 
 ## Database tables that matter for installs
 
