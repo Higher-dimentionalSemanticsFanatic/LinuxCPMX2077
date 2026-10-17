@@ -687,6 +687,7 @@ button.canvas-tile.np-sel { --fill: rgba(246, 207, 60, .16); background: var(--f
   #np-tabs button { padding: 3px 8px; font-size: 12px; }
 }
 
-/* Source chip in front of a Nexus category (self-drawn, not the Nexus Mods logo). */
-.nx-cat { display: flex; align-items: baseline; gap: 5px; margin-top: 2px; }
-.nx-src { flex: none; font: 700 10px/1 ui-monospace, "JetBrains Mono", monospace; letter-spacing: .5px; color: #0b0f14; background: #e8893a; padding: 2px 3px 1px; clip-path: polygon(0 0, 100% 0, 100% 70%, 75% 100%, 0 100%); }
+/* Nexus Mods logo in front of a Nexus category (captain's exception to the no-logos rule). */
+.nx-cat { display: flex; align-items: flex-start; gap: 5px; margin-top: 2px; }
+.nx-src { flex: none; width: 14px; height: 14px; margin-top: 1px; }
+.canvas-col h4 .nx-src { align-self: center; margin: 0 -2px 0 0; }

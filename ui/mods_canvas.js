@@ -119,7 +119,7 @@ function renderModsCanvas(shown) {
   $("#mods-canvas").replaceChildren(...cols.map((c) => el("section", { class: "canvas-col", style: `--c:${c.color}` },
     el("h4", {},
       canvasGroup === "category" && c.label !== "No Nexus category"
-        ? el("span", { class: "nx-src", title: "Nexus Mods category, from the mods' Nexus pages" }, "NX") : null,
+        ? el("img", { class: "nx-src", src: "img/nexusmods.png", alt: "Nexus Mods category:", title: "Nexus Mods category, from the mods' Nexus pages" }) : null,
       c.filter ? el("button", { class: "link", title: "Show these mods in the List view", onclick: () => {
         $("#mods-filter").value = "";
         $("#mods-category").value = c.filter;

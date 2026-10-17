@@ -604,7 +604,7 @@ function modRow(m) {
       el("div", { class: "muted mono" }, m.archive_name)),
     el("td", {}, tagEditor(m), m.category
       ? el("div", { class: "muted small nx-cat", title: "Nexus Mods category, from the mod's Nexus page. Tags above are CPMX2077 tags." },
-        el("span", { class: "nx-src", "aria-label": "Nexus Mods category:" }, "NX"), m.category)
+        el("img", { class: "nx-src", src: "img/nexusmods.png", alt: "Nexus Mods category:" }), m.category)
       : null),
     el("td", {}, m.version || "—", up ? el("div", { class: "badge ok" }, `${up.to_stable ? "stable " : ""}${up.latest} available`) : null),
     el("td", {}, el("span", { class: "badge" }, sourceLabel(m))),
