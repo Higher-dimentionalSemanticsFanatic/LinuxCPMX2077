@@ -33,6 +33,12 @@
   // Frameworks whose need alone says what a mod is (CET Lua, TweakXL YAML).
   const NEEDS_KIND = { cet: "CET", tweakxl: "TweakXL", redmod: "REDmod" };
   const MIN_K = 0.05, MAX_K = 4;
+  // "Selection" modes: fade by link distance, hide everything further than
+  // the depth, or the old one-step neighbour highlight.
+  const ISOLATE = { fade: "Fade by distance", hide: "Hide unrelated", near: "Highlight neighbours" };
+  // Paths stop at these: every mod needs a framework, so going through one
+  // would reach most of the library in two steps.
+  const PATH_END = new Set(["framework", "base_game"]);
   const COLOR_RE = /^#[0-9a-f]{6}$/i;
 
   const canvas = document.getElementById("graph");
@@ -55,6 +61,16 @@
   let groups = new Map(), headers = [];
   let hover = null, selected = null, drag = null, alpha = 0, raf = 0;
   let lastReport = null;
+  let isolate = ISOLATE[loadPref("graphIsolate", "fade")] ? loadPref("graphIsolate", "fade") : "fade";
+  let depth = Math.min(4, Math.max(1, Number(loadPref("graphDepth", 2)) || 2));
+  // Hide unrelated: ids of the nodes kept around the selected one, and every
+  // node's position in the full graph to go back to.
+  let scope = null, fullPos = null;
+  // Node id -> neighbour ids and node id -> type, over the whole graph (also
+  // while a scope shows only part of it).
+  let fullAdj = new Map(), fullType = new Map();
+  // Opacity per node for the current focus, worked out once per focus.
+  let fadeFor = null, fadeMap = null;
   // Mod id -> { level, findings, logErrors }: what the checks found per mod.
   let problems = new Map();
   // Mods lit up from a finding or crash suspect: { modIds, label, mods, near }.
@@ -138,16 +154,20 @@
   }
 
   // ---- building -----------------------------------------------------------
-  function build(report, keepPositions) {
+  function build(report, keepPositions, positions) {
     const hide = document.getElementById("graph-hide-hooks").checked;
-    const old = keepPositions ? new Map(nodes.map((n) => [n.id, n])) : new Map();
+    const old = positions || (keepPositions ? new Map(nodes.map((n) => [n.id, n])) : new Map());
     const keep = report.graph.edges.filter((e) => !(hide && HARMLESS.has(e.label) && !e.conflict));
     const used = new Set(keep.flatMap((e) => [e.from, e.to]));
     // A hidden type's nodes are dropped after `used` is worked out, so the
     // parts of hidden mods still show; the edges filter below drops every
     // edge with a hidden end.
-    nodes = report.graph.nodes
-      .filter((n) => (n.type === "mod" || used.has(n.id)) && !hidden.has(n.type))
+    const all = report.graph.nodes.filter((n) => (n.type === "mod" || used.has(n.id)) && !hidden.has(n.type));
+    fullType = new Map(all.map((n) => [n.id, n.type]));
+    fullAdj = new Map(all.map((n) => [n.id, []]));
+    for (const e of keep) if (fullAdj.has(e.from) && fullAdj.has(e.to)) { fullAdj.get(e.from).push(e.to); fullAdj.get(e.to).push(e.from); }
+    nodes = all
+      .filter((n) => !scope || scope.has(n.id))
       .map((n) => ({ ...n, degree: 0, x: 0, y: 0, vx: 0, vy: 0, fixed: false, problem: problems.get(n.mod_id) || null }));
     byId = new Map(nodes.map((n) => [n.id, n]));
     edges = keep.filter((e) => byId.has(e.from) && byId.has(e.to)).map((e) => ({ ...e, affected: e.affected || [], a: byId.get(e.from), b: byId.get(e.to) }));
@@ -156,6 +176,7 @@
     assignGroups(report);
     selected = selected && byId.get(selected.id) || null;
     hover = null;
+    fadeFor = null;
     if (lit) lit = lightUp(lit.modIds, lit.label);
 
     let reused = 0;
@@ -173,6 +194,7 @@
       settle(reused === nodes.length ? 0 : 150);
     }
     if (!userMoved) fit();
+    showScope();
     setMessage(nodes.length ? "" : hidden.size && report.graph.nodes.length
       ? "All node types in this graph are hidden. Select a type in the legend to show it."
       : report.mods.length
@@ -524,6 +546,69 @@
     return s;
   }
 
+  // Links from `id` to every node within `max`, over the whole graph. Paths
+  // end at frameworks and the base game.
+  function distances(id, max) {
+    const dist = new Map([[id, 0]]);
+    let ring = [id];
+    for (let d = 1; d <= max && ring.length; d++) {
+      const next = [];
+      for (const a of ring) {
+        if (a !== id && PATH_END.has(fullType.get(a))) continue;
+        for (const b of fullAdj.get(a) || []) if (!dist.has(b)) { dist.set(b, d); next.push(b); }
+      }
+      ring = next;
+    }
+    return dist;
+  }
+
+  // Opacity of a node at `d` links: 1 at the focus, down to .4 at the depth.
+  const fadeAt = (d) => d === 0 ? 1 : 0.85 - 0.45 * (d - 1) / Math.max(1, depth - 1);
+  // The focus's opacities (null: draw everything), cached per focus.
+  function fadeOf(focus) {
+    if (!focus || isolate === "near") return null;
+    const key = `${focus.id}|${depth}`;
+    if (fadeFor !== key) {
+      const dist = distances(focus.id, depth);
+      fadeMap = new Map();
+      // Hide unrelated already removed the rest: fade less.
+      for (const [id, d] of dist) { const n = byId.get(id); if (n) fadeMap.set(n, scope ? Math.max(0.65, fadeAt(d)) : fadeAt(d)); }
+      fadeFor = key;
+    }
+    return fadeMap;
+  }
+
+  // Hide unrelated: rebuild the graph with only the nodes within `depth`
+  // links of `n`, laid out on their own; showAll() goes back.
+  function isolateAround(n) {
+    if (!lastReport) return;
+    if (!scope) fullPos = new Map(nodes.map((x) => [x.id, { x: x.x, y: x.y, fixed: x.fixed }]));
+    scope = new Set(distances(n.id, depth).keys());
+    selected = n;
+    userMoved = false;
+    build(lastReport, false);
+    showInfo(selected);
+  }
+  function showAll() {
+    if (!scope) return;
+    scope = null;
+    userMoved = false;
+    build(lastReport, false, fullPos);
+    fullPos = null;
+    if (selected) showInfo(selected);
+  }
+  const scopeNote = document.getElementById("graph-scope");
+  function showScope() {
+    scopeNote.classList.toggle("hidden", !scope);
+    if (!scope) return;
+    const total = fullType.size;
+    const b = document.createElement("button");
+    b.className = "link inline";
+    b.textContent = "Show all";
+    b.addEventListener("click", () => { selected = null; showAll(); showInfo(null); requestDraw(); });
+    scopeNote.replaceChildren(`Isolated: ${selected ? selected.label : "selection"} · ${nodes.length} of ${total} nodes within ${depth} link${depth === 1 ? "" : "s"} `, b);
+  }
+
   // The lit mods, plus what they share: everything two of them touch, or
   // everything a single lit mod touches.
   function lightUp(modIds, label) {
@@ -598,9 +683,13 @@
     const r = box;
     if (drawQueued) { cancelAnimationFrame(drawQueued); drawQueued = 0; }
     ctx.clearRect(0, 0, r.width, r.height);
-    const focus = hover || selected;
-    const near = focus ? neighbors(focus) : lit?.mods.size ? lit.near : null;
+    // Fading follows the selection; hovering only previews when nothing is selected.
+    const focus = isolate === "near" ? hover || selected : selected || hover;
+    const fade = fadeOf(focus);
+    const near = fade ? null : focus ? neighbors(focus) : lit?.mods.size ? lit.near : null;
     const onFocus = (e) => focus ? e.a === focus || e.b === focus : lit.mods.has(e.a) || lit.mods.has(e.b);
+    // Opacity of a node: from the fade, else dimmed outside `near`.
+    const alphaOf = (n) => fade ? fade.get(n) ?? (scope ? 0 : 0.05) : near && !near.has(n) ? 0.2 : 1;
     const flow = layout === "flow";
     if (groupBy && !flow) drawRings();
     if (groupBy && flow && view.k * 12 >= 5) {
@@ -626,14 +715,22 @@
         [a, b] = c;
         label = edgeEnds(e);
       }
-      const bright = !near || (near.has(e.a) && near.has(e.b) && onFocus(e));
-      const color = e.conflict ? "rgba(255,77,94," + (bright ? 0.9 : 0.15) + ")" : "rgba(140,140,170," + (bright ? 0.55 : 0.08) + ")";
+      let bright, color;
+      if (fade) {
+        const a = Math.min(alphaOf(e.a), alphaOf(e.b));
+        if (!a) continue;
+        bright = a > 0.3;
+        color = e.conflict ? `rgba(255,77,94,${(0.9 * a).toFixed(2)})` : `rgba(140,140,170,${(0.6 * a).toFixed(2)})`;
+      } else {
+        bright = !near || (near.has(e.a) && near.has(e.b) && onFocus(e));
+        color = e.conflict ? "rgba(255,77,94," + (bright ? 0.9 : 0.15) + ")" : "rgba(140,140,170," + (bright ? 0.55 : 0.08) + ")";
+      }
       const width = Math.round(Math.min(4, 1 + Math.log2(e.weight || 1) * 0.5) * (e.conflict ? 1.4 : 1) * 2) / 2;
       const dashed = e.label === "requires" && !huge;
       const key = `${color}|${width}|${dashed}`;
       if (!strokes.has(key)) strokes.set(key, { color, width, dashed, bright, conflict: e.conflict, segs: [] });
       strokes.get(key).segs.push(a, b);
-      if (near && bright && view.k > 0.5) edgeLabels.push([e.label, (label[0].x + label[1].x) / 2 + 4, (label[0].y + label[1].y) / 2 - 4]);
+      if ((near || fade) && bright && onFocus(e) && view.k > 0.5) edgeLabels.push([e.label, (label[0].x + label[1].x) / 2 + 4, (label[0].y + label[1].y) / 2 - 4]);
     }
     // Dim lines first, bright and conflicting ones on top.
     const order = [...strokes.values()].sort((x, y) => x.bright - y.bright || x.conflict - y.conflict);
@@ -655,19 +752,20 @@
       ctx.font = "11px system-ui, sans-serif";
       for (const [t, x, y] of edgeLabels) ctx.fillText(t, x, y);
     }
-    if (flow) drawFlowNodes(r, focus, near);
-    else drawWebNodes(r, focus, near);
+    if (flow) drawFlowNodes(r, focus, alphaOf);
+    else drawWebNodes(r, focus, alphaOf, !!(fade || near));
   }
 
-  function drawFlowNodes(r, focus, near) {
+  function drawFlowNodes(r, focus, alphaOf) {
     for (const n of nodes) {
       const p = toScreen(n);
-      const dim = near && !near.has(n);
+      const a = alphaOf(n);
+      if (!a) continue;
       const ring = n === selected || (!focus && lit?.mods.has(n));
       const w = n.w * view.k, h = n.h * view.k;
       const x = p.x - w / 2, y = p.y - h / 2;
       if (x > r.width || x + w < 0 || y > r.height || y + h < 0) continue;
-      ctx.globalAlpha = dim ? 0.2 : 1;
+      ctx.globalAlpha = a;
       const solid = n.type === "mod" || n.type === "framework";
       roundRect(x, y, w, h, Math.min(6, 6 * view.k));
       ctx.fillStyle = solid ? COLORS[n.type] : "#151520";
@@ -685,36 +783,37 @@
     }
   }
 
-  function drawWebNodes(r, focus, near) {
+  function drawWebNodes(r, focus, alphaOf, focusing) {
     const scale = Math.max(0.6, Math.min(1.6, view.k));
     const fills = new Map(), shown = [];
     for (const n of nodes) {
       const p = toScreen(n);
       const rad = radius(n) * scale;
       if (p.x + rad + (n.tw || 0) + 10 < 0 || p.x - rad > r.width || p.y + rad < 0 || p.y - rad > r.height) continue;
-      const dim = !!(near && !near.has(n));
-      const key = `${COLORS[n.type] || "#888"}|${dim}`;
+      const a = alphaOf(n);
+      if (!a) continue;
+      const key = `${COLORS[n.type] || "#888"}|${a}`;
       if (!fills.has(key)) fills.set(key, []);
       fills.get(key).push(p.x, p.y, rad);
-      shown.push([n, p, rad, dim]);
+      shown.push([n, p, rad, a]);
     }
     for (const [key, list] of fills) {
-      const [color, dim] = key.split("|");
-      ctx.globalAlpha = dim === "true" ? 0.2 : 1;
+      const [color, a] = key.split("|");
+      ctx.globalAlpha = Number(a);
       ctx.fillStyle = color;
       ctx.beginPath();
       for (let i = 0; i < list.length; i += 3) { ctx.moveTo(list[i] + list[i + 2], list[i + 1]); ctx.arc(list[i], list[i + 1], list[i + 2], 0, Math.PI * 2); }
       ctx.fill();
     }
-    for (const [n, p, rad, dim] of shown) {
-      ctx.globalAlpha = dim ? 0.2 : 1;
+    for (const [n, p, rad, a] of shown) {
+      ctx.globalAlpha = a;
       const ring = n === selected || (!focus && lit?.mods.has(n));
       if (n.missing || ring) {
         ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
         if (n.missing) { ctx.strokeStyle = "#ff4d5e"; ctx.lineWidth = 3; ctx.stroke(); }
         if (ring) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke(); }
       }
-      const showLabel = (big(n) && view.k > 0.35) || n === focus || (near && near.has(n)) || view.k > 1.3;
+      const showLabel = (big(n) && view.k > 0.35 && a > 0.3) || n === focus || (focusing && a > 0.3) || view.k > 1.3;
       if (showLabel) {
         ctx.fillStyle = n.type === "mod" ? "#fff" : "#c8c8d8";
         ctx.font = n.type === "mod" ? "600 12px system-ui, sans-serif" : "11px system-ui, sans-serif";
@@ -920,8 +1019,11 @@
     if (click && !drag.moved) {
       selected = drag.node;
       if (!selected) lit = null;
+      if (isolate === "hide" && selected) isolateAround(selected);
+      else if (isolate === "hide" && scope) showAll();
       showInfo(selected);
       requestDraw();
+      if (selected?.type === "mod" && selected.mod_id != null && linked()) window.fileMapShowMod?.(selected.mod_id);
     }
     drag = null;
     canvas.classList.remove("dragging");
@@ -954,6 +1056,56 @@
     savePref("graphGroup", groupBy);
     regroup();
   });
+  const isolatePick = document.getElementById("graph-isolate");
+  const depthPick = document.getElementById("graph-depth");
+  isolatePick.value = isolate;
+  depthPick.value = String(depth);
+  depthPick.disabled = isolate === "near";
+  isolatePick.addEventListener("change", () => {
+    isolate = ISOLATE[isolatePick.value] ? isolatePick.value : "fade";
+    savePref("graphIsolate", isolate);
+    depthPick.disabled = isolate === "near";
+    fadeFor = null;
+    if (isolate === "hide" && selected) isolateAround(selected);
+    else showAll();
+    requestDraw();
+  });
+  depthPick.addEventListener("change", () => {
+    depth = Math.min(4, Math.max(1, Number(depthPick.value) || 2));
+    savePref("graphDepth", depth);
+    fadeFor = null;
+    if (scope && selected) isolateAround(selected);
+    requestDraw();
+  });
+  const linked = () => document.getElementById("net-link")?.checked;
+
+  // Select a mod from elsewhere (the File map): selection, isolation and
+  // centring as if it was clicked here. False when it is not in the graph.
+  window.graphSelectMod = (modId) => {
+    if (!lastReport) return false;
+    const id = `mod:${modId}`;
+    if (selected?.id === id) return true;
+    if (!fullType.has(id)) return false;
+    lit = null;
+    if (isolate === "hide") {
+      isolateAround({ id, label: "" });
+    } else {
+      showAll();
+      selected = byId.get(id);
+      const r = rect();
+      if (view.k < 0.6) view.k = 1;
+      view.x = -selected.x - (r.width > 760 ? info.offsetWidth / 2 : 0) / view.k;
+      view.y = -selected.y;
+      userMoved = true;
+      updateZoom();
+    }
+    selected = byId.get(id) || null;
+    showScope();
+    showInfo(selected);
+    requestDraw();
+    return true;
+  };
+
   window.graphTagsChanged = () => {
     if (groupBy === "tag") regroup();
     else if (selected) showInfo(selected);
@@ -990,6 +1142,7 @@
   window.highlightGraph = (modIds, label) => {
     // Lighting up mods needs them drawn.
     if (hidden.has("mod")) toggleType("mod", true);
+    showAll();
     lit = lightUp(modIds, label);
     selected = null;
     if (lit.mods.size) {

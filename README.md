@@ -240,7 +240,9 @@ Screenshots show sample data, with file locations blurred.
 - **Graph view**: mods, the frameworks they need, the game classes, tweak
   records and resources they touch, with clashes highlighted. "Group by"
   rings or heads the nodes by node type, mod type, tag, Nexus category or
-  source; clicking a type in the legend hides or shows it.
+  source; clicking a type in the legend hides or shows it. Selecting a node
+  fades the rest by link distance or hides everything unrelated, and the
+  File map can follow the graph's selection (and the other way round).
 - **Verify**: re-hashes a mod's files and reports missing, edited or
   overridden ones.
 - **Nexus Mods sign-in**: “Sign in with Nexus Mods” uses Nexus SSO, so you

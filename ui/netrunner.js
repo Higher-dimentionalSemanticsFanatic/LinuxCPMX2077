@@ -130,7 +130,7 @@
     focusKey(node.key);
   }
 
-  function select(node, { open = true } = {}) {
+  function select(node, { open = true, quiet = false } = {}) {
     selected = node.key;
     $("#net-filter").value = "";
     // Selecting reveals the node: every folder above it opens, and a click
@@ -140,7 +140,9 @@
     if (open && node.mod_id != null) expandAll(node);
     for (let p = node.parent; p; p = p.parent) expanded[group].add(p.key);
     render();
-    focusKey(node.key);
+    // From the graph: scroll the tree only, not the page.
+    if (quiet) revealKey(node.key); else focusKey(node.key);
+    if (!quiet && node.mod_id != null && $("#net-link").checked) window.graphSelectMod?.(node.mod_id);
   }
 
   function expandAll(node) {
@@ -151,6 +153,12 @@
   function focusKey(key) {
     const b = [...document.querySelectorAll("#net-tree .net-node")].find((n) => n.dataset.key === key);
     b?.focus({ preventScroll: false });
+  }
+
+  function revealKey(key) {
+    const box = $("#net-tree");
+    const b = [...box.querySelectorAll(".net-node")].find((n) => n.dataset.key === key);
+    if (b) box.scrollTop += b.getBoundingClientRect().top - box.getBoundingClientRect().top - box.clientHeight / 3;
   }
 
   // Arrow keys move like a registry editor: up/down between visible rows,
@@ -223,7 +231,16 @@
         return i ? [el("span", { class: "sep" }, " › "), b] : [b];
       }));
     }
-    $("#net-open").onclick = () => busy($("#net-open"), () => openFolder(query ? "" : node.path));
+    $("#net-open").onclick = () => busy($("#net-open"), () => openFolder(query ? "" : folderOf(node)));
+  }
+
+  // A mod's entry in the "by mod" view has no folder of its own: open the
+  // deepest folder holding all its files.
+  function folderOf(node) {
+    if (node.mod_id == null) return node.path;
+    let n = node;
+    while (n.folders.length === 1 && !n.files.length) n = n.folders[0];
+    return n === node ? "" : n.path;
   }
 
   function openFolder(path) {
@@ -422,12 +439,18 @@
   }
 
 
-  async function showMod(modId) {
-    setGroup("mod");
-    await load();
+  async function showMod(modId, quiet = false) {
+    if (group !== "mod" || !tree) {
+      setGroup("mod");
+      await load();
+    }
     const n = byKey.get(`m${modId}`);
-    if (n) { expanded.mod.add(n.key); select(n); }
+    if (n) { expanded.mod.add(n.key); select(n, { quiet }); }
   }
+  // Called by the graph when "Link with graph" is ticked.
+  window.fileMapShowMod = (modId) => busy(null, () => showMod(modId, true));
+  $("#net-link").checked = loadPref("netrunner.link", false) === true;
+  $("#net-link").addEventListener("change", () => savePref("netrunner.link", $("#net-link").checked));
 
   function setGroup(g) {
     group = g;

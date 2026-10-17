@@ -987,8 +987,10 @@ Every file your mods put into the game, laid out like the game folder, in
 the style of a registry editor. Folders are on the left: click one to open
 it and see what's inside on the right, or use the arrow keys (up and down to
 move, right to open, left to close). The bar above shows where you are;
-click any part of it to go back up, and **Open folder** opens that folder in
-your file manager.
+click any part of it to go back up, and **Open in file manager** opens that
+folder in the system file manager (xdg-open on Linux, Explorer on Windows).
+With a mod selected in **By mod**, it opens the deepest folder that holds all
+of that mod's files (the game folder when they are spread over several).
 
 Each file shows its name, **Install location** (the folder it sits in inside the
 game folder; click it to open that folder, hover for the full path), the
@@ -1009,7 +1011,13 @@ overridden. **By folder** / **By mod** switches between the game's folder
 layout and one branch per mod (click a mod name in the list to jump to its
 branch). In **By mod**, clicking a mod opens its whole folder structure at
 once; the other mods stay collapsed. **Find a file or mod…** lists every file whose path or mod name
-matches. The map only shows files CPMX2077 installed, not the game's own
+matches.
+
+**Link with graph** (off by default, remembered) connects the File map and
+the [Graph](#graph): clicking a mod node in the graph switches the File map to
+**By mod** and shows that mod's files; selecting a mod in the File map (in
+**By mod**, or a mod name in the **Mod** column) selects and centres it in
+the graph, isolated if **Selection** is *Hide unrelated*. The map only shows files CPMX2077 installed, not the game's own
 files or mods installed by hand.
 
 **Load order** (column and view). The game reads `.archive` files in a fixed
@@ -1079,6 +1087,19 @@ one *Framework* node, not a mod node plus a framework node.
   in its column, and a mod with several tags is listed under its first tag.
   Game parts (classes, records, resources) are only grouped by *Node type*.
   Clicking a mod shows its tags in the details panel.
+- **Selection** sets what happens to the rest of the graph when you click a
+  node, measured in links from that node (the second list: **1 link** to
+  **4 links**, default 2). Paths stop at frameworks and the base game, since
+  nearly every mod links to them.
+  - *Fade by distance* (default): the selected node at full strength, nodes
+    further away fainter, nodes beyond the distance almost invisible.
+  - *Hide unrelated*: only the nodes within the distance stay, laid out on
+    their own and fitted to the view. A note at the top left shows how many
+    of all nodes are shown; **Show all**, or clicking empty space, brings
+    the full graph back as it was. Clicking another node isolates around
+    that one.
+  - *Highlight neighbours*: the previous behaviour, direct neighbours bright
+    and everything else dimmed.
 - **Hide harmless hooks** hides hooks that several mods share without
   conflict.
 - **Legend**: click a node type (*Mod*, *Framework*, *Game class*, …) to

@@ -278,10 +278,11 @@
               <option value="load">Sort: load order</option>
             </select>
             <input id="net-filter" type="search" placeholder="Find a file or mod…" aria-label="Find a file or mod">
+            <label class="check" title="Clicking a mod in the graph shows its files here; selecting a mod here (By mod) selects it in the graph"><input type="checkbox" id="net-link"> Link with graph</label>
           </div>
         </header>
         <p class="muted">Every file your mods put into the game, laid out like the game folder. Click a folder to see what's in it and which mod each file came from.</p>
-        <div id="net-address" class="mono"><span id="net-path"></span><button id="net-open" class="link inline">Open folder</button></div>
+        <div id="net-address" class="mono"><span id="net-path"></span><button id="net-open" class="link inline" title="Open this folder in the system file manager">Open in file manager</button></div>
         <div id="net-browser">
           <div id="net-tree" role="tree" aria-label="Folders"></div>
           <div id="net-list">
@@ -320,6 +321,19 @@
                 <option value="source">Source</option>
               </select>
             </label>
+            <label class="check" title="What happens to the rest of the graph when a node is selected. Distance counts links; paths end at frameworks and the base game">Selection
+              <select id="graph-isolate">
+                <option value="fade">Fade by distance</option>
+                <option value="hide">Hide unrelated</option>
+                <option value="near">Highlight neighbours</option>
+              </select>
+            <select id="graph-depth" aria-label="Links from the selected node" title="Nodes further than this many links from the selected node are faded out or hidden">
+              <option value="1">1 link</option>
+              <option value="2">2 links</option>
+              <option value="3">3 links</option>
+              <option value="4">4 links</option>
+            </select>
+            </label>
             <label class="check"><input type="checkbox" id="graph-hide-hooks"> Hide harmless hooks</label>
             <button id="graph-reset">Re-layout</button>
           </div>
@@ -327,6 +341,7 @@
         <div id="graph-wrap">
           <canvas id="graph"></canvas>
           <div id="graph-message" class="hidden"></div>
+          <div id="graph-scope" class="hidden" aria-live="polite"></div>
           <div id="graph-controls" aria-label="Zoom">
             <button id="graph-zoom-out" title="Zoom out">−</button>
             <button id="graph-zoom" title="Zoom to 100%">100%</button>
