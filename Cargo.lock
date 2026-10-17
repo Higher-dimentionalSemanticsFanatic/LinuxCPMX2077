@@ -720,7 +720,6 @@ version = "0.8.1"
 dependencies = [
  "base64 0.23.1",
  "cp2077mm-core",
- "cp2077mm-hidmap",
  "log",
  "serde",
  "serde_json",
@@ -735,12 +734,10 @@ dependencies = [
 name = "cp2077mm-core"
 version = "0.8.1"
 dependencies = [
- "cp2077mm-hidmap",
  "crc32fast",
  "dirs",
  "hex",
  "keyring",
- "libc",
  "log",
  "md-5",
  "pelite",
@@ -768,7 +765,6 @@ name = "cp2077mm-hidmap"
 version = "0.1.0"
 dependencies = [
  "serde",
- "serde_json",
  "windows-sys 0.61.2",
 ]
 
@@ -777,7 +773,6 @@ name = "cpmx-hid-input"
 version = "0.1.0"
 dependencies = [
  "cp2077mm-hidmap",
- "serde",
  "serde_json",
  "windows-sys 0.61.2",
 ]

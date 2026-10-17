@@ -215,12 +215,6 @@ sidebar. **Pop out** moves it to its own window.
   mods**, click **Install radioExt** if it's missing, then **New station**
   and **Add songs…**. For your own logo, pick **PNG image** as the icon
   source. See [RadioEXT](user-guide.md#radioext).
-- Pedals, a wheel or a flight stick the game doesn't see? Open **HID
-  input** under **Installed mods**, click **Install plugin** (needs
-  RED4ext), click a box on the gamepad drawing, move the pedal, and click
-  **Save bindings**. With the Mod Settings mod (**Get Mod Settings** on
-  the same page) the bindings can also be set in the game under
-  **Settings › Mods › HID Input**. See [HID input](user-guide.md#hid-input).
 - Modding tools: **Netrunner › WolvenKit** installs WolvenKit from GitHub.
   Its command-line build needs the .NET 10 runtime (on Linux, your
   distribution's `dotnet-runtime-10.0` package). See

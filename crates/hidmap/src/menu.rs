@@ -8,20 +8,13 @@
 //!
 //! The menu can only offer fixed choices, so it binds by number:
 //! controller 1 to 4 (the plugin's [`numbered`] order) and axis, button or
-//! hat 1 to n as the plugin reads that controller.
+//! hat 1 to n as the plugin reads that controller. `status.json` lists the
+//! numbers and the inputs last moved.
 
-use crate::{Binding, Device, Half, Input, Target};
+use crate::{Binding, Half, Input, Target};
 
-/// Where the script goes, relative to the game folder.
-pub const SCRIPT_PATH: &str = "r6/scripts/cpmx_hid_input/HIDInput.reds";
-/// The script as shipped ([`script`] wrote it).
-pub const SCRIPT: &str = include_str!("../reds/HIDInput.reds");
 /// Mod Settings' saved values, relative to the game folder.
 pub const USER_INI: &str = "red4ext/plugins/mod_settings/user.ini";
-/// Present when Mod Settings is installed.
-pub const MOD_SETTINGS_DLL: &str = "red4ext/plugins/mod_settings/mod_settings.dll";
-/// Mod Settings on Nexus Mods.
-pub const MOD_SETTINGS_NEXUS_ID: i64 = 4885;
 
 /// Name in Settings › Mods.
 pub const MENU_NAME: &str = "HID Input";
@@ -76,7 +69,7 @@ pub const BUTTON_TARGETS: [MenuTarget; 14] = [
 /// The whole d-pad from a hat switch.
 pub const HAT_TARGET: MenuTarget = t("dpadHat", Target::Dpad, "D-pad (hat switch)");
 
-/// Response choices and their curve exponents (as on CPMX2077's page).
+/// Response choices and their curve exponents.
 const RESPONSES: [(&str, &str, f32); 3] = [("Linear", "Linear", 1.0), ("Progressive", "Progressive", 1.6), ("Strong", "Strong", 2.5)];
 const RANGES: [(&str, &str, Half); 3] = [
     ("WholeAxis", "Whole axis", Half::Full),
@@ -91,25 +84,13 @@ pub struct Menu {
     /// XInput user index, 0 to 3.
     pub slot: u32,
     pub emulate_pad: bool,
-    pub bindings: Vec<MenuBinding>,
+    pub bindings: Vec<Binding>,
 }
 
 impl Default for Menu {
     fn default() -> Self {
         Menu { enabled: true, slot: 0, emulate_pad: true, bindings: Vec::new() }
     }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct MenuBinding {
-    /// 1 to [`CONTROLLERS`].
-    pub controller: u32,
-    pub input: Input,
-    pub target: Target,
-    pub invert: bool,
-    pub deadzone: f32,
-    pub curve: f32,
-    pub half: Half,
 }
 
 /// A controller as the plugin numbers it.
@@ -119,46 +100,6 @@ pub struct Numbered {
     pub pid: u16,
     pub instance: u32,
     pub name: String,
-}
-
-/// Device id the menu's bindings use for controller `n`.
-pub fn controller_id(n: u32) -> String {
-    format!("menu:{n}")
-}
-
-impl Menu {
-    /// The menu's bindings for the controllers as numbered, in the shape of
-    /// `bindings.json`. Bindings to a controller number with no controller
-    /// are left out.
-    pub fn resolve(&self, controllers: &[Numbered]) -> (Vec<Device>, Vec<Binding>) {
-        let mut devices: Vec<Device> = Vec::new();
-        let mut bindings = Vec::new();
-        for b in &self.bindings {
-            let Some(c) = controllers.get(b.controller as usize - 1) else { continue };
-            let id = controller_id(b.controller);
-            if !devices.iter().any(|d| d.id == id) {
-                devices.push(Device {
-                    id: id.clone(),
-                    vid: c.vid,
-                    pid: c.pid,
-                    instance: c.instance,
-                    name: c.name.clone(),
-                    hid_axes: Vec::new(),
-                    kind: None,
-                });
-            }
-            bindings.push(Binding {
-                device: id,
-                input: b.input,
-                target: b.target,
-                invert: b.invert,
-                deadzone: b.deadzone,
-                curve: b.curve,
-                half: b.half,
-            });
-        }
-        (devices, bindings)
-    }
 }
 
 /// Number controllers for the menu: game controllers that are not XInput
@@ -218,7 +159,7 @@ pub fn parse(ini: &str) -> Option<Menu> {
     };
     for mt in &AXIS_TARGETS {
         let Some(c) = controller(mt.key) else { continue };
-        let input = source(get(&format!("{}Input", mt.key)), true).unwrap_or(Input::Axis { index: 0, usage: None, occurrence: 0 });
+        let input = source(get(&format!("{}Input", mt.key)), true).unwrap_or(Input::Axis { index: 0 });
         let response = choice(get(&format!("{}Response", mt.key)), &RESPONSES.map(|r| r.0)).unwrap_or(0);
         let range = choice(get(&format!("{}Range", mt.key)), &RANGES.map(|r| r.0)).unwrap_or(0);
         let mut half = RANGES[range].2;
@@ -226,7 +167,7 @@ pub fn parse(ini: &str) -> Option<Menu> {
         if half == Half::Full && matches!(input, Input::Button { .. }) {
             half = Half::Positive;
         }
-        m.bindings.push(MenuBinding {
+        m.bindings.push(Binding {
             controller: c,
             input,
             target: mt.target,
@@ -249,8 +190,8 @@ pub fn parse(ini: &str) -> Option<Menu> {
     Some(m)
 }
 
-fn button_binding(controller: u32, input: Input, target: Target) -> MenuBinding {
-    MenuBinding { controller, input, target, invert: false, deadzone: 0.0, curve: 1.0, half: Half::Full }
+fn button_binding(controller: u32, input: Input, target: Target) -> Binding {
+    Binding { controller, input, target, invert: false, deadzone: 0.0, curve: 1.0, half: Half::Full }
 }
 
 /// `prefixN` (any case) as N.
@@ -263,7 +204,7 @@ fn numbered_name(v: &str, prefix: &str) -> Option<u32> {
 /// targets list axes first, button targets buttons first.
 fn source(v: Option<&str>, axes_first: bool) -> Option<Input> {
     let v = v?;
-    let axis = |n: u32| (1..=AXES).contains(&n).then_some(Input::Axis { index: n - 1, usage: None, occurrence: 0 });
+    let axis = |n: u32| (1..=AXES).contains(&n).then_some(Input::Axis { index: n - 1 });
     let button = |n: u32| (1..=BUTTONS).contains(&n).then_some(Input::Button { index: n - 1 });
     if let Ok(n) = v.parse::<u32>() {
         return if axes_first {
@@ -343,8 +284,9 @@ pub fn script() -> String {
     f.add(&mut s, "reportGamepad", "Report a gamepad when none is connected", "Bool", "true");
 
     let controller_desc = "Game controllers that are not XInput gamepads, numbered by USB vendor and product ID. \
-                           red4ext/plugins/cpmx_hid_input/status.json lists them with their axes.";
-    let input_desc = "Axis, button and hat numbers in the order the plugin reads the controller (status.json lists the axes).";
+                           red4ext/plugins/cpmx_hid_input/status.json lists them.";
+    let input_desc = "Numbered in the order the plugin reads the controller. \
+                      Move the input: status.json lists it under recent_inputs.";
     for mt in &AXIS_TARGETS {
         let k = mt.key;
         let stick = !matches!(mt.target, Target::LeftTrigger | Target::RightTrigger);
@@ -482,7 +424,7 @@ mod tests {
         assert_eq!(m.slot, 1);
         assert_eq!(m.bindings.len(), 4);
         let rt = &m.bindings[0];
-        assert_eq!((rt.controller, rt.target, rt.input), (1, Target::RightTrigger, Input::Axis { index: 2, usage: None, occurrence: 0 }));
+        assert_eq!((rt.controller, rt.target, rt.input), (1, Target::RightTrigger, Input::Axis { index: 2 }));
         assert!(rt.invert && (rt.deadzone - 0.1).abs() < 1e-6 && rt.curve == 1.6);
         assert_eq!((m.bindings[1].target, m.bindings[1].half), (Target::LeftX, Half::Full));
         assert_eq!(m.bindings[2].input, Input::Button { index: 9 });
@@ -495,21 +437,16 @@ mod tests {
         let m = parse(ini).unwrap();
         assert_eq!(m.bindings.len(), 2, "unbound and out-of-range controllers are skipped");
         assert_eq!((m.bindings[0].controller, m.bindings[0].input), (2, Input::Button { index: 2 }));
-        assert_eq!((m.bindings[1].input, m.bindings[1].half), (Input::Axis { index: 7, usage: None, occurrence: 0 }, Half::Negative));
+        assert_eq!((m.bindings[1].input, m.bindings[1].half), (Input::Axis { index: 7 }, Half::Negative));
         assert!(m.enabled && m.emulate_pad && m.slot == 0, "defaults for unsaved values");
     }
 
     #[test]
-    fn resolves_controller_numbers() {
+    fn numbers_controllers_by_vendor_and_product() {
         let pedals = Numbered { vid: 0x06a3, pid: 0x0763, instance: 0, name: "Pedals".into() };
         let wheel = Numbered { vid: 0x046d, pid: 0xc24f, instance: 0, name: "Wheel".into() };
-        let order = numbered(vec![pedals.clone(), wheel.clone()]);
-        assert_eq!(order, vec![wheel.clone(), pedals.clone()], "by vendor and product id");
-        let m = parse("[CPMXHIDInputSettings]\nrightTriggerController = 2\nleftTriggerController = 2\nbuttonAController = 3\n").unwrap();
-        let (devices, bindings) = m.resolve(&order);
-        assert_eq!(devices.len(), 1);
-        assert_eq!((devices[0].vid, devices[0].id.as_str()), (0x06a3, "menu:2"));
-        assert_eq!(bindings.len(), 2, "controller 3 is not connected");
-        assert!(bindings.iter().all(|b| b.device == "menu:2"));
+        let wheel2 = Numbered { instance: 1, ..wheel.clone() };
+        let order = numbered(vec![wheel2.clone(), pedals.clone(), wheel.clone()]);
+        assert_eq!(order, vec![wheel, wheel2, pedals]);
     }
 }

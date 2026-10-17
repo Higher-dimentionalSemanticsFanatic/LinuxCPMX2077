@@ -1,36 +1,30 @@
-//! Bindings for the CPMX2077 HID Input RED4ext plugin, shared by the plugin
-//! (inside the game) and CPMX2077 (which writes the bindings file).
+//! The CPMX2077 HID Input RED4ext plugin's logic that does not need the
+//! game or Windows: bindings, the merge rules, the in-game menu ([`menu`])
+//! and the status file. The plugin (`crates/hid-plugin`) supplies the
+//! hooks and device reads; this crate is tested on any platform.
 //!
 //! Cyberpunk 2077 reads one XInput gamepad. Each binding takes one input of a
 //! HID game controller (an axis, a button or a hat) and adds it to that
 //! gamepad: triggers take the larger value, stick axes add up, buttons
 //! combine. Pedals, wheels, sticks and button boxes then drive the game next
 //! to (or instead of) a real gamepad.
-//!
-//! Inputs are stored so they are found again whichever way the device reaches
-//! the game. Windows and Proton's hidraw path keep the device's own HID
-//! descriptor, so axes are matched by HID usage; Proton's SDL path rebuilds
-//! the descriptor with axes in evdev code order, so axes are matched by
-//! position. [`resolve`] picks between the two.
 
-pub mod descriptor;
 pub mod menu;
 #[cfg(windows)]
 pub mod win;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 pub const PLUGIN_NAME: &str = "CPMX2077 HID Input";
-/// The plugin's version, reported to RED4ext and in `status.json`; raise it
-/// with every change to the plugin so CPMX2077 offers the update.
-pub const PLUGIN_VERSION: &str = "0.2.0";
+/// The plugin's version, reported to RED4ext, in `status.json` and in the
+/// mod archive's name.
+pub const PLUGIN_VERSION: &str = "0.3.0";
 /// Plugin folder under the game root. RED4ext loads
 /// `red4ext/plugins/<folder>/<name>.dll`, one folder level deep.
 pub const PLUGIN_DIR: &str = "red4ext/plugins/cpmx_hid_input";
 pub const PLUGIN_DLL: &str = "cpmx_hid_input.dll";
-/// Written by CPMX2077, read by the plugin (again whenever it changes).
-pub const BINDINGS_FILE: &str = "bindings.json";
-/// Written by the plugin while the game runs, read by CPMX2077.
+/// Written by the plugin while the game runs, for players looking up
+/// controller and input numbers.
 pub const STATUS_FILE: &str = "status.json";
 
 pub const PAGE_GENERIC: u16 = 0x01;
@@ -66,91 +60,22 @@ pub fn usage_label(u: u32) -> Option<&'static str> {
     })
 }
 
-/// Device key used by bindings: `vvvv:pppp`, plus `#n` for the n-th of
-/// several identical devices.
+/// `vvvv:pppp`, plus `#n` for the n-th of several identical devices.
 pub fn device_id(vid: u16, pid: u16, instance: u32) -> String {
     if instance == 0 { format!("{vid:04x}:{pid:04x}") } else { format!("{vid:04x}:{pid:04x}#{instance}") }
 }
 
-// ---- the bindings file ------------------------------------------------------
+// ---- bindings ------------------------------------------------------------------
 
-/// `bindings.json`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Bindings {
-    #[serde(default = "one")]
-    pub version: u32,
-    /// Off: the plugin passes the gamepad through unchanged.
-    #[serde(default = "yes")]
-    pub enabled: bool,
-    /// XInput user index (0 to 3) the bound inputs go to.
-    #[serde(default)]
-    pub slot: u32,
-    /// With no real gamepad on `slot`, report one there while a bound device
-    /// is connected, so pedals work next to mouse and keyboard.
-    #[serde(default = "yes")]
-    pub emulate_pad: bool,
-    #[serde(default)]
-    pub devices: Vec<Device>,
-    #[serde(default)]
-    pub bindings: Vec<Binding>,
-}
-
-fn one() -> u32 {
-    1
-}
-fn yes() -> bool {
-    true
-}
-fn linear() -> f32 {
-    1.0
-}
-
-impl Default for Bindings {
-    fn default() -> Self {
-        Bindings { version: 1, enabled: true, slot: 0, emulate_pad: true, devices: Vec::new(), bindings: Vec::new() }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Device {
-    /// [`device_id`].
-    pub id: String,
-    pub vid: u16,
-    pub pid: u16,
-    /// Which of several identical devices (same vid:pid), from 0.
-    #[serde(default)]
-    pub instance: u32,
-    #[serde(default)]
-    pub name: String,
-    /// Axis usages in the device's own HID descriptor order, when known.
-    #[serde(default)]
-    pub hid_axes: Vec<u32>,
-    /// Picture CPMX2077 draws for it (pedals, wheel, stick, …).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub kind: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
+/// An input, by its position as the plugin reads the controller, from 0.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Input {
-    /// `index`: position among the device's axes (evdev code order, hats
-    /// left out). `usage`/`occurrence`: the axis in the device's own HID
-    /// descriptor (the n-th axis with that usage), when known.
-    Axis {
-        index: u32,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        usage: Option<u32>,
-        #[serde(default)]
-        occurrence: u32,
-    },
-    /// Position among the device's buttons, from 0.
+    Axis { index: u32 },
     Button { index: u32 },
-    /// Position among the device's hat switches, from 0.
     Hat { index: u32 },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Target {
     LeftX,
     LeftY,
@@ -204,8 +129,7 @@ impl Target {
 }
 
 /// Which part of a stick axis an axis or button drives.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Half {
     /// The whole axis: input at rest in the middle, as a wheel or stick.
     #[default]
@@ -216,31 +140,27 @@ pub enum Half {
     Negative,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
-    /// [`Device::id`].
-    pub device: String,
+    /// Controller number in the in-game menu, 1 to [`menu::CONTROLLERS`].
+    pub controller: u32,
     pub input: Input,
     pub target: Target,
-    #[serde(default)]
     pub invert: bool,
     /// Ignored travel, 0 to 0.5: at the rest end (pedals, triggers, half
     /// axes) or around the middle (full stick axes).
-    #[serde(default)]
     pub deadzone: f32,
     /// Response exponent: 1 linear, above 1 finer near rest.
-    #[serde(default = "linear")]
     pub curve: f32,
-    #[serde(default)]
     pub half: Half,
 }
 
-// ---- matching inputs on the device the game sees ----------------------------
+// ---- matching inputs on a connected controller ----------------------------------
 
 /// The inputs of a connected device as the reading side lists them.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Layout {
-    /// Axis usages in descriptor order.
+    /// Axis usages in the order they are read.
     pub axes: Vec<u32>,
     pub buttons: usize,
     pub hats: usize,
@@ -254,34 +174,11 @@ pub enum Slot {
     Hat(usize),
 }
 
-fn same_set(a: &[u32], b: &[u32]) -> bool {
-    let (mut a, mut b) = (a.to_vec(), b.to_vec());
-    a.sort_unstable();
-    b.sort_unstable();
-    a == b
-}
-
-/// Find `input` on a device that reports `layout`. When the device shows
-/// exactly the axis usages CPMX2077 read from its own descriptor, the usage
-/// decides (Windows, Proton hidraw); otherwise the descriptor was rebuilt
-/// (Proton's SDL path, axes in evdev code order) and the position decides.
-pub fn resolve(input: &Input, dev: &Device, layout: &Layout) -> Option<Slot> {
+/// Find `input` on a device that reports `layout`; `None` when the device
+/// has fewer inputs of that kind.
+pub fn resolve(input: &Input, layout: &Layout) -> Option<Slot> {
     match *input {
-        Input::Axis { index, usage, occurrence } => {
-            if let Some(u) = usage
-                && !dev.hid_axes.is_empty()
-                && same_set(&dev.hid_axes, &layout.axes)
-            {
-                return layout
-                    .axes
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, a)| **a == u)
-                    .nth(occurrence as usize)
-                    .map(|(i, _)| Slot::Axis(i));
-            }
-            ((index as usize) < layout.axes.len()).then_some(Slot::Axis(index as usize))
-        }
+        Input::Axis { index } => ((index as usize) < layout.axes.len()).then_some(Slot::Axis(index as usize)),
         Input::Button { index } => ((index as usize) < layout.buttons).then_some(Slot::Button(index as usize)),
         Input::Hat { index } => ((index as usize) < layout.hats).then_some(Slot::Hat(index as usize)),
     }
@@ -448,127 +345,135 @@ pub fn contribution(active: &[Active], live: &[Live]) -> Contribution {
     c
 }
 
+// ---- finding input numbers ------------------------------------------------------
+
+/// How many inputs [`Moves::recent`] keeps.
+pub const RECENT_INPUTS: usize = 5;
+
+/// The inputs moved on one controller, newest first, so players can look
+/// up which number an input has: an axis once it travels a third of its
+/// range from rest, a button when pressed, a hat when pushed. Rest is where
+/// each input was in the first report read.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Moves {
+    rest: Option<Live>,
+    away: Vec<bool>,
+    pub recent: Vec<String>,
+}
+
+impl Moves {
+    /// Take the controller's newest values; true when [`Moves::recent`]
+    /// changed.
+    pub fn update(&mut self, now: &Live) -> bool {
+        let Some(rest) = &mut self.rest else {
+            self.rest = Some(now.clone());
+            self.away = vec![false; now.axes.len()];
+            return false;
+        };
+        let mut moved = Vec::new();
+        for (i, (v, r)) in now.axes.iter().zip(&rest.axes).enumerate() {
+            let d = (v - r).abs();
+            if !self.away[i] && d > 1.0 / 3.0 {
+                self.away[i] = true;
+                moved.push(format!("Axis {}", i + 1));
+            } else if self.away[i] && d < 0.1 {
+                self.away[i] = false;
+            }
+        }
+        for (i, (b, was)) in now.buttons.iter().zip(&mut rest.buttons).enumerate() {
+            if *b && !*was {
+                moved.push(format!("Button {}", i + 1));
+            }
+            *was = *b;
+        }
+        for (i, (h, was)) in now.hats.iter().zip(&mut rest.hats).enumerate() {
+            if h.is_some() && was.is_none() {
+                moved.push(format!("Hat {}", i + 1));
+            }
+            *was = *h;
+        }
+        // Inputs moved together keep their order (axes, buttons, hats).
+        for name in moved.iter().rev() {
+            self.recent.retain(|r| r != name);
+            self.recent.insert(0, name.clone());
+        }
+        self.recent.truncate(RECENT_INPUTS);
+        !moved.is_empty()
+    }
+}
+
 // ---- plugin status ------------------------------------------------------------
 
 /// `status.json`: what the plugin found in the running game.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct Status {
     pub plugin_version: String,
     /// Unix seconds.
     pub started: u64,
     pub updated: u64,
     /// `module!function` for every XInput function hooked.
-    #[serde(default)]
     pub hooks: Vec<String>,
-    #[serde(default)]
     pub hook_errors: Vec<String>,
     /// XInputGetState calls by the game, any slot.
-    #[serde(default)]
     pub get_state_calls: u64,
     /// Reads of the bound slot that carried bound input.
-    #[serde(default)]
     pub merged_reads: u64,
     /// Reads answered with a reported gamepad (no real one on the slot).
-    #[serde(default)]
     pub emulated_reads: u64,
-    #[serde(default)]
+    /// Mod Settings' `user.ini` could not be read.
     pub config_error: Option<String>,
-    #[serde(default)]
+    /// Settings › Mods › HID Input values were found in `user.ini`.
+    pub menu_saved: bool,
     pub enabled: bool,
-    /// Bindings from `bindings.json` and the in-game menu together.
-    #[serde(default)]
+    /// Bindings set in the menu.
     pub bindings: usize,
-    /// Bindings set in Settings › Mods › HID Input; `None` when Mod
-    /// Settings' `user.ini` has no HID Input values.
-    #[serde(default)]
-    pub menu_bindings: Option<usize>,
-    /// Bindings whose device and input were found.
-    #[serde(default)]
+    /// Bindings whose controller and input were found.
     pub active_bindings: usize,
     /// Game controllers the plugin can read.
-    #[serde(default)]
     pub devices: Vec<StatusDevice>,
-    /// Bound devices not connected.
-    #[serde(default)]
+    /// Bound controller numbers with no controller connected.
     pub missing: Vec<String>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct StatusDevice {
+    /// [`device_id`].
     pub id: String,
     pub name: String,
     pub vid: u16,
     pub pid: u16,
-    pub axes: Vec<u32>,
-    /// `Axis 1: X axis`, …: for players reading the file.
-    #[serde(default)]
+    /// Its number in the in-game menu (Controller 1 to 4).
+    pub controller: Option<u32>,
+    /// An XInput gamepad, read by the game itself (no number).
+    pub xinput: bool,
+    /// `Axis 1: X axis`, …
     pub axis_names: Vec<String>,
+    /// Each axis's position now, percent of its range.
+    pub axis_values: Vec<u8>,
     pub buttons: usize,
     pub hats: usize,
+    /// [`Moves::recent`].
+    pub recent_inputs: Vec<String>,
+    /// A binding uses it.
     pub bound: bool,
-    /// Its number in the in-game menu (Controller 1 to 4).
-    #[serde(default)]
-    pub controller: Option<u32>,
-    /// An XInput gamepad, read by the game itself.
-    #[serde(default)]
-    pub xinput: bool,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const GAS: u32 = usage(PAGE_SIMULATION, 0xC4);
-    const BRAKE: u32 = usage(PAGE_SIMULATION, 0xC5);
-    const X: u32 = usage(PAGE_GENERIC, 0x30);
-    const Y: u32 = usage(PAGE_GENERIC, 0x31);
-    const Z: u32 = usage(PAGE_GENERIC, 0x32);
-    const RX: u32 = usage(PAGE_GENERIC, 0x33);
-    const RZ: u32 = usage(PAGE_GENERIC, 0x35);
-
-    fn dev(hid_axes: Vec<u32>) -> Device {
-        Device { id: "046d:c24f".into(), vid: 0x046d, pid: 0xc24f, instance: 0, name: "Pedals".into(), hid_axes, kind: None }
-    }
-
     fn bind(input: Input, target: Target) -> Binding {
-        Binding { device: "046d:c24f".into(), input, target, invert: false, deadzone: 0.0, curve: 1.0, half: Half::Full }
+        Binding { controller: 1, input, target, invert: false, deadzone: 0.0, curve: 1.0, half: Half::Full }
     }
 
     #[test]
-    fn resolves_by_usage_when_the_descriptor_is_the_devices_own() {
-        // Wheel: X steering, Y clutch, Z gas, Rz brake (hidraw or Windows).
-        let d = dev(vec![X, Y, Z, RZ]);
-        let layout = Layout { axes: vec![X, Y, Z, RZ], buttons: 0, hats: 0 };
-        let brake = Input::Axis { index: 3, usage: Some(RZ), occurrence: 0 };
-        assert_eq!(resolve(&brake, &d, &layout), Some(Slot::Axis(3)));
-        // Same set, other order (Windows lists by data index): usage wins.
-        let layout = Layout { axes: vec![RZ, X, Y, Z], buttons: 0, hats: 0 };
-        assert_eq!(resolve(&brake, &d, &layout), Some(Slot::Axis(0)));
-    }
-
-    #[test]
-    fn falls_back_to_position_on_a_rebuilt_descriptor() {
-        // Proton's SDL path renames the four axes X, Y, Z, Rx in evdev order.
-        let d = dev(vec![X, Y, Z, RZ]);
-        let layout = Layout { axes: vec![X, Y, Z, RX], buttons: 0, hats: 0 };
-        let brake = Input::Axis { index: 3, usage: Some(RZ), occurrence: 0 };
-        assert_eq!(resolve(&brake, &d, &layout), Some(Slot::Axis(3)));
-        // Simulation usages become generic ones too.
-        let d = dev(vec![GAS, BRAKE]);
-        let layout = Layout { axes: vec![X, Y], buttons: 0, hats: 0 };
-        assert_eq!(resolve(&Input::Axis { index: 1, usage: Some(BRAKE), occurrence: 0 }, &d, &layout), Some(Slot::Axis(1)));
-        // Unknown descriptor: position only, and out of range is none.
-        let d = dev(vec![]);
-        assert_eq!(resolve(&Input::Axis { index: 5, usage: None, occurrence: 0 }, &d, &layout), None);
-        assert_eq!(resolve(&Input::Button { index: 0 }, &d, &layout), None);
-    }
-
-    #[test]
-    fn duplicate_usages_use_the_occurrence() {
-        let d = dev(vec![Z, Z]);
-        let layout = Layout { axes: vec![Z, Z], buttons: 2, hats: 1 };
-        assert_eq!(resolve(&Input::Axis { index: 0, usage: Some(Z), occurrence: 1 }, &d, &layout), Some(Slot::Axis(1)));
-        assert_eq!(resolve(&Input::Hat { index: 0 }, &d, &layout), Some(Slot::Hat(0)));
+    fn resolves_by_position() {
+        let layout = Layout { axes: vec![usage(PAGE_GENERIC, 0x30), usage(PAGE_GENERIC, 0x31)], buttons: 2, hats: 1 };
+        assert_eq!(resolve(&Input::Axis { index: 1 }, &layout), Some(Slot::Axis(1)));
+        assert_eq!(resolve(&Input::Axis { index: 2 }, &layout), None);
+        assert_eq!(resolve(&Input::Button { index: 1 }, &layout), Some(Slot::Button(1)));
+        assert_eq!(resolve(&Input::Hat { index: 0 }, &layout), Some(Slot::Hat(0)));
+        assert_eq!(resolve(&Input::Hat { index: 1 }, &layout), None);
     }
 
     fn active(b: Binding, slot: Slot) -> Active {
@@ -578,9 +483,9 @@ mod tests {
     #[test]
     fn pedals_drive_the_triggers() {
         let live = vec![Live { axes: vec![0.5, 1.0], buttons: vec![], hats: vec![] }];
-        let gas = active(bind(Input::Axis { index: 0, usage: None, occurrence: 0 }, Target::RightTrigger), Slot::Axis(0));
+        let gas = active(bind(Input::Axis { index: 0 }, Target::RightTrigger), Slot::Axis(0));
         // This brake pedal rests at the high end.
-        let mut brake = bind(Input::Axis { index: 1, usage: None, occurrence: 0 }, Target::LeftTrigger);
+        let mut brake = bind(Input::Axis { index: 1 }, Target::LeftTrigger);
         brake.invert = true;
         let c = contribution(&[gas, active(brake, Slot::Axis(1))], &live);
         assert_eq!(c.right_trigger, 0.5);
@@ -593,7 +498,7 @@ mod tests {
 
     #[test]
     fn deadzone_and_curve() {
-        let mut b = bind(Input::Axis { index: 0, usage: None, occurrence: 0 }, Target::RightTrigger);
+        let mut b = bind(Input::Axis { index: 0 }, Target::RightTrigger);
         b.deadzone = 0.1;
         assert_eq!(from_rest(0.05, &b), 0.0);
         assert!((from_rest(0.55, &b) - 0.5).abs() < 1e-6);
@@ -601,7 +506,7 @@ mod tests {
         b.curve = 2.0;
         assert!((from_rest(0.55, &b) - 0.25).abs() < 1e-6);
         // Full stick axis: deadzone around the middle.
-        let mut s = bind(Input::Axis { index: 0, usage: None, occurrence: 0 }, Target::LeftX);
+        let mut s = bind(Input::Axis { index: 0 }, Target::LeftX);
         s.deadzone = 0.1;
         assert_eq!(centred(0.52, &s), 0.0);
         assert_eq!(centred(0.0, &s), -1.0);
@@ -612,8 +517,8 @@ mod tests {
     #[test]
     fn sticks_add_and_buttons_combine() {
         let live = vec![Live { axes: vec![1.0, 0.75], buttons: vec![true, false], hats: vec![Some(1)] }];
-        let wheel = active(bind(Input::Axis { index: 0, usage: None, occurrence: 0 }, Target::LeftX), Slot::Axis(0));
-        let mut pedal = bind(Input::Axis { index: 1, usage: None, occurrence: 0 }, Target::LeftY);
+        let wheel = active(bind(Input::Axis { index: 0 }, Target::LeftX), Slot::Axis(0));
+        let mut pedal = bind(Input::Axis { index: 1 }, Target::LeftY);
         pedal.half = Half::Negative;
         let a = active(bind(Input::Button { index: 0 }, Target::A), Slot::Button(0));
         let b = active(bind(Input::Button { index: 1 }, Target::B), Slot::Button(1));
@@ -640,13 +545,20 @@ mod tests {
     }
 
     #[test]
-    fn bindings_file_round_trip_and_defaults() {
-        let parsed: Bindings = serde_json::from_str(r#"{"devices":[],"bindings":[{"device":"046d:c24f","input":{"kind":"axis","index":2,"usage":131268},"target":"right_trigger"}]}"#).unwrap();
-        assert!(parsed.enabled && parsed.emulate_pad);
-        assert_eq!(parsed.bindings[0].curve, 1.0);
-        assert_eq!(parsed.bindings[0].input, Input::Axis { index: 2, usage: Some(GAS), occurrence: 0 });
-        let text = serde_json::to_string(&parsed).unwrap();
-        assert_eq!(serde_json::from_str::<Bindings>(&text).unwrap(), parsed);
+    fn moved_inputs_newest_first() {
+        let live = |axes: [f32; 2], button: bool, hat: Option<u8>| Live { axes: axes.to_vec(), buttons: vec![false, button], hats: vec![hat] };
+        let mut m = Moves::default();
+        // Brake pedal resting at the top; held button at start doesn't count.
+        assert!(!m.update(&Live { buttons: vec![false, true], ..live([0.5, 1.0], false, None) }));
+        assert!(!m.update(&live([0.55, 0.95], false, None)), "noise");
+        assert!(m.update(&live([0.5, 0.2], false, None)));
+        assert_eq!(m.recent, ["Axis 2"]);
+        assert!(!m.update(&live([0.5, 0.5], false, None)), "still away");
+        assert!(!m.update(&live([0.5, 1.0], false, None)), "back at rest");
+        assert!(m.update(&live([0.5, 1.0], true, Some(2))));
+        assert_eq!(m.recent, ["Button 2", "Hat 1", "Axis 2"]);
+        assert!(m.update(&live([0.5, 0.0], true, Some(2))));
+        assert_eq!(m.recent, ["Axis 2", "Button 2", "Hat 1"], "a repeat moves to the front");
         assert_eq!(device_id(0x46d, 0xc24f, 0), "046d:c24f");
         assert_eq!(device_id(0x46d, 0xc24f, 1), "046d:c24f#1");
     }
