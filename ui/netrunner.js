@@ -16,6 +16,7 @@
   let archives = []; // loaded archives from mods, in load order
   let orderView = null; // load_order_view: every archive in the folders, managed or not
   let editing = null; // archive/pc/mod file names in the order being edited
+  let scoped = new Set(); // mods selected in Installed mods, marked in the list
 
   // Keys are unique per node: the folder path, prefixed by the mod in the
   // "by mod" view where the same folder appears under several mods.
@@ -142,7 +143,7 @@
     render();
     // From the graph: scroll the tree only, not the page.
     if (quiet) revealKey(node.key); else focusKey(node.key);
-    if (!quiet && node.mod_id != null && $("#net-link").checked) window.graphSelectMod?.(node.mod_id);
+    if (!quiet && node.mod_id != null) window.netSelectMod?.(node.mod_id, "files");
   }
 
   function expandAll(node) {
@@ -274,7 +275,7 @@
     const modCell = group === "location"
       ? el("button", { class: "link", title: "Show this mod's files", onclick: () => showMod(f.mod_id) }, modName)
       : modName;
-    return el("tr", { class: `net-file ${f.state}` },
+    return el("tr", { class: `net-file ${f.state}${scoped.has(f.mod_id) ? " np-hl" : ""}` },
       el("td", { class: "mono", title: f.path }, f.name),
       el("td", { class: "mono" }, el("button", { class: "link path", title: `${tree.game_path}/${f.path}\nClick to open this folder`, onclick: (e) => busy(e.target, () => openFolder(folder)) },
         `${gameName()}/${folder ? `${folder}/` : ""}`)),
@@ -327,7 +328,7 @@
   function orderRow(sl) {
     const f = archives.find((a) => a.path.toLowerCase() === sl.path.toLowerCase());
     const movable = editing && sl.source === "archive";
-    const tr = f && !editing ? fileRow(f) : el("tr", { class: "net-file" },
+    const tr = f && !editing ? fileRow(f) : el("tr", { class: `net-file${scoped.has(sl.mod_id) ? " np-hl" : ""}` },
       el("td", { class: "mono", title: sl.path }, sl.name),
       el("td", { class: "mono muted" }, `${gameName()}/${sl.path.slice(0, sl.path.lastIndexOf("/") + 1)}`),
       el("td", {}, sl.mod_name || el("span", { class: "muted" }, "not installed by CPMX2077")),
@@ -447,10 +448,14 @@
     const n = byKey.get(`m${modId}`);
     if (n) { expanded.mod.add(n.key); select(n, { quiet }); }
   }
-  // Called by the graph when "Link with graph" is ticked.
-  window.fileMapShowMod = (modId) => busy(null, () => showMod(modId, true));
-  $("#net-link").checked = loadPref("netrunner.link", false) === true;
-  $("#net-link").addEventListener("change", () => savePref("netrunner.link", $("#net-link").checked));
+  // The mods selected in Installed mods: one opens its branch in By mod
+  // (in Load order its archives are marked); several are marked in the list.
+  window.fileMapScope = (ids) => {
+    scoped = new Set(ids);
+    if (!tree) return;
+    if (ids.length === 1 && group !== "order") busy(null, () => showMod(ids[0], true));
+    else renderList();
+  };
 
   function setGroup(g) {
     group = g;

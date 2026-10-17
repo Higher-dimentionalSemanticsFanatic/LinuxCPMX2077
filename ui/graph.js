@@ -68,7 +68,7 @@
   let scope = null, fullPos = null;
   // Node id -> neighbour ids and node id -> type, over the whole graph (also
   // while a scope shows only part of it).
-  let fullAdj = new Map(), fullType = new Map();
+  let fullAdj = new Map(), fullType = new Map(), nodeOfMod = new Map();
   // Opacity per node for the current focus, worked out once per focus.
   let fadeFor = null, fadeMap = null;
   // Mod id -> { level, findings, logErrors }: what the checks found per mod.
@@ -164,6 +164,8 @@
     // edge with a hidden end.
     const all = report.graph.nodes.filter((n) => (n.type === "mod" || used.has(n.id)) && !hidden.has(n.type));
     fullType = new Map(all.map((n) => [n.id, n.type]));
+    // A framework installed as a mod is its framework node.
+    nodeOfMod = new Map(all.filter((n) => n.mod_id != null).map((n) => [n.mod_id, n.id]));
     fullAdj = new Map(all.map((n) => [n.id, []]));
     for (const e of keep) if (fullAdj.has(e.from) && fullAdj.has(e.to)) { fullAdj.get(e.from).push(e.to); fullAdj.get(e.to).push(e.from); }
     nodes = all
@@ -536,8 +538,24 @@
     canvas.width = Math.max(1, r.width * dpr);
     canvas.height = Math.max(1, r.height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (r.width && (needsFit || !userMoved)) fit();
+    if (r.width && centerOn) centre(centerOn);
+    else if (r.width && (needsFit || !userMoved)) fit();
     draw();
+  }
+
+  // Put `n` in the middle of the free part of the canvas at a readable zoom.
+  // While the canvas is hidden (another Netrunner tab), wait for its size.
+  let centerOn = null;
+  function centre(n) {
+    const r = rect();
+    if (!r.width) { centerOn = n; return; }
+    centerOn = null;
+    box = { width: r.width, height: r.height };
+    if (view.k < 0.6) view.k = 1;
+    view.x = -n.x - (r.width > 760 ? info.offsetWidth / 2 : 0) / view.k;
+    view.y = -n.y;
+    userMoved = true;
+    updateZoom();
   }
 
   function neighbors(n) {
@@ -1023,7 +1041,9 @@
       else if (isolate === "hide" && scope) showAll();
       showInfo(selected);
       requestDraw();
-      if (selected?.type === "mod" && selected.mod_id != null && linked()) window.fileMapShowMod?.(selected.mod_id);
+      // The Netrunner panel's other tabs follow a selected mod.
+      if (selected?.mod_id != null) window.netSelectMod?.(selected.mod_id, "graph");
+      else if (!selected) window.netSelectMod?.(null, "graph");
     }
     drag = null;
     canvas.classList.remove("dragging");
@@ -1077,33 +1097,37 @@
     if (scope && selected) isolateAround(selected);
     requestDraw();
   });
-  const linked = () => document.getElementById("net-link")?.checked;
-
-  // Select a mod from elsewhere (the File map): selection, isolation and
-  // centring as if it was clicked here. False when it is not in the graph.
+  // Select a mod from elsewhere (List, Canvas, File map): selection,
+  // isolation and centring as if it was clicked here. False when it is not
+  // in the graph.
   window.graphSelectMod = (modId) => {
     if (!lastReport) return false;
-    const id = `mod:${modId}`;
+    const id = nodeOfMod.get(modId);
     if (selected?.id === id) return true;
-    if (!fullType.has(id)) return false;
+    if (!id) { window.graphClearSelection(); return false; }
     lit = null;
     if (isolate === "hide") {
       isolateAround({ id, label: "" });
     } else {
       showAll();
       selected = byId.get(id);
-      const r = rect();
-      if (view.k < 0.6) view.k = 1;
-      view.x = -selected.x - (r.width > 760 ? info.offsetWidth / 2 : 0) / view.k;
-      view.y = -selected.y;
-      userMoved = true;
-      updateZoom();
+      centre(selected);
     }
     selected = byId.get(id) || null;
     showScope();
     showInfo(selected);
     requestDraw();
     return true;
+  };
+
+  window.graphClearSelection = () => {
+    centerOn = null;
+    if (!selected && !lit && !scope) return;
+    selected = null;
+    lit = null;
+    showAll();
+    showInfo(null);
+    requestDraw();
   };
 
   window.graphTagsChanged = () => {

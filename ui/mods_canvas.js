@@ -95,14 +95,17 @@ function canvasTile(m, col) {
   const what = [m.name, on ? "enabled" : "disabled", `${m.file_count} file${m.file_count === 1 ? "" : "s"}`,
     (modTags.mods[m.id] || []).length ? `tags: ${modTags.mods[m.id].join(", ")}` : "no tags",
     m.category ? `Nexus category: ${m.category}` : null, up ? `${up.latest} available` : null].filter(Boolean).join(" · ");
-  return el("button", {
-    class: `canvas-tile${on ? "" : " off"}`, style: `--c:${col.color}`, title: `${what}\nClick: show in the List view`,
-    onclick: () => canvasOpenInList(m),
+  const tile = el("button", {
+    class: `canvas-tile${on ? "" : " off"}`, style: `--c:${col.color}`, "data-mod-id": m.id,
+    title: `${what}\nClick: select (Netrunner panel shows this mod). Double-click: show in the List view`,
+    onclick: () => window.netSelectMod(m.id, "canvas"),
   },
   el("span", { class: "canvas-name" }, m.name),
   ...others.map((n) => el("span", { class: "canvas-dot", style: `background:${canvasTagColor(n)}`, "aria-label": `also ${n}` })),
   up ? el("span", { class: "canvas-up", "aria-label": "update available" }, "▲") : null,
   el("span", { class: "canvas-files" }, m.file_count));
+  tile.addEventListener("dblclick", () => canvasOpenInList(m));
+  return tile;
 }
 
 function renderModsCanvas(shown) {

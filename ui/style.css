@@ -90,7 +90,7 @@ code, .mono { font-family: ui-monospace, "JetBrains Mono", monospace; font-size:
 .progress { position: relative; height: 22px; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 14px; overflow: hidden; }
 .progress-bar { height: 100%; width: 0; background: var(--cyan); opacity: .35; }
 .progress-text { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 10px; font-size: 12px; }
-#toast { position: fixed; right: 20px; bottom: calc(20px + var(--popup-h, 0px)); z-index: 7; max-width: 460px; background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--cyan); padding: 12px 14px; border-radius: 4px; white-space: pre-wrap; }
+#toast { position: fixed; right: 20px; bottom: calc(20px + var(--popup-h, 0px) + var(--np-bottom, 0px)); z-index: 7; max-width: 460px; background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--cyan); padding: 12px 14px; border-radius: 4px; white-space: pre-wrap; }
 #toast.error { border-left-color: var(--red); }
 #game-info, .warnings li { overflow-wrap: anywhere; }
 
@@ -289,7 +289,7 @@ button.update { border-color: var(--cyan); color: var(--cyan); }
 .notice { border-left: 3px solid var(--cyan); }
 
 /* Download queue and picking several mods. */
-#queue { position: fixed; bottom: 12px; z-index: 6; margin: 0; border-left: 3px solid var(--yellow); box-shadow: 0 -6px 18px rgba(0, 0, 0, .45); }
+#queue { position: fixed; bottom: calc(12px + var(--np-bottom, 0px)); z-index: 6; margin: 0; border-left: 3px solid var(--yellow); box-shadow: 0 -6px 18px rgba(0, 0, 0, .45); }
 /* One line, so the popup keeps its height whatever it says or shows. */
 #queue > .row { flex-wrap: nowrap; min-height: 36px; }
 #queue-title { white-space: nowrap; }
@@ -615,3 +615,74 @@ button.canvas-tile.off { opacity: .5; border-style: dashed; border-left-style: d
 .canvas-up { flex: none; color: var(--yellow); font-size: 10px; }
 .canvas-files { flex: none; margin-left: auto; padding-left: 6px; color: var(--muted); font-size: 11px; }
 #tab-mods #mods-filter { min-width: 180px; }
+
+/* Netrunner panel, docked under Installed mods › Overview. The page area
+   ends above it; it is fixed to the bottom of the window. */
+body.np-shown main { height: calc(100vh - var(--np-bottom, 0px)); align-self: flex-start; }
+body.np-resizing { cursor: row-resize; user-select: none; }
+body.np-resizing iframe, body.np-resizing canvas { pointer-events: none; }
+.net-panel {
+  position: fixed; left: var(--np-left, 296px); right: 0; bottom: 0; height: var(--np-h, 46vh); z-index: 5;
+  display: flex; flex-direction: column; min-width: 0;
+  background: linear-gradient(180deg, rgba(4, 10, 14, .98), rgba(6, 8, 12, .99)); border-top: 1px solid var(--cyan);
+  box-shadow: 0 -6px 18px rgba(0, 240, 255, .07);
+}
+#np-splitter { position: absolute; left: 0; right: 0; top: -4px; height: 8px; cursor: row-resize; z-index: 1; }
+#np-splitter::after { content: ""; position: absolute; left: 50%; top: 2px; width: 46px; height: 4px; margin-left: -23px; border-top: 1px solid var(--cyan); border-bottom: 1px solid var(--cyan); }
+#np-splitter:hover, #np-splitter:focus-visible { outline: none; background: linear-gradient(180deg, transparent 3px, var(--cyan) 3px, var(--cyan) 5px, transparent 5px); }
+#np-head { flex: none; margin: 0; padding: 8px 26px; gap: 10px; justify-content: flex-start; flex-wrap: nowrap; border-bottom: 1px solid rgba(0, 240, 255, .25); }
+#tab-netrunner #np-head .net-title { font-size: 15px; letter-spacing: 4px; margin: 0; white-space: nowrap; }
+#np-scope { flex: 0 1 auto; min-width: 60px; color: var(--cyan); white-space: nowrap; display: flex; align-items: baseline; max-width: 300px; }
+#np-scope b { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#np-scope button { flex: none; }
+#np-scope::before { content: ">\00a0"; flex: none; color: var(--yellow); }
+#np-scope b { color: var(--yellow); font-weight: 600; }
+#np-tabs { flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+#np-tabs button { flex: none; }
+#run-diagnostics, #np-hide { flex: none; }
+#np-tabs button { padding: 3px 11px; font-size: 13px; }
+.np-n { display: inline-block; min-width: 16px; margin-left: 6px; padding: 0 4px; font-size: 10px; line-height: 15px; text-align: center; background: #ff003c; color: #111; font-weight: 700; }
+#run-diagnostics { padding: 4px 12px; font-size: 13px; }
+#np-hide { margin: 0; }
+#np-body { flex: 1; min-height: 0; overflow: auto; padding: 10px 26px 12px; }
+#np-body .np-pane { display: none; margin: 0; }
+#np-body .np-pane.active { display: block; }
+#np-body .diag-section > h3, #np-body .diag-section > header h3 { display: none; }
+#np-body .diag-section > header { margin-bottom: 6px; }
+/* Files and Mod interaction fill the panel. */
+#np-body #net-files.active, #np-body #diag-graph.active { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+#np-body #net-files > p.muted { display: none; }
+#np-body #net-browser { flex: 1; height: auto; min-height: 160px; resize: none; }
+#np-body #diag-graph #graph-wrap { flex: 1; height: auto; min-height: 240px; }
+.np-scope-note { margin: 0 0 8px; color: var(--yellow); font-size: 12px; }
+#net-list tr.np-hl td { background: rgba(246, 207, 60, .1); }
+#net-list tr.np-hl td:first-child { box-shadow: inset 3px 0 var(--yellow); }
+/* The selected mods above. */
+#mods-body tr.np-sel td { background: rgba(246, 207, 60, .09); }
+#mods-body tr.np-sel td:first-child { box-shadow: inset 3px 0 var(--yellow); }
+#mods-body tr[data-mod-id] { cursor: pointer; }
+button.canvas-tile.np-sel { --fill: rgba(246, 207, 60, .16); background: var(--fill); border-color: var(--yellow); border-left-color: var(--c); box-shadow: 0 0 0 1px var(--yellow); }
+/* Hidden: one line with the counts. */
+#net-strip {
+  position: fixed; left: var(--np-left, 296px); right: 0; bottom: 0; height: 34px; z-index: 5;
+  display: flex; align-items: center; gap: 16px; padding: 0 26px; overflow: hidden; cursor: pointer;
+  border-top: 1px solid var(--cyan); background: rgba(4, 10, 14, .97); font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 12px;
+}
+#net-strip.hidden { display: none; }
+#net-strip:hover { background: rgba(6, 18, 24, .98); }
+#net-strip > * { white-space: nowrap; }
+#net-strip .net-title { color: var(--yellow); letter-spacing: 3px; font-weight: 700; }
+#net-strip .s.bad { color: #ff003c; } #net-strip .s.warn { color: var(--yellow); } #net-strip .s.ok { color: var(--green); }
+#net-strip .s.sel { color: var(--cyan); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#net-strip button { padding: 2px 12px; font-size: 12px; }
+/* The tabs get their own row when the header can't hold them and the selection. */
+@media (max-width: 1750px) {
+  #np-head { flex-wrap: wrap; row-gap: 6px; }
+  #np-tabs { order: 5; flex-basis: 100%; }
+  #np-scope { max-width: 420px; margin-right: auto; }
+}
+@media (max-width: 1400px) {
+  #np-head, #np-body, #net-strip { padding-left: 16px; padding-right: 16px; }
+  #np-scope { max-width: 240px; }
+  #np-tabs button { padding: 3px 8px; font-size: 12px; }
+}

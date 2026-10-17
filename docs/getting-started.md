@@ -177,14 +177,16 @@ collection gets a profile of its own; switch between them under
 
 ## 8. Start the game and check
 
-Launch Cyberpunk 2077 from Steam or Heroic as usual. Then open the
-**Netrunner** tab in CPMX2077 and click **Check again**. It shows, at the
-top, anything that needs attention: setup problems, the first step of the
+Launch Cyberpunk 2077 from Steam or Heroic as usual. Then open
+**Installed mods** in CPMX2077: the **Netrunner** panel at the bottom of
+the window holds the checks (click the strip with **Show ▴** if it is
+folded). Click **Check again**. Its *Summary* tab shows anything that needs
+attention: setup problems, the first step of the
 last start that failed (**Start here**), whether the game crashed, mods
 named in errors from that session, known problem mods, and compatibility
-problems between your mods. Its
-*File map* shows every file your mods installed and where it went, and
-*Launch options* explains each part of the line the Linux setup fixes wrote
+problems between your mods. Click a mod in the list to see only what
+concerns that mod. The *Files* tab shows every file your mods installed and
+where it went, and *Launch options* explains each part of the line the Linux setup fixes wrote
 to Steam.
 
 If the game crashes or a framework does not load, see
@@ -215,7 +217,7 @@ sidebar. **Pop out** moves it to its own window.
   mods**, click **Install radioExt** if it's missing, then **New station**
   and **Add songs…**. For your own logo, pick **PNG image** as the icon
   source. See [RadioEXT](user-guide.md#radioext).
-- Modding tools: **Netrunner › WolvenKit** installs WolvenKit from GitHub.
+- Modding tools: the Netrunner panel's **WolvenKit** tab installs WolvenKit from GitHub.
   Its command-line build needs the .NET 10 runtime (on Linux, your
   distribution's `dotnet-runtime-10.0` package). See
   [WolvenKit](user-guide.md#wolvenkit).

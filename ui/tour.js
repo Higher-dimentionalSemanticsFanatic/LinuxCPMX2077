@@ -42,7 +42,7 @@ function tourSteps() {
       body: [
         el("ul", {},
           el("li", {}, el("b", {}, "Installed mods"), ": enable, disable, update, verify, uninstall; profiles per game version. Sections: Overview, ReShade, OptiScaler FSR4.1.1 Lite, RadioEXT, Ultra+ recommendations, Patch-note check."),
-          el("li", {}, el("b", {}, "Netrunner"), ": setup problems, launch options, crashes and logs, file map, graph, compatibility, WolvenKit."),
+          el("li", {}, el("b", {}, "Netrunner"), " (panel under Overview): setup problems, files, conflicts, mod interaction, crashes and logs, launch options, WolvenKit."),
           el("li", {}, el("b", {}, "Get mods"), ": Nexus Mods and GitHub. Section Modpacks: Nexus collections, tags, mod list import and export."),
           el("li", {}, el("b", {}, "Downloads"), ": downloaded archives per mod and version; reinstall or switch."),
           el("li", {}, el("b", {}, "Settings"), ": game installs, download location, nxm:// links, terminal.")),
@@ -110,9 +110,11 @@ function tourSteps() {
     },
     {
       title: "Netrunner",
-      target: () => '#sidebar nav button[data-tab="netrunner"]',
+      tab: "mods",
+      target: () => visible("#tab-netrunner") ? "#np-head" : visible("#net-strip") ? "#net-strip" : null,
       body: [
-        "After starting the game, open Netrunner and click Check again: setup problems, the failed startup step, crashes, mods named in log errors, known problem mods and conflicts between installed mods.",
+        "The panel under the list. After starting the game, click Check again: setup problems, the failed startup step, crashes, mods named in log errors, known problem mods and conflicts between installed mods.",
+        "Click a mod in the list or the canvas to see only what concerns it. Hide folds the panel to a strip with the counts.",
       ],
     },
     {

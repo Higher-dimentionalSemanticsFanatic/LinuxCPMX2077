@@ -252,8 +252,8 @@ not listed.
 | **Adopt** | Records its files and their SHA-256 hashes and stores a copy, the same as an install. It then appears in the list above with the source *Adopted*, and **Enabled**, **Verify** and **Uninstall** work on it. Nothing in the game folder changes. Uninstalling an adopted mod deletes its files: there is no archive to reinstall it from. |
 | **Adopt all** | Adopts every mod in the section after one confirmation listing them. |
 
-These mods are included in [Compatibility](#compatibility), the
-[Graph](#graph) and the File map's **wins N / loses M** counts with
+These mods are included in [Conflicts](#conflicts), the
+[Mod interaction](#mod-interaction) graph and the File map's **wins N / loses M** counts with
 *(untracked)* after their name, whether or not you adopt them. They can't
 be switched off until they are adopted.
 
@@ -274,8 +274,10 @@ see at a glance which mods carry which tag.
 - The number on the right of a tile is the mod's file count. **▲** marks an
   available update. Faded, dashed tiles are disabled mods; untick **Show
   disabled** to hide them.
-- Click a tile to open that mod in **List** (name filter set to it). Click a
-  tag or category heading to show that group in **List**.
+- Click a tile to select it: the [Netrunner panel](#netrunner) below shows
+  that mod. Double-click a tile to open that mod in **List** (name filter
+  set to it). Click a tag or category heading to show that group in
+  **List**.
 - Hover a tile for its state, file count, tags and Nexus category.
 
 ### Selecting several mods
@@ -419,7 +421,7 @@ requirement).
 
 *not installed* means CPMX2077 didn't install it; a mod you copied in by hand
 can't be told apart by name. Installed conflicts and the setting notes also
-show under **Known problems** in Netrunner's
+show under **Known problems** in the Netrunner panel's
 [Crashes & logs](#crashes--logs).
 
 ### Patch-note check
@@ -768,7 +770,7 @@ connected Nexus account for collections.
 - **Your tags**: add tags with a name and color (a new tag starts with a colour no other tag uses), rename them or change their
   color, or delete them (a deleted tag comes off its mods; the mods stay
   installed). Give mods tags in Installed mods; a mod can have several. Tags
-  stay with a mod through updates and can group the [graph](#graph). The
+  stay with a mod through updates and can group the [Mod interaction](#mod-interaction) graph. The
   list shows how many mods have each tag. (Older versions had one "custom
   category" per mod; those became tags automatically.)
 - **Predefined tag set** (under Your tags): finer tags than the Nexus
@@ -816,22 +818,50 @@ connected Nexus account for collections.
 
 ## Netrunner
 
-![The top of the Netrunner tab: crashes and errors, compatibility, and the file map](images/netrunner.png)
+![The Netrunner panel under Installed mods, showing one mod's conflicts](images/netrunner.png)
 
-One place to see whether your setup is healthy (called Diagnostics in
-earlier versions). **Check again** reruns every check. The top of the
-tab summarises what needs attention: game setup problems, where the last
-start went wrong (**Start here**), whether the game crashed in the last
-session, errors from that session, known problem mods, and compatibility
-problems. *Game setup* lists the same items as the Game panel: Linux setup
-fixes still open (each with its fix button, such as **Install vcrun2022**)
-and frameworks that are installed without what they need (with **Install
-missing frameworks**). **Show in
-graph** next to a finding lights up the mods involved. The links under the
-title (**Files**, **Graph**, **Compatibility**, **Crashes & logs**,
-**Launch options**, **WolvenKit**) jump to each section.
+Checks of the mods and the game setup (called Diagnostics in earlier
+versions), as a panel at the bottom of **Installed mods › Overview**, under
+**List** and **Canvas**. Drag its top edge to change its height
+(double-click the edge to reset; the arrow keys work too when it has focus).
+**Hide** folds it to a one-line strip at the bottom with the counts of the
+last check (*problems*, *overlaps*, *log errors*, *setup*) and the selected
+mod; click the strip (**Show ▴**) to open the panel again. The panel opens
+on its own the first time you show Overview for a game and runs the checks;
+**Check again** reruns every check. Open, height and tab are remembered.
+
+Tabs: **Summary**, **Files**, **Conflicts**, **Mod interaction**, **Crashes &
+logs**, **Launch options**, **WolvenKit**. A red number on a tab counts what
+needs attention there: setup problems on Summary, problems and overlaps on
+Conflicts, log errors of the last session on Crashes & logs.
+
+**Follows the selection.** The panel is about the mods selected above, shown
+after **>** next to the title (*All mods* when none):
+
+- Click a row in **List** (not its buttons, switches or tags) or a tile in
+  **Canvas** to select that mod; click it again to deselect. Ticked rows
+  (see [Selecting several mods](#selecting-several-mods)) take precedence.
+  Clicking a node in Mod interaction or a mod in Files selects that mod
+  too. The selected rows and tiles are outlined.
+- *Files* opens the mod's branch **By mod** (a mod's files are marked in the
+  other arrangements), *Conflicts* and *Crashes & logs* list only what names
+  the selected mods (a yellow line above says how many of all are shown;
+  **Show all** there clears the selection), and *Mod interaction* selects the
+  mod's node (several mods: lights them up).
+- **× all mods** next to the name clears the selection.
+
+**Summary** sums up what needs attention: game setup problems, where the
+last start went wrong (**Start here**), whether the game crashed in the
+last session, errors from that session, known problem mods, and
+compatibility problems. *Game setup* lists the same items as the Game
+panel: Linux setup fixes still open (each with its fix button, such as
+**Install vcrun2022**) and frameworks that are installed without what they
+need (with **Install missing frameworks**). **Show in graph** next to a
+finding switches to *Mod interaction* and lights up the mods involved.
 
 ### File map
+
+The **Files** tab.
 
 ![The file map showing the archive/pc/mod folder and which mod each file came from](images/file-map.png)
 
@@ -865,12 +895,11 @@ branch). In **By mod**, clicking a mod opens its whole folder structure at
 once; the other mods stay collapsed. **Find a file or mod…** lists every file whose path or mod name
 matches.
 
-**Link with graph** (off by default, remembered) connects the File map and
-the [Graph](#graph): clicking a mod node in the graph switches the File map to
-**By mod** and shows that mod's files; selecting a mod in the File map (in
-**By mod**, or a mod name in the **Mod** column) selects and centres it in
-the graph, isolated if **Selection** is *Hide unrelated*. The map only shows files CPMX2077 installed, not the game's own
-files or mods installed by hand.
+Selecting a mod in the File map (in **By mod**, or a mod name in the
+**Mod** column) selects it for the whole panel, and selecting a mod above
+(List, Canvas, Mod interaction) opens its branch here. The map only shows
+files CPMX2077 installed, not the game's own files or mods installed by
+hand.
 
 **Load order** (column and view). The game reads `.archive` files in a fixed
 order, and when two archives contain the same resource, the one loaded
@@ -918,11 +947,12 @@ Changing the order:
   restores it (or the file-name order). The stock chip resets it. Profiles
   saved before this leave the order as it is.
 
-### Graph
+### Mod interaction
 
-![The graph in the Flowchart (left to right) layout](images/graph.png)
+![The Mod interaction graph in the Flowchart (left to right) layout](images/graph.png)
 
-How your mods connect: mods, the frameworks they need, game classes, tweak
+The **Mod interaction** tab (called *How your mods connect* before) is a
+graph of how your mods interact: mods, the frameworks they need, game classes, tweak
 records and resources they touch, and the base game. Clashes are drawn in
 red. A framework you installed through the app (CET, RED4ext, redscript,
 ArchiveXL, TweakXL, Codeware, matched by Nexus id or GitHub repository) is
@@ -948,8 +978,10 @@ one *Framework* node, not a mod node plus a framework node.
   - *Hide unrelated*: only the nodes within the distance stay, laid out on
     their own and fitted to the view. A note at the top left shows how many
     of all nodes are shown; **Show all**, or clicking empty space, brings
-    the full graph back as it was. Clicking another node isolates around
-    that one.
+    the full graph back as it was and clears the selection. Clicking
+    another node isolates around that one.
+  - A mod selected in List, Canvas or Files is selected here the same way
+    and centred.
   - *Highlight neighbours*: the previous behaviour, direct neighbours bright
     and everything else dimmed.
 - **Hide harmless hooks** hides hooks that several mods share without
@@ -967,9 +999,9 @@ one *Framework* node, not a mod node plus a framework node.
   stops drawing, it says so in red and the error is listed in the
   [terminal](#terminal).
 
-### Compatibility
+### Conflicts
 
-Lists, by severity:
+The **Conflicts** tab (called *Compatibility* before). Lists, by severity:
 
 - **Problems**: clashes where only one mod can win, such as two mods
   replacing the same redscript method, or a framework a mod needs that isn't
@@ -1301,7 +1333,7 @@ Every archive you downloaded, grouped by mod with each version under it.
   account box (API key, Free vs Premium downloads), Installed mods, the
   *Game version and profiles* ribbon (profiles under each game version,
   **+ Profile**, **Apply**, the stock chip, load order saved with a
-  profile), Netrunner, and last the First setup checklist. The outlined
+  profile), the Netrunner panel, and last the First setup checklist. The outlined
   element stays clickable and can be scrolled (the outline and the step
   card follow it); everything else is dimmed. **Next** / **Back**
   or the arrow keys step through, **Skip tour** or Esc closes it, and the
@@ -1456,7 +1488,7 @@ API key is in Windows Credential Manager.
   Organizer on its own.
 - `.rar` archives are unpacked with the `tar.exe` built into Windows 10
   and 11.
-- Netrunner › WolvenKit also offers the WolvenKit editor (it's a Windows
+- The Netrunner panel's WolvenKit tab also offers the WolvenKit editor (it's a Windows
   program) and downloads the Windows build of the CLI.
 - The OptiScaler FSR4.1.1 Lite section has no FSR 4.1.1 shader overrides: they are a
   vkd3d-proton (Proton) feature. OptiScaler and AMD's DLL install the same
@@ -1504,7 +1536,7 @@ uninstalling it later restores the other mod's copy.
 clicked the download in CPMX2077's own Nexus window, or that CPMX2077 handles
 `nxm://` links (Settings) if you used your browser.
 
-**The game crashes.** Open Netrunner → *Crashes & logs* and start with the
+**The game crashes.** In Installed mods › Overview, open the Netrunner panel's *Crashes & logs* tab and start with the
 step marked **Start here** under *Last start, step by step*, then *Known
 problems*. Mods named in errors from the last session are listed; turn them
 off with the **Enabled** switch to test, start the game again, then **Check

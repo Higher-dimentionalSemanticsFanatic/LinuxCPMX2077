@@ -145,6 +145,7 @@ function showModsSub(sub) {
   $("#mods-title").textContent = MODS_TITLES[modsSub];
   document.querySelectorAll("#tab-mods .mods-sub").forEach((x) => x.classList.toggle("hidden", x.dataset.sub !== modsSub));
   if (modsSub === "patchnotes") loadPatchNotes().catch((e) => toast(String(e), true));
+  window.netPanelSync?.();
 }
 
 // A section's menu entry shows once its card has something to show.
@@ -163,9 +164,9 @@ function showTab(name, sub) {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === `tab-${name}`));
   if (name === "downloads") busy(null, loadDownloads);
   if (name === "nexus") busy(null, () => selectSource(currentSource));
-  if (name === "netrunner") busy(null, runDiagnostics);
   if (name === "modpacks") busy(null, loadModpacks);
   if (name === "settings") refreshCacheInfo().catch(() => {});
+  window.netPanelSync?.();
 }
 
 // ---- game ---------------------------------------------------------------
@@ -302,7 +303,7 @@ function renderWarnings() {
   // The OptiScaler page shows its launch-option checks inline.
   if (!$("#optiscaler").classList.contains("hidden")) loadOptiScaler().catch(() => {});
   // Netrunner's summary lists the same problems.
-  if (lastDiag && $("#tab-netrunner").classList.contains("active")) renderProblems(lastDiag.analysis, lastDiag.crash);
+  if (lastDiag && window.netPanelIsOpen?.()) renderProblems(lastDiag.analysis, lastDiag.crash);
 }
 
 function setupItem(c) {
@@ -558,6 +559,7 @@ function renderMods() {
   $("#mods-body").replaceChildren(...deficitRows(), ...shown.flatMap((m) => [modRow(m), ...dependencyRows(m)]));
   modSel.render(shown.map((m) => m.id));
   renderModsCanvas(shown);
+  window.netDecorate?.();
 }
 
 // The mod's page in Get mods (Nexus or another source); none for manual installs.
@@ -595,7 +597,7 @@ function modRow(m) {
       : "Disabled: files are removed from the game folder; the stored copy is kept in CPMX2077's storage. Click to enable: files go back from the stored copy" });
   sw.checked = on;
   sw.addEventListener("change", () => busy(sw, () => setEnabled(m, sw.checked)).finally(loadMods));
-  return el("tr", { class: on ? "" : "off" },
+  return el("tr", { class: on ? "" : "off", "data-mod-id": m.id },
     el("td", {}, modSel.box([m.id], m.name)),
     el("td", { class: "thumb-col" }, modThumb(m)),
     el("td", {}, el("b", {}, m.name), on ? null : el("span", { class: "badge" }, "disabled"),
@@ -666,6 +668,7 @@ const modSel = rowSelection($("#mods-body"), $("#mods-select-all"), () => {
   const n = modSel.ids.size;
   $("#mods-bulk").classList.toggle("hidden", !n);
   $("#mods-bulk-count").textContent = `${n} selected`;
+  window.netScopeChanged?.();
 });
 const selectedMods = () => mods.filter((m) => modSel.ids.has(m.id));
 
@@ -948,12 +951,11 @@ async function runDiagnostics() {
   if (crash.status === "fulfilled") renderCrash(crash.value);
   lastDiag = { analysis: analysis.value, crash: crash.value };
   renderProblems(analysis.value, crash.value);
+  window.netPanelChecked?.();
   const failed = [analysis, crash].filter((r) => r.status === "rejected").map((r) => String(r.reason));
   if (failed.length) toast(failed.join("\n"), true);
 }
 $("#run-diagnostics").addEventListener("click", (e) => busy(e.target, runDiagnostics));
-document.querySelectorAll("[data-jump]").forEach((b) => b.addEventListener("click", () =>
-  document.getElementById(b.dataset.jump).scrollIntoView({ behavior: "smooth", block: "start" })));
 
 // An expandable list of exactly what a finding or graph connection covers,
 // grouped by mod or file. Built when first opened: a texture pack can list
@@ -977,8 +979,8 @@ function affectedDetails(groups, { hashes = false, label = "Show what's affected
 }
 
 function showInGraph(modIds, label) {
+  window.netPanelShow("graph");
   window.highlightGraph(modIds, label);
-  $("#diag-graph").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function graphButton(modIds, label) {
   return modIds.length ? el("button", { class: "link inline", title: "Light up these mods in the graph",
@@ -1018,13 +1020,13 @@ function renderProblems(analysis, crash) {
     const lines = [];
     const first = crash.timeline.find((s) => s.first_problem);
     if (first) lines.push(el("li", {}, el("b", {}, "Start here: "), `${first.title}: ${first.summary} `,
-      el("button", { class: "link inline", onclick: () => $("#crash-timeline").scrollIntoView({ behavior: "smooth", block: "center" }) }, "See the startup steps")));
+      el("button", { class: "link inline", onclick: () => window.netPanelShow("crashes", "crash-timeline") }, "See the startup steps")));
     if (crash.session?.crashed) lines.push(el("li", {}, "The game crashed in the last session (", fmtTime(crash.latest_crash?.modified_unix), ")"));
     else if (crash.latest_crash && !crash.session) lines.push(el("li", {}, "Latest crash report: ", el("b", {}, fmtTime(crash.latest_crash.modified_unix))));
     if (errors) lines.push(el("li", {}, `${errors} error${errors === 1 ? "" : "s"} in the logs${crash.session ? " from the last session" : ""}`));
     const known = crash.known_issues.filter((k) => k.severity !== "info");
     if (known.length) lines.push(el("li", {}, `${known.length} known problem${known.length === 1 ? "" : "s"}: `, known.map((k) => k.title).join("; "), " ",
-      el("button", { class: "link inline", onclick: () => $("#crash-known").scrollIntoView({ behavior: "smooth", block: "start" }) }, "See what to do")));
+      el("button", { class: "link inline", onclick: () => window.netPanelShow("crashes", "crash-known") }, "See what to do")));
     for (const [name, n] of crash.suspects.slice(0, 8)) {
       const m = [...(ids.get(name) || [])];
       lines.push(el("li", {}, el("b", {}, name), ` is named in ${n} error${n === 1 ? "" : "s"} `, graphButton(m, `${name}: named in log errors`)));
@@ -1043,7 +1045,7 @@ function renderProblems(analysis, crash) {
           errs.length ? el("li", {}, `${errs.length} problem${errs.length === 1 ? "" : "s"}, such as a missing framework or two mods replacing the same resource or method`) : null,
           warns.length ? el("li", {}, `${warns.length} overlap${warns.length === 1 ? "" : "s"} to check`) : null),
         el("div", { class: "row" },
-          el("button", { class: "link", onclick: () => $("#diag-compat").scrollIntoView({ behavior: "smooth" }) }, "See the list"),
+          el("button", { class: "link", onclick: () => window.netPanelShow("conflicts") }, "See the list"),
           graphButton(mods, "Mods with compatibility findings"))));
     }
   }
@@ -1051,10 +1053,22 @@ function renderProblems(analysis, crash) {
     : [el("div", { class: "card finding ok" }, analysis && crash ? "Nothing needs attention: no crashes, log errors or conflicts found." : "Some checks failed; see the message.")]));
 }
 
+// Limited to the mods selected in Installed mods, when there are any.
+function scopeNote(box, scope, shown, total, what) {
+  box.classList.toggle("hidden", !scope);
+  if (!scope) return;
+  const names = [...scope].map((id) => mods.find((m) => m.id === id)?.name || `Mod ${id}`);
+  box.replaceChildren(`${shown} of ${total} ${what} name ${names.length === 1 ? names[0] : `the ${names.length} selected mods`}. `,
+    el("button", { class: "link inline", onclick: () => window.netSelectMod(null, "clear") }, "Show all"));
+}
+
 function renderCompat(r) {
   const sev = { error: "Problems", warning: "Overlaps to check", info: "Shared hooks (chained, all run)" };
+  const scope = window.netScope?.() || null;
+  const named = scope ? r.findings.filter((f) => f.mod_ids.some((id) => scope.has(id))) : r.findings;
+  scopeNote($("#compat-scope"), scope, named.length, r.findings.length, "findings");
   const groups = ["error", "warning", "info"].map((s) => {
-    const items = r.findings.filter((f) => f.severity === s);
+    const items = named.filter((f) => f.severity === s);
     if (!items.length) return null;
     return el("div", { class: `card finding ${s}` },
       el("h3", {}, `${sev[s]} (${items.length})`),
@@ -1062,9 +1076,9 @@ function renderCompat(r) {
         affectedDetails(f.affected, { hashes: f.kind === "resource" })))));
   }).filter(Boolean);
   $("#findings").replaceChildren(...(groups.length ? groups
-    : [el("div", { class: "card finding ok" }, r.mods.length ? "No conflicts found between your installed mods." : "No mods installed yet.")]));
+    : [el("div", { class: "card finding ok" }, scope ? "No findings name the selected mods." : r.mods.length ? "No conflicts found between your installed mods." : "No mods installed yet.")]));
   const n = (m, ...kinds) => kinds.reduce((a, k) => a + (m.counts[k] || 0), 0) || "—";
-  $("#mod-summary").replaceChildren(...r.mods.map((m) => el("tr", {},
+  $("#mod-summary").replaceChildren(...r.mods.filter((m) => !scope || scope.has(m.mod_id)).map((m) => el("tr", {},
     el("td", {}, m.name),
     el("td", {}, n(m, "resource")),
     el("td", {}, m.base_overrides || "—"),
@@ -1116,8 +1130,11 @@ function issueList(items) {
 
 function renderCrash(r) {
   const ids = suspectIds(r);
-  const current = r.issues.filter((i) => i.last_session);
-  const earlier = r.issues.filter((i) => !i.last_session);
+  const scope = window.netScope?.() || null;
+  const issues = scope ? r.issues.filter((i) => i.mod_ids.some((id) => scope.has(id))) : r.issues;
+  scopeNote($("#crash-scope"), scope, issues.length, r.issues.length, "log lines");
+  const current = issues.filter((i) => i.last_session);
+  const earlier = issues.filter((i) => !i.last_session);
   const errors = current.filter((i) => i.level === "error");
   const warnings = current.filter((i) => i.level === "warning");
   const s = r.session;

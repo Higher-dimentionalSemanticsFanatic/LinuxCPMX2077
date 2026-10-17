@@ -36,7 +36,6 @@
         <button data-tab="mods" data-sub="ultraplus" class="hidden">Ultra+ recommendations</button>
         <button data-tab="mods" data-sub="patchnotes" class="hidden">Patch-note check</button>
       </div>
-      <button data-tab="netrunner">Netrunner</button>
       <div class="nav-group" data-tabs="nexus modpacks">
         <button data-tab="nexus" class="nav-parent">Get mods</button>
         <button class="nav-caret" data-group="nexus" aria-expanded="true" aria-controls="nav-sub-nexus" title="Show or hide the Get mods sections">▾</button>
@@ -243,164 +242,6 @@
         </section>
       </div>
       <div id="coll-detail" class="hidden"></div>
-    </section>
-
-    <section id="tab-netrunner" class="tab">
-      <header>
-        <h2 class="net-title" data-text="NETRUNNER">NETRUNNER<span>diagnostics // file map // crash trace</span></h2>
-        <div class="row">
-          <div class="jump" aria-label="Sections">
-            <button class="link" data-jump="net-files">Files</button>
-            <button class="link" data-jump="diag-graph">Graph</button>
-            <button class="link" data-jump="diag-compat">Compatibility</button>
-            <button class="link" data-jump="diag-crashes">Crashes &amp; logs</button>
-            <button class="link" data-jump="net-launch">Launch options</button>
-            <button class="link" data-jump="net-wolvenkit">WolvenKit</button>
-          </div>
-          <button id="run-diagnostics" class="primary">Check again</button>
-        </div>
-      </header>
-      <div id="diag-problems"></div>
-
-      <section id="net-files" class="diag-section">
-        <header>
-          <h3>File map</h3>
-          <div class="row">
-            <div id="net-group" class="segmented" role="tablist" aria-label="Arrange files">
-              <button data-group="location" class="active" role="tab">By folder</button>
-              <button data-group="mod" role="tab">By mod</button>
-              <button data-group="order" role="tab">Load order</button>
-            </div>
-            <select id="net-sort" aria-label="Sort files">
-              <option value="name">Sort: name</option>
-              <option value="load">Sort: load order</option>
-            </select>
-            <input id="net-filter" type="search" placeholder="Find a file or mod…" aria-label="Find a file or mod">
-            <label class="check" title="Clicking a mod in the graph shows its files here; selecting a mod here (By mod) selects it in the graph"><input type="checkbox" id="net-link"> Link with graph</label>
-          </div>
-        </header>
-        <p class="muted">Every file your mods put into the game, laid out like the game folder. Click a folder to see what's in it and which mod each file came from.</p>
-        <div id="net-address" class="mono"><span id="net-path"></span><button id="net-open" class="link inline" title="Open this folder in the system file manager">Open in file manager</button></div>
-        <div id="net-browser">
-          <div id="net-tree" role="tree" aria-label="Folders"></div>
-          <div id="net-list">
-            <table>
-              <thead><tr><th>Name</th><th>Install location</th><th>Mod</th><th>Status</th><th title="Load position of .archive files; the first loaded wins shared resources">Load order</th><th>Size</th></tr></thead>
-              <tbody id="net-rows"></tbody>
-            </table>
-            <p id="net-empty" class="muted hidden"></p>
-          </div>
-        </div>
-        <div id="net-legend" class="muted">
-          <span class="net-state active">in use</span>
-          <span class="net-state overridden">overridden by a newer mod</span>
-          <span class="net-state missing">missing from the game folder</span>
-          <span class="net-state disabled">mod switched off</span>
-        </div>
-      </section>
-
-      <section id="diag-graph" class="diag-section">
-        <header>
-          <h3>How your mods connect</h3>
-          <div class="row">
-            <label class="check">Layout
-              <select id="graph-layout">
-                <option value="force">Web</option>
-                <option value="flow">Flowchart (left to right)</option>
-              </select>
-            </label>
-            <label class="check">Group by
-              <select id="graph-group">
-                <option value="">Nothing</option>
-                <option value="type">Node type</option>
-                <option value="modtype">Mod type</option>
-                <option value="tag">Tag</option>
-                <option value="category">Nexus category</option>
-                <option value="source">Source</option>
-              </select>
-            </label>
-            <label class="check" title="What happens to the rest of the graph when a node is selected. Distance counts links; paths end at frameworks and the base game">Selection
-              <select id="graph-isolate">
-                <option value="fade">Fade by distance</option>
-                <option value="hide">Hide unrelated</option>
-                <option value="near">Highlight neighbours</option>
-              </select>
-            <select id="graph-depth" aria-label="Links from the selected node" title="Nodes further than this many links from the selected node are faded out or hidden">
-              <option value="1">1 link</option>
-              <option value="2">2 links</option>
-              <option value="3">3 links</option>
-              <option value="4">4 links</option>
-            </select>
-            </label>
-            <label class="check"><input type="checkbox" id="graph-hide-hooks"> Hide harmless hooks</label>
-            <button id="graph-reset">Re-layout</button>
-          </div>
-        </header>
-        <div id="graph-wrap">
-          <canvas id="graph"></canvas>
-          <div id="graph-message" class="hidden"></div>
-          <div id="graph-scope" class="hidden" aria-live="polite"></div>
-          <div id="graph-controls" aria-label="Zoom">
-            <button id="graph-zoom-out" title="Zoom out">−</button>
-            <button id="graph-zoom" title="Zoom to 100%">100%</button>
-            <button id="graph-zoom-in" title="Zoom in">+</button>
-            <button id="graph-fit" title="Fit the whole graph in view">Fit</button>
-          </div>
-          <aside id="graph-info" class="muted">Drag to pan, scroll to zoom, drag a node to move it, click a node for details, click a type in the legend to hide or show it.</aside>
-          <div id="graph-legend"></div>
-        </div>
-      </section>
-
-      <section id="diag-compat" class="diag-section">
-        <h3>Compatibility</h3>
-        <p class="muted">Scans the files of every enabled mod for game resources, redscript methods, tweak records,
-          ArchiveXL patches and CET hooks that clash, and for frameworks a mod needs but you don't have.
-          “Show in graph” lights up the mods a finding names.</p>
-        <div id="findings"></div>
-        <details>
-          <summary>What each mod changes</summary>
-          <table>
-            <thead><tr><th>Mod</th><th>Game resources</th><th>Replaces base game</th><th>Script hooks</th><th>Tweaks</th><th>Needs</th></tr></thead>
-            <tbody id="mod-summary"></tbody>
-          </table>
-        </details>
-      </section>
-
-      <section id="diag-crashes" class="diag-section">
-        <h3>Crashes &amp; logs</h3>
-        <p class="muted">Reads the game's crash reports and the CET, RED4ext, ArchiveXL, TweakXL, Codeware and redscript logs,
-          and points out which installed mod each error mentions. Errors from the last time the game ran come first.</p>
-        <div id="crash-summary"></div>
-        <h3>Last start, step by step</h3>
-        <ol id="crash-timeline" class="timeline"></ol>
-        <div id="crash-known"></div>
-        <div id="crash-issues"></div>
-        <h3>Logs found</h3>
-        <table>
-          <thead><tr><th>Log</th><th>Size</th><th>Last written</th><th></th></tr></thead>
-          <tbody id="crash-logs"></tbody>
-        </table>
-      </section>
-
-      <section id="net-launch" class="diag-section">
-        <header>
-          <h3>Launch options</h3>
-          <div class="row"><button id="launch-current" disabled>Current line</button></div>
-        </header>
-        <p class="muted">The game's Steam launch options, one bracket per part. Select a part for what it does and which
-          Game panel item adds it. Edit the line or paste one from a guide or another launcher to check it; nothing here is written to Steam.</p>
-        <textarea id="launch-line" class="mono" rows="2" spellcheck="false" aria-label="Launch options line" placeholder="WINEDLLOVERRIDES=&quot;winmm,version=n,b&quot; %command% --launcher-skip"></textarea>
-        <p id="launch-source" class="muted small"></p>
-        <div id="launch-parts" role="listbox" aria-label="Parts of the launch options"></div>
-        <div id="launch-note" class="hidden" aria-live="polite"></div>
-      </section>
-
-      <section id="net-wolvenkit" class="diag-section">
-        <h3>WolvenKit</h3>
-        <p class="muted">The Cyberpunk 2077 modding toolkit, downloaded from its GitHub releases into CPMX2077's data folder.
-          The command-line build (WolvenKit CLI) runs on Linux and Windows with the .NET runtime; the editor is a Windows program.</p>
-        <div id="wolvenkit"></div>
-      </section>
     </section>
 
     <section id="tab-nexus" class="tab">
@@ -654,6 +495,170 @@
       </div>
     </section>
   </main>
+  <section id="tab-netrunner" class="net-panel hidden" aria-label="Netrunner">
+    <div id="np-splitter" role="separator" aria-orientation="horizontal" tabindex="0" title="Drag to resize the Netrunner panel. Double-click to reset."></div>
+    <header id="np-head">
+      <h2 class="net-title" data-text="NETRUNNER">NETRUNNER</h2>
+      <div id="np-scope" class="mono"></div>
+      <div id="np-tabs" class="segmented" role="tablist" aria-label="Netrunner sections">
+        <button data-pane="summary" role="tab" title="Setup problems, crashes, mods named in log errors and conflicts, in short">Summary</button>
+        <button data-pane="files" role="tab" title="Every file mods installed, by folder or by mod, and the archive load order">Files</button>
+        <button data-pane="conflicts" role="tab" title="Resources, methods, records and hooks several mods change; frameworks a mod needs">Conflicts</button>
+        <button data-pane="graph" role="tab" title="Mods, the frameworks they need and the game parts they touch">Mod interaction</button>
+        <button data-pane="crashes" role="tab" title="Crash reports and framework logs, matched to mods">Crashes &amp; logs</button>
+        <button data-pane="launch" role="tab" title="The game's Steam launch options, part by part">Launch options</button>
+        <button data-pane="wolvenkit" role="tab" title="WolvenKit modding toolkit: download and run">WolvenKit</button>
+      </div>
+      <span class="spacer"></span>
+      <button id="run-diagnostics" title="Read the files, logs and analysis index again">Check again</button>
+      <button id="np-hide" class="link" title="Hide the panel; the strip at the bottom keeps the counts">Hide</button>
+    </header>
+    <div id="np-body">
+    <div id="diag-problems" class="np-pane" data-pane="summary"></div>
+
+    <section id="net-files" class="diag-section np-pane" data-pane="files">
+      <header>
+        <h3>File map</h3>
+        <div class="row">
+          <div id="net-group" class="segmented" role="tablist" aria-label="Arrange files">
+            <button data-group="location" class="active" role="tab">By folder</button>
+            <button data-group="mod" role="tab">By mod</button>
+            <button data-group="order" role="tab">Load order</button>
+          </div>
+          <select id="net-sort" aria-label="Sort files">
+            <option value="name">Sort: name</option>
+            <option value="load">Sort: load order</option>
+          </select>
+          <input id="net-filter" type="search" placeholder="Find a file or mod…" aria-label="Find a file or mod">
+        </div>
+      </header>
+      <p class="muted">Every file your mods put into the game, laid out like the game folder. Click a folder to see what's in it and which mod each file came from.</p>
+      <div id="net-address" class="mono"><span id="net-path"></span><button id="net-open" class="link inline" title="Open this folder in the system file manager">Open in file manager</button></div>
+      <div id="net-browser">
+        <div id="net-tree" role="tree" aria-label="Folders"></div>
+        <div id="net-list">
+          <table>
+            <thead><tr><th>Name</th><th>Install location</th><th>Mod</th><th>Status</th><th title="Load position of .archive files; the first loaded wins shared resources">Load order</th><th>Size</th></tr></thead>
+            <tbody id="net-rows"></tbody>
+          </table>
+          <p id="net-empty" class="muted hidden"></p>
+        </div>
+      </div>
+      <div id="net-legend" class="muted">
+        <span class="net-state active">in use</span>
+        <span class="net-state overridden">overridden by a newer mod</span>
+        <span class="net-state missing">missing from the game folder</span>
+        <span class="net-state disabled">mod switched off</span>
+      </div>
+    </section>
+
+    <section id="diag-graph" class="diag-section np-pane" data-pane="graph">
+      <header>
+        <h3>Mod interaction</h3>
+        <div class="row">
+          <label class="check">Layout
+            <select id="graph-layout">
+              <option value="force">Web</option>
+              <option value="flow">Flowchart (left to right)</option>
+            </select>
+          </label>
+          <label class="check">Group by
+            <select id="graph-group">
+              <option value="">Nothing</option>
+              <option value="type">Node type</option>
+              <option value="modtype">Mod type</option>
+              <option value="tag">Tag</option>
+              <option value="category">Nexus category</option>
+              <option value="source">Source</option>
+            </select>
+          </label>
+          <label class="check" title="What happens to the rest of the graph when a node is selected. Distance counts links; paths end at frameworks and the base game">Selection
+            <select id="graph-isolate">
+              <option value="fade">Fade by distance</option>
+              <option value="hide">Hide unrelated</option>
+              <option value="near">Highlight neighbours</option>
+            </select>
+          <select id="graph-depth" aria-label="Links from the selected node" title="Nodes further than this many links from the selected node are faded out or hidden">
+            <option value="1">1 link</option>
+            <option value="2">2 links</option>
+            <option value="3">3 links</option>
+            <option value="4">4 links</option>
+          </select>
+          </label>
+          <label class="check"><input type="checkbox" id="graph-hide-hooks"> Hide harmless hooks</label>
+          <button id="graph-reset">Re-layout</button>
+        </div>
+      </header>
+      <div id="graph-wrap">
+        <canvas id="graph"></canvas>
+        <div id="graph-message" class="hidden"></div>
+        <div id="graph-scope" class="hidden" aria-live="polite"></div>
+        <div id="graph-controls" aria-label="Zoom">
+          <button id="graph-zoom-out" title="Zoom out">−</button>
+          <button id="graph-zoom" title="Zoom to 100%">100%</button>
+          <button id="graph-zoom-in" title="Zoom in">+</button>
+          <button id="graph-fit" title="Fit the whole graph in view">Fit</button>
+        </div>
+        <aside id="graph-info" class="muted">Drag to pan, scroll to zoom, drag a node to move it, click a node for details, click a type in the legend to hide or show it.</aside>
+        <div id="graph-legend"></div>
+      </div>
+    </section>
+
+    <section id="diag-compat" class="diag-section np-pane" data-pane="conflicts">
+      <h3>Conflicts</h3>
+      <p id="compat-scope" class="np-scope-note hidden"></p>
+      <p class="muted">Scans the files of every enabled mod for game resources, redscript methods, tweak records,
+        ArchiveXL patches and CET hooks that clash, and for frameworks a mod needs but you don't have.
+        “Show in graph” lights up the mods a finding names.</p>
+      <div id="findings"></div>
+      <details>
+        <summary>What each mod changes</summary>
+        <table>
+          <thead><tr><th>Mod</th><th>Game resources</th><th>Replaces base game</th><th>Script hooks</th><th>Tweaks</th><th>Needs</th></tr></thead>
+          <tbody id="mod-summary"></tbody>
+        </table>
+      </details>
+    </section>
+
+    <section id="diag-crashes" class="diag-section np-pane" data-pane="crashes">
+      <h3>Crashes &amp; logs</h3>
+      <p id="crash-scope" class="np-scope-note hidden"></p>
+      <p class="muted">Reads the game's crash reports and the CET, RED4ext, ArchiveXL, TweakXL, Codeware and redscript logs,
+        and points out which installed mod each error mentions. Errors from the last time the game ran come first.</p>
+      <div id="crash-summary"></div>
+      <h3>Last start, step by step</h3>
+      <ol id="crash-timeline" class="timeline"></ol>
+      <div id="crash-known"></div>
+      <div id="crash-issues"></div>
+      <h3>Logs found</h3>
+      <table>
+        <thead><tr><th>Log</th><th>Size</th><th>Last written</th><th></th></tr></thead>
+        <tbody id="crash-logs"></tbody>
+      </table>
+    </section>
+
+    <section id="net-launch" class="diag-section np-pane" data-pane="launch">
+      <header>
+        <h3>Launch options</h3>
+        <div class="row"><button id="launch-current" disabled>Current line</button></div>
+      </header>
+      <p class="muted">The game's Steam launch options, one bracket per part. Select a part for what it does and which
+        Game panel item adds it. Edit the line or paste one from a guide or another launcher to check it; nothing here is written to Steam.</p>
+      <textarea id="launch-line" class="mono" rows="2" spellcheck="false" aria-label="Launch options line" placeholder="WINEDLLOVERRIDES=&quot;winmm,version=n,b&quot; %command% --launcher-skip"></textarea>
+      <p id="launch-source" class="muted small"></p>
+      <div id="launch-parts" role="listbox" aria-label="Parts of the launch options"></div>
+      <div id="launch-note" class="hidden" aria-live="polite"></div>
+    </section>
+
+    <section id="net-wolvenkit" class="diag-section np-pane" data-pane="wolvenkit">
+      <h3>WolvenKit</h3>
+      <p class="muted">The Cyberpunk 2077 modding toolkit, downloaded from its GitHub releases into CPMX2077's data folder.
+        The command-line build (WolvenKit CLI) runs on Linux and Windows with the .NET runtime; the editor is a Windows program.</p>
+      <div id="wolvenkit"></div>
+    </section>
+    </div>
+  </section>
+  <div id="net-strip" class="hidden" role="button" tabindex="0" title="Show the Netrunner panel: files, load order, conflicts, mod interaction and logs of the selected mods"></div>
 
   <div id="wizard" class="hidden" role="dialog" aria-modal="true" aria-labelledby="wiz-title">
     <div class="wiz-panel">
@@ -739,6 +744,7 @@
   <script src="optiscaler.js"></script>
   <script src="radio.js"></script>
   <script src="wolvenkit.js"></script>
+  <script src="netpanel.js"></script>
   <script src="app_update.js"></script>
   <script src="tour.js"></script>
 </body>

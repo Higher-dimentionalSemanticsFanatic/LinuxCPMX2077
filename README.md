@@ -44,9 +44,11 @@ Install it like any mod; see [its README](crates/hid-plugin/README.md).
   prefix and the Steam launch options mods need, each with an Undo.
 - **Nexus Mods and GitHub in the app**: browse, download, verify and install,
   with a download queue and update checks.
-- **Netrunner tab**: one place to see what's wrong. A file map of everything
-  mods installed, a graph of how mods connect, a compatibility check that
-  needs no AI, and crash and log analysis that names the mod behind an error.
+- **Netrunner panel**: one place to see what's wrong, docked under the
+  installed mods list and following the mod you select there. A file map of
+  everything mods installed, a graph of how mods interact, a conflicts check
+  that needs no AI, and crash and log analysis that names the mod behind an
+  error.
 - **Safe downloads**: Nexus files must match the checksum Nexus knows for
   them, GitHub files the SHA-256 GitHub publishes, and archives are unpacked
   with zip-bomb and path checks.
@@ -56,7 +58,7 @@ Install it like any mod; see [its README](crates/hid-plugin/README.md).
 | ![Netrunner: a summary of crashes, log errors and compatibility problems](docs/images/netrunner.png) | ![File map: every file mods installed, by game folder, with the mod it came from and its status](docs/images/file-map.png) |
 | **Netrunner** sums up what needs attention. | **File map** shows which mod owns each file. |
 | ![Graph: mods, the frameworks they need and what they touch, as a flowchart with clashes in red](docs/images/graph.png) | ![Crashes and logs: the last game start step by step, with the first step that failed marked](docs/images/crashes.png) |
-| **Graph** shows how mods connect and where they clash. | **Crashes & logs** walks through the last start and marks where it broke. |
+| **Mod interaction** shows how mods connect and where they clash. | **Crashes & logs** walks through the last start and marks where it broke. |
 
 Screenshots show sample data, with file locations blurred.
 
@@ -192,13 +194,15 @@ Screenshots show sample data, with file locations blurred.
 - **Multi-select**: select several installed mods to enable, disable,
   tag or uninstall them together, or several downloads to delete them, with one
   confirmation listing what is removed.
-- **Netrunner tab** (formerly Diagnostics): one place for overview and
-  diagnosis. It opens with a summary of what needs attention (game setup
+- **Netrunner panel** (formerly the Netrunner and Diagnostics tabs): a
+  resizable panel under Installed mods › Overview (List or Canvas), folded
+  to a strip with the counts when hidden. Tabs: Summary (game setup
   warnings, recent crashes, mods named in log errors, compatibility
-  problems), followed by the file map, the graph, the compatibility findings,
-  the crash/log check and a launch options explainer (a bracket under each
-  part of the Steam launch options, with what it does and which setup fix
-  adds it).
+  problems), Files (the file map), Conflicts, Mod interaction (the graph),
+  Crashes & logs, Launch options (a bracket under each part of the Steam
+  launch options, with what it does and which setup fix adds it) and
+  WolvenKit. Selecting a mod in the list, the canvas, the graph or the file
+  map scopes every tab to it.
 - **File map**: a registry-editor style tree of every file mods installed,
   by game folder or by mod, showing which mod owns each file, where it is
   installed and whether it is in use, overridden by a newer mod, missing or
@@ -234,12 +238,11 @@ Screenshots show sample data, with file locations blurred.
   mods, CET, ArchiveXL, TweakXL, Codeware, crash) and marks the first one that
   failed. A list of known problem mods from the modding wiki's troubleshooting
   guide (`crates/core/data/known_issues.json`) is checked too.
-- **Graph view**: mods, the frameworks they need, the game classes, tweak
+- **Mod interaction graph**: mods, the frameworks they need, the game classes, tweak
   records and resources they touch, with clashes highlighted. "Group by"
   rings or heads the nodes by node type, mod type, tag, Nexus category or
   source; clicking a type in the legend hides or shows it. Selecting a node
-  fades the rest by link distance or hides everything unrelated, and the
-  File map can follow the graph's selection (and the other way round).
+  fades the rest by link distance or hides everything unrelated.
 - **Verify**: re-hashes a mod's files and reports missing, edited or
   overridden ones.
 - **Nexus Mods sign-in**: “Sign in with Nexus Mods” uses Nexus SSO, so you
