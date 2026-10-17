@@ -435,7 +435,8 @@ mod tests {
         if std::env::var_os("UPDATE_REDS").is_some() {
             std::fs::write(FILE, &want).unwrap();
         }
-        let have = std::fs::read_to_string(FILE).unwrap_or_default();
+        // A checkout with CRLF line ends still counts as current.
+        let have = std::fs::read_to_string(FILE).unwrap_or_default().replace("\r\n", "\n");
         assert!(have == want, "reds/HIDInput.reds is out of date: run UPDATE_REDS=1 cargo test -p cp2077mm-hidmap menu::");
     }
 
