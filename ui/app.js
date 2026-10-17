@@ -602,7 +602,10 @@ function modRow(m) {
     el("td", { class: "thumb-col" }, modThumb(m)),
     el("td", {}, el("b", {}, m.name), on ? null : el("span", { class: "badge" }, "disabled"),
       el("div", { class: "muted mono" }, m.archive_name)),
-    el("td", {}, tagEditor(m), el("div", { class: "muted small" }, m.category || "")),
+    el("td", {}, tagEditor(m), m.category
+      ? el("div", { class: "muted small nx-cat", title: "Nexus Mods category, from the mod's Nexus page. Tags above are CPMX2077 tags." },
+        el("span", { class: "nx-src", "aria-label": "Nexus Mods category:" }, "NX"), m.category)
+      : null),
     el("td", {}, m.version || "—", up ? el("div", { class: "badge ok" }, `${up.to_stable ? "stable " : ""}${up.latest} available`) : null),
     el("td", {}, el("span", { class: "badge" }, sourceLabel(m))),
     el("td", {}, m.file_count),
