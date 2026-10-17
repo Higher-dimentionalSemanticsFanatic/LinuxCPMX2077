@@ -741,6 +741,12 @@ adds them to the XInput gamepad on the chosen slot:
 So pedals work next to a gamepad (accelerate with the pedal, steer with
 the stick), or with mouse and keyboard and no gamepad at all.
 
+Bindings are set on this page or in the game under **Settings › Mods ›
+HID Input** (see [In the game: Settings › Mods › HID Input](#in-the-game-settings--mods--hid-input));
+bindings from both apply. The plugin is also published as a standalone
+mod, `CPMX2077-HID-Input-<version>.zip` on the CPMX2077 release page, for
+players who don't use CPMX2077: unpack it into the game folder.
+
 The top rows:
 
 | Row | What it shows |
@@ -748,14 +754,16 @@ The top rows:
 | **Plugin** | The installed version, and whether it is the one this CPMX2077 build carries (*matches this CPMX2077 build*). *not managed* when `cpmx_hid_input.dll` is in the plugin folder but was not installed by CPMX2077. |
 | **RED4ext** | *installed* when RED4ext is in the game. |
 | **Game input imports** | The input DLLs `bin/x64/Cyberpunk2077.exe` imports (read from its import table): *XInput imported* plus the functions. |
-| **Last game run** | What the plugin wrote to `status.json` in the last game run, and how long ago: hooks set, `XInputGetState` calls, reads that carried bound input, reads where it reported a gamepad, bindings active (bound device connected). *no XInput reads*: the game didn't ask XInput for the gamepad in that run, so bound inputs didn't reach it. *not connected* names bound controllers the plugin didn't find; *bindings file* shows a `bindings.json` it couldn't read (it keeps the bindings it had). The last line lists the controllers the plugin read in the game. |
+| **In-game menu** | Whether [Mod Settings](https://www.nexusmods.com/cyberpunk2077/mods/4885) is installed (it shows **Settings › Mods** in the game; it uses RED4ext, redscript and ArchiveXL), and what is saved there: number of bindings, **Bindings on**, **Gamepad slot**, and whether a gamepad is reported. *nothing saved there yet* until the menu is first saved. Read from `red4ext/plugins/mod_settings/user.ini`. While Mod Settings is missing, **Get Mod Settings** adds it to the download queue from Nexus Mods. |
+| **Last game run** | What the plugin wrote to `status.json` in the last game run, and how long ago: hooks set, `XInputGetState` calls, reads that carried bound input, reads where it reported a gamepad, bindings active (bound device connected). *no XInput reads*: the game didn't ask XInput for the gamepad in that run, so bound inputs didn't reach it. *not connected* names bound controllers the plugin didn't find (*Controller 2 (in-game menu)* for a menu number with no controller); *bindings file* shows a `bindings.json` it couldn't read (it keeps the bindings it had). Below: the controllers the plugin read in the game, each with its in-game menu number (*Controller 1*) and its axes in the plugin's order (*Axis 1: X axis · Axis 2: Y axis*), buttons and hat switches. XInput gamepads are listed without a number: the game reads them itself. |
 
 Buttons:
 
 - **Install plugin** installs the plugin into
-  `red4ext/plugins/cpmx_hid_input/` as a tracked mod (source *CPMX2077*,
-  category *Input*): it shows in the mod list and turns off with the
-  **Enabled** switch like any mod. When an older version is installed
+  `red4ext/plugins/cpmx_hid_input/` and its in-game menu script into
+  `r6/scripts/cpmx_hid_input/HIDInput.reds`, as a tracked mod (source
+  *CPMX2077*, category *Input*): it shows in the mod list and turns off
+  with the **Enabled** switch like any mod. When an older version is installed
   the button reads **Update plugin to …** and replaces it. Either takes
   effect at the next game start.
 - **Open plugin folder** opens `red4ext/plugins/cpmx_hid_input/`.
@@ -771,6 +779,11 @@ Buttons:
 - **Save bindings** writes `bindings.json` to the plugin folder; the badge
   *unsaved changes* shows there are edits not yet saved. The plugin reads
   the file again within a second, also while the game runs.
+
+Once **Settings › Mods › HID Input** has been saved in the game, its
+**Bindings on**, **Gamepad slot** and **Report a gamepad when none is
+connected** are the ones the plugin uses: here they show those values,
+greyed out, marked *set in the game menu*.
 
 The gamepad drawing has a box per gamepad input, with what it does when
 driving (**Right trigger**: accelerate, **Left trigger**: brake and
@@ -798,11 +811,18 @@ The table below lists each binding:
 | **Output** | The value the binding gives now, from the controller's live values. |
 | **Remove** | Deletes the binding (saved with **Save bindings**). |
 
+**Set in the game menu** lists the bindings saved in **Settings › Mods ›
+HID Input**, with the controller's name from the last game run
+(*Controller 2 (Saitek Pro Flight Rudder Pedals) · Axis 2 (Y axis)*).
+They are changed in the game, not here. The gamepad drawing shows them
+too, as *Controller 2 (game menu)*.
+
 **Controllers on this computer** lists the connected game controllers
 with a drawing (pedals, wheel, flight stick, throttle, button box), a bar
 per axis and a lamp per button and hat switch, all moving with the live
 values. The drawing is picked from the device's name and inputs; the
-menu next to the name changes it. On Linux the list is read from
+menu next to the name changes it. A *Controller 1* badge gives its number
+in the game menu, from the plugin's last game run. On Linux the list is read from
 `/dev/input` (devices udev marks as joysticks), and live values need read
 access to the device node: *no live values* shows the error. Proton gives
 the game the same devices. On Windows the list is read through `hid.dll`,
@@ -814,6 +834,38 @@ number can differ between Linux and the game; the plugin matches axes by
 their HID usage when the game sees the same axis set, and by position
 otherwise. Checked under Wine with the plugin's hooks, not yet with real
 controllers in the game: see *Last game run* after a session.
+
+#### In the game: Settings › Mods › HID Input
+
+With [Mod Settings](https://www.nexusmods.com/cyberpunk2077/mods/4885)
+installed, the game's **Settings** has a **Mods** page with **HID Input**.
+The menu offers fixed choices, so it binds by number:
+
+- **General**: **Bindings on**, **Gamepad slot**, **Report a gamepad when
+  none is connected**, as on this page.
+- One section per analog gamepad input: **Right trigger (vehicle:
+  accelerate)**, **Left trigger (vehicle: brake, reverse)**, **Left stick X
+  (vehicle: steer)**, **Left stick Y**, **Right stick X**, **Right stick
+  Y**. Each has **Controller** (*None*, *Controller 1* to *Controller 4*),
+  **Input** (*Axis 1* to *Axis 8*, *Button 1* to *Button 32*), **Invert**,
+  **Deadzone (%)** (0 to 50), **Response** (*Linear*, *Progressive*,
+  *Strong*) and, on the sticks, **Stick range**.
+- **Buttons**: *controller* and *input* for each gamepad button and d-pad
+  direction (**A: controller**, **A: input**, …). An axis counts as
+  pressed past half its travel.
+- **D-pad (hat switch)**: **Controller** and **Hat switch**; the hat drives
+  all four directions.
+
+Controller numbers count the game controllers that are not XInput
+gamepads, ordered by USB vendor and product ID, so they stay the same
+from one session to the next while the same controllers are connected;
+during a session, a controller that is unplugged keeps its number. Axis,
+button and hat numbers are the order the plugin reads the controller in.
+The **Last game run** row here, and `status.json` in the plugin folder,
+list each controller's number and axes.
+
+Mod Settings saves the menu to `red4ext/plugins/mod_settings/user.ini`;
+the plugin reads it again within a second, also while the game runs.
 
 ## Modpacks
 
@@ -1494,7 +1546,7 @@ logs are only readable from a fixed list of known locations.
 | FSR 4 shader overrides | `~/.local/share/cp2077-modmanager/fsr4-shader-overrides/` (`prebuilt/`, `prebuilt-lossy/`) |
 | WolvenKit (Netrunner) | `~/.local/share/cp2077-modmanager/tools/wolvenkit/` (`cli/`, `editor/` on Windows; release archives are deleted after unpacking) |
 | Radio station icons made from a PNG | `archive/pc/mod/cpmx2077_radio_<station>.archive` in the game folder |
-| HID input bindings and the plugin's last-run report | `red4ext/plugins/cpmx_hid_input/bindings.json` and `status.json` in the game folder |
+| HID input bindings and the plugin's last-run report | `red4ext/plugins/cpmx_hid_input/bindings.json` and `status.json` in the game folder; bindings set in the game: Mod Settings' `red4ext/plugins/mod_settings/user.ini` |
 | Saved Nexus pages | `~/.cache/cp2077-modmanager/nexus/` |
 | Mod thumbnails | `~/.cache/cp2077-modmanager/thumbnails/` |
 | Refreshed Ultra+ recommendations | In the library database (settings) |

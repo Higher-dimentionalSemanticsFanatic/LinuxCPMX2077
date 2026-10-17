@@ -44,7 +44,10 @@ Both checks must pass before pushing.
   have their own `*_cmd.rs`. Commands that touch disk or network run on a
   blocking thread. The same binary serves `--mcp` (see `core::mcp`).
 - `crates/hidmap` (`cp2077mm-hidmap`): the HID Input binding format
-  (`bindings.json`, `status.json`), the merge rules, a HID report
+  (`bindings.json`, `status.json`), the merge rules, the in-game menu
+  (`menu`: generates `reds/HIDInput.reds` for the Mod Settings mod and
+  reads its `user.ini`; after changing the menu run
+  `UPDATE_REDS=1 cargo test -p cp2077mm-hidmap menu::`), a HID report
   descriptor parser and the Windows `hid.dll` reader. Shared by core and
   the plugin; keep it free of GUI and database code.
 - `crates/hid-plugin` (`cpmx-hid-input`): RED4ext plugin DLL that hooks

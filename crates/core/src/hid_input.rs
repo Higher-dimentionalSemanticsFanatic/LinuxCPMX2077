@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use cp2077mm_hidmap::{self as hm, Bindings, Input, PAGE_SIMULATION, Status, usage};
+use cp2077mm_hidmap::{self as hm, Bindings, Input, PAGE_SIMULATION, Status, menu, usage};
 use serde::Serialize;
 
 use crate::db::{Db, GameRow, ModRow, NewMod};
@@ -531,6 +531,12 @@ pub struct PluginState {
     /// The DLL is in the game but CPMX2077 has no record of installing it.
     pub unmanaged: bool,
     pub red4ext: bool,
+    /// Settings › Mods › HID Input: Mod Settings and redscript present, and
+    /// the values saved there.
+    pub mod_settings: bool,
+    pub redscript: bool,
+    pub menu: Option<MenuView>,
+    pub menu_error: Option<String>,
     /// XInput, DirectInput and GameInput DLLs the game executable imports,
     /// with the input functions it imports from them.
     pub game_imports: Vec<String>,
@@ -538,6 +544,54 @@ pub struct PluginState {
     pub status: Option<Status>,
     pub status_age: Option<u64>,
     pub plugin_dir: String,
+}
+
+/// The in-game menu's values, for the page.
+#[derive(Debug, Clone, Serialize)]
+pub struct MenuView {
+    pub enabled: bool,
+    pub slot: u32,
+    pub emulate_pad: bool,
+    pub bindings: Vec<MenuBindingView>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MenuBindingView {
+    pub controller: u32,
+    pub target: hm::Target,
+    pub input: Input,
+    pub invert: bool,
+    pub deadzone: f32,
+    pub curve: f32,
+    pub half: hm::Half,
+}
+
+/// Mod Settings' saved HID Input values, if any.
+pub fn read_menu(game_dir: &Path) -> std::result::Result<Option<MenuView>, String> {
+    let path = resolve_ci(game_dir, menu::USER_INI);
+    let text = match std::fs::read(&path) {
+        Ok(b) => String::from_utf8_lossy(&b).into_owned(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(format!("{}: {e}", menu::USER_INI)),
+    };
+    Ok(menu::parse(&text).map(|m| MenuView {
+        enabled: m.enabled,
+        slot: m.slot,
+        emulate_pad: m.emulate_pad,
+        bindings: m
+            .bindings
+            .into_iter()
+            .map(|b| MenuBindingView {
+                controller: b.controller,
+                target: b.target,
+                input: b.input,
+                invert: b.invert,
+                deadzone: b.deadzone,
+                curve: b.curve,
+                half: b.half,
+            })
+            .collect(),
+    }))
 }
 
 pub fn installed_mod(db: &Db, game_id: i64) -> Result<Option<ModRow>> {
@@ -554,12 +608,19 @@ pub fn state(db: &Db, game: &GameRow, bundled: &[u8]) -> Result<PluginState> {
     let dir = plugin_dir(game_dir);
     let dll = dir.join(hm::PLUGIN_DLL);
     let on_disk = dll.is_file().then(|| hash::sha256_file(&dll).ok()).flatten();
+    // Current: this build's DLL and script are the ones in the game.
+    let script = resolve_ci(game_dir, menu::SCRIPT_PATH);
+    let script_current = std::fs::read(&script).is_ok_and(|b| b == menu::SCRIPT.as_bytes());
     let installed = installed_mod(db, game.id)?.map(|m| Installed {
         mod_id: m.id,
         version: m.version.clone(),
         enabled: m.enabled(),
-        current: !bundled.is_empty() && on_disk.as_deref() == Some(sha256_bytes(bundled).as_str()),
+        current: !bundled.is_empty() && script_current && on_disk.as_deref() == Some(sha256_bytes(bundled).as_str()),
     });
+    let (menu, menu_error) = match read_menu(game_dir) {
+        Ok(m) => (m, None),
+        Err(e) => (None, Some(e)),
+    };
     let status_path = dir.join(hm::STATUS_FILE);
     let status: Option<Status> = std::fs::read(&status_path).ok().and_then(|b| serde_json::from_slice(&b).ok());
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
@@ -568,6 +629,10 @@ pub fn state(db: &Db, game: &GameRow, bundled: &[u8]) -> Result<PluginState> {
         unmanaged: installed.is_none() && on_disk.is_some(),
         installed,
         red4ext: resolve_ci(game_dir, "red4ext/RED4ext.dll").is_file(),
+        mod_settings: resolve_ci(game_dir, menu::MOD_SETTINGS_DLL).is_file(),
+        redscript: crate::game::exists_ci(game_dir, "engine/tools/scc.exe") || crate::game::exists_ci(game_dir, "engine/tools/scc_lib.dll"),
+        menu,
+        menu_error,
         game_imports: game_imports(game_dir),
         status_age: status.as_ref().map(|s| now.saturating_sub(s.updated)),
         status,
@@ -641,6 +706,8 @@ pub fn install(inst: &Installer, game: &GameRow, dll: &[u8]) -> Result<InstallRe
         let opts = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
         z.start_file(format!("{}/{}", hm::PLUGIN_DIR, hm::PLUGIN_DLL), opts).map_err(|e| Error::Other(e.to_string()))?;
         z.write_all(dll)?;
+        z.start_file(menu::SCRIPT_PATH, opts).map_err(|e| Error::Other(e.to_string()))?;
+        z.write_all(menu::SCRIPT.as_bytes())?;
         z.finish().map_err(|e| Error::Other(e.to_string()))?;
     }
     let p = inst.prepare(game, &zip_path)?;
@@ -736,12 +803,26 @@ mod tests {
         assert!(install(&inst, &game, b"").is_err());
         assert!(install(&inst, &game, b"ELF").is_err());
         let r = install(&inst, &game, &dll).unwrap();
-        assert_eq!(r.files_installed, 1);
+        assert_eq!(r.files_installed, 2, "the DLL and the in-game menu script");
+        assert_eq!(std::fs::read_to_string(game_dir.join(menu::SCRIPT_PATH)).unwrap(), menu::SCRIPT);
         let s = state(&db, &game, &dll).unwrap();
         let i = s.installed.unwrap();
         assert!(i.current && i.enabled);
         assert_eq!(i.version.as_deref(), Some(hm::PLUGIN_VERSION));
         assert!(!s.unmanaged && !s.red4ext && s.game_imports.is_empty() && s.status.is_none());
+        assert!(!s.mod_settings && s.menu.is_none());
+        // An edited or missing script means the install is not current.
+        std::fs::write(game_dir.join(menu::SCRIPT_PATH), "// edited").unwrap();
+        assert!(!state(&db, &game, &dll).unwrap().installed.unwrap().current);
+        // Values saved in Settings > Mods are read from Mod Settings' user.ini.
+        let ini = game_dir.join(menu::USER_INI);
+        std::fs::create_dir_all(ini.parent().unwrap()).unwrap();
+        std::fs::write(game_dir.join(menu::MOD_SETTINGS_DLL), b"MZ").unwrap();
+        std::fs::write(&ini, "[CPMXHIDInputSettings]\ngamepadSlot = 2\nrightTriggerController = 1\nrightTriggerInput = 2\n").unwrap();
+        let s = state(&db, &game, &dll).unwrap();
+        let m = s.menu.unwrap();
+        assert!(s.mod_settings && m.slot == 1 && m.bindings.len() == 1);
+        assert_eq!(m.bindings[0].input, Input::Axis { index: 2, usage: None, occurrence: 0 });
         // A newer build's DLL replaces the old record.
         let newer = b"MZ newer plugin".to_vec();
         assert!(!state(&db, &game, &newer).unwrap().installed.unwrap().current);

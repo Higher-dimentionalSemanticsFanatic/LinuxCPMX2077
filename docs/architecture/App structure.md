@@ -35,7 +35,7 @@ flowchart LR
     mcp[mcp]
   end
   subgraph Hid["HID input plugin"]
-    hidmap[crates/hidmap<br/>bindings format, merge rules,<br/>HID descriptor parser, hid.dll reader]
+    hidmap[crates/hidmap<br/>bindings format, merge rules,<br/>in-game menu script + user.ini reader,<br/>HID descriptor parser, hid.dll reader]
     plugin[crates/hid-plugin<br/>RED4ext DLL: XInput hooks]
   end
   app & mp & nr & rs & dbg -- invoke --> main & cmds
@@ -55,6 +55,12 @@ targets), cross-compiled from Linux with `x86_64-pc-windows-gnu`.
 game it hooks `XInputGetState(Ex)` and `XInputGetCapabilities` in every
 `xinput*.dll`, reads the bound devices through `hid.dll`, and merges them
 with `hidmap::contribution`, the same rules `ui/hid.js` previews.
+Bindings come from `bindings.json` (CPMX2077's page) and from the in-game
+menu: `hidmap::menu::script` generates `crates/hidmap/reds/HIDInput.reds`,
+a script class the Mod Settings mod shows as Settings › Mods › HID Input;
+Mod Settings saves it to `red4ext/plugins/mod_settings/user.ini`, which
+the plugin reads with `menu::parse` and maps to controllers numbered by
+`menu::numbered` (no script-to-plugin calls).
 
 ## Tabs and what they call
 
@@ -86,6 +92,7 @@ All paths come from `core::paths` (XDG on Linux, `dirs` equivalents on Windows).
 | Nexus API key | system keyring | `core::secrets` |
 | Nexus page cache | `<cache>/cp2077-modmanager/nexus/` | `core::nexus_cache` |
 | HID input bindings, plugin last-run report | `<game>/red4ext/plugins/cpmx_hid_input/bindings.json`, `status.json` | `core::hid_input::save_bindings`; the plugin in the game |
+| HID input bindings set in the game | `<game>/red4ext/plugins/mod_settings/user.ini` | the Mod Settings mod; read by the plugin and `core::hid_input::read_menu` |
 
 ## Database tables that matter for installs
 

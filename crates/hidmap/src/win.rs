@@ -30,6 +30,9 @@ pub struct Info {
     pub instance: u32,
     pub name: String,
     pub layout: Layout,
+    /// An XInput gamepad (`IG_` in its path): the game reads it already, and
+    /// the in-game menu leaves it out of its controller numbers.
+    pub xinput: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -220,6 +223,7 @@ pub fn list() -> Vec<Info> {
             continue;
         }
         let instance = out.iter().filter(|i| i.vid == attr.VendorID && i.pid == attr.ProductID).count() as u32;
+        let xinput = String::from_utf16_lossy(&path).to_ascii_lowercase().contains("ig_");
         out.push(Info {
             path,
             vid: attr.VendorID,
@@ -227,6 +231,7 @@ pub fn list() -> Vec<Info> {
             instance,
             name: product_name(&h),
             layout: layout(&c),
+            xinput,
         });
     }
     out

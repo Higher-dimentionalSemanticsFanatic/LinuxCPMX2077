@@ -4,9 +4,10 @@
 //! `Supports`, `Query` and `Main`. `Main` hooks XInputGetState (and
 //! XInputGetStateEx, XInputGetCapabilities) in every XInput DLL through
 //! RED4ext's hooking API, then a background thread watches the bindings
-//! file, opens the bound devices and writes the status file. One thread per
-//! open device waits for its input reports. The hooks add the bound inputs
-//! to the game's reads of the bound gamepad slot.
+//! (CPMX2077's `bindings.json` and the in-game menu's values in Mod
+//! Settings' `user.ini`), opens the bound devices and writes the status
+//! file. One thread per open device waits for its input reports. The hooks
+//! add the bound inputs to the game's reads of the bound gamepad slot.
 
 use std::collections::HashSet;
 use std::ffi::{CString, c_void};
@@ -15,6 +16,7 @@ use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use cp2077mm_hidmap::menu::{self, Menu, Numbered};
 use cp2077mm_hidmap::{self as hm, Active, Bindings, Live, Pad, Status, StatusDevice, win};
 use windows_sys::Win32::Foundation::{ERROR_DEVICE_NOT_CONNECTED, ERROR_SUCCESS, HMODULE};
 use windows_sys::Win32::System::LibraryLoader::{
@@ -172,6 +174,12 @@ struct Connected {
 
 #[derive(Default)]
 struct Engine {
+    /// `bindings.json`, written by CPMX2077.
+    file: Bindings,
+    /// Settings › Mods › HID Input, when saved.
+    menu: Option<Menu>,
+    menu_error: Option<String>,
+    /// Both together: what the hooks use.
     cfg: Bindings,
     cfg_error: Option<String>,
     /// Devices opened since the game started; a slot is reused when the
@@ -181,12 +189,51 @@ struct Engine {
     active: Vec<Active>,
     /// Every game controller seen by the last scan.
     seen: Vec<win::Info>,
+    /// Controllers the menu numbers: every non-XInput controller seen since
+    /// the game started, so numbers don't shift when one is unplugged.
+    numbered: Vec<Numbered>,
     /// Per XInput slot: the last pad returned and how often it changed.
     last: [Pad; 4],
     changes: [u32; 4],
 }
 
 impl Engine {
+    /// `bindings.json` plus the menu's bindings for the controllers as
+    /// numbered now; the menu's general settings win once saved.
+    fn combine(&mut self) {
+        let mut cfg = self.file.clone();
+        if let Some(m) = &self.menu {
+            cfg.enabled = m.enabled;
+            cfg.slot = m.slot;
+            cfg.emulate_pad = m.emulate_pad;
+            let (devices, bindings) = m.resolve(&self.numbered);
+            cfg.devices.extend(devices);
+            cfg.bindings.extend(bindings);
+        }
+        cfg.slot = cfg.slot.min(3);
+        self.cfg = cfg;
+        self.rebuild();
+    }
+
+    /// Add newly seen controllers to the menu's numbering.
+    fn number(&mut self) {
+        let mut all = self.numbered.clone();
+        for i in self.seen.iter().filter(|i| !i.xinput) {
+            if !all.iter().any(|c| c.vid == i.vid && c.pid == i.pid && c.instance == i.instance) {
+                all.push(Numbered { vid: i.vid, pid: i.pid, instance: i.instance, name: i.name.clone() });
+            }
+        }
+        self.numbered = menu::numbered(all);
+    }
+
+    /// Menu controller numbers bound but not seen.
+    fn menu_missing(&self) -> Vec<u32> {
+        let mut n: Vec<u32> = self.menu.iter().flat_map(|m| &m.bindings).map(|b| b.controller).filter(|c| *c as usize > self.numbered.len()).collect();
+        n.sort_unstable();
+        n.dedup();
+        n
+    }
+
     /// Match every binding to a connected device and input.
     fn rebuild(&mut self) {
         let mut active = Vec::new();
@@ -219,6 +266,7 @@ impl Engine {
                 !self.devices.iter().any(|c| c.connected && c.info.vid == d.vid && c.info.pid == d.pid && c.info.instance == d.instance)
             })
             .map(|d| if d.name.is_empty() { d.id.clone() } else { format!("{} ({})", d.name, d.id) })
+            .chain(self.menu_missing().into_iter().map(|n| format!("Controller {n} (in-game menu)")))
             .collect()
     }
 }
@@ -454,9 +502,14 @@ unsafe fn load(handle: HMODULE, sdk: &Sdk) {
     {
         let mut e = engine();
         load_config(&mut e, &dir.join(hm::BINDINGS_FILE));
-        let n = e.cfg.bindings.len();
+        load_menu(&mut e, &user_ini(&dir));
+        let (n, m) = (e.file.bindings.len(), e.menu.as_ref().map(|m| m.bindings.len()));
         drop(e);
-        log(sdk, handle, INFO, &format!("{} {VERSION}: {n} binding(s) in {}", hm::PLUGIN_NAME, hm::BINDINGS_FILE));
+        let menu = match m {
+            Some(m) => format!("{m} in Settings > Mods > {}", menu::MENU_NAME),
+            None => "none saved in Settings > Mods".into(),
+        };
+        log(sdk, handle, INFO, &format!("{} {VERSION}: {n} binding(s) in {}, {menu}", hm::PLUGIN_NAME, hm::BINDINGS_FILE));
     }
     unsafe { hook_xinput(handle, sdk) };
     let started = unix_now();
@@ -480,20 +533,41 @@ fn load_config(e: &mut Engine, path: &Path) {
     match std::fs::read(path) {
         Ok(bytes) => match serde_json::from_slice::<Bindings>(&bytes) {
             Ok(cfg) => {
-                e.cfg = cfg;
+                e.file = cfg;
                 e.cfg_error = None;
             }
             // Keep the previous bindings until the file parses again.
             Err(err) => e.cfg_error = Some(format!("{}: {err}", hm::BINDINGS_FILE)),
         },
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-            e.cfg = Bindings::default();
+            e.file = Bindings::default();
             e.cfg_error = None;
         }
         Err(err) => e.cfg_error = Some(format!("{}: {err}", hm::BINDINGS_FILE)),
     }
-    e.cfg.slot = e.cfg.slot.min(3);
-    e.rebuild();
+    e.combine();
+}
+
+/// Mod Settings' `user.ini`: `red4ext/plugins/mod_settings/` next to this
+/// plugin's folder.
+fn user_ini(dir: &Path) -> PathBuf {
+    dir.parent().unwrap_or(dir).join("mod_settings").join("user.ini")
+}
+
+fn load_menu(e: &mut Engine, path: &Path) {
+    match std::fs::read(path) {
+        Ok(bytes) => {
+            e.menu = menu::parse(&String::from_utf8_lossy(&bytes));
+            e.menu_error = None;
+        }
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            e.menu = None;
+            e.menu_error = None;
+        }
+        // Keep the previous values until the file reads again.
+        Err(err) => e.menu_error = Some(format!("{}: {err}", menu::USER_INI)),
+    }
+    e.combine();
 }
 
 fn modified(path: &Path) -> Option<SystemTime> {
@@ -508,6 +582,10 @@ fn unix_now() -> u64 {
 fn scan() {
     let found = win::list();
     let mut e = engine();
+    // New controllers may take a menu number: bind them before opening.
+    e.seen = found.clone();
+    e.number();
+    e.combine();
     let mut opened = Vec::new();
     for info in &found {
         if !e.wanted(info) || e.devices.iter().any(|c| c.connected && c.info.path == info.path) {
@@ -531,7 +609,6 @@ fn scan() {
         };
         opened.push((slot, reader));
     }
-    e.seen = found;
     if !opened.is_empty() {
         e.rebuild();
     }
@@ -570,9 +647,15 @@ fn status(started: u64) -> Status {
             vid: i.vid,
             pid: i.pid,
             axes: i.layout.axes.clone(),
+            axis_names: i.layout.axes.iter().enumerate().map(|(n, u)| format!("Axis {}: {}", n + 1, hm::usage_label(*u).unwrap_or("other"))).collect(),
             buttons: i.layout.buttons,
             hats: i.layout.hats,
             bound: e.devices.iter().enumerate().any(|(n, c)| c.connected && c.info.path == i.path && e.active.iter().any(|a| a.device == n)),
+            controller: (!i.xinput)
+                .then(|| e.numbered.iter().position(|c| c.vid == i.vid && c.pid == i.pid && c.instance == i.instance))
+                .flatten()
+                .map(|n| n as u32 + 1),
+            xinput: i.xinput,
         })
         .collect();
     Status {
@@ -584,9 +667,10 @@ fn status(started: u64) -> Status {
         get_state_calls: GET_STATE_CALLS.load(Ordering::Relaxed),
         merged_reads: MERGED_READS.load(Ordering::Relaxed),
         emulated_reads: EMULATED_READS.load(Ordering::Relaxed),
-        config_error: e.cfg_error.clone(),
+        config_error: e.cfg_error.clone().or_else(|| e.menu_error.clone()),
         enabled: e.cfg.enabled,
         bindings: e.cfg.bindings.len(),
+        menu_bindings: e.menu.as_ref().map(|m| m.bindings.len()),
         active_bindings: e.active.len(),
         devices,
         missing: e.missing(),
@@ -606,6 +690,8 @@ fn write_status(dir: &Path, started: u64) {
 fn monitor(dir: PathBuf, started: u64) {
     let cfg_path = dir.join(hm::BINDINGS_FILE);
     let mut cfg_time = modified(&cfg_path);
+    let ini_path = user_ini(&dir);
+    let mut ini_time = modified(&ini_path);
     let mut last_scan: Option<Instant> = None;
     let mut last_status: Option<Instant> = None;
     while !STOPPING.load(Ordering::Relaxed) {
@@ -614,6 +700,12 @@ fn monitor(dir: PathBuf, started: u64) {
         if t != cfg_time {
             cfg_time = t;
             load_config(&mut engine(), &cfg_path);
+            rescan = true;
+        }
+        let t = modified(&ini_path);
+        if t != ini_time {
+            ini_time = t;
+            load_menu(&mut engine(), &ini_path);
             rescan = true;
         }
         let missing = !engine().missing().is_empty();

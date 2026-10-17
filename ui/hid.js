@@ -432,7 +432,8 @@ function drawGamepad(callouts) {
         const x = side === "l" ? 6 : 594;
         const anchor = parts[t.id].anchor;
         const edge = side === "l" ? x + 214 : x;
-        const bound = hidBind.bindings.filter((b) => b.target === t.id).map(hidInputName);
+        const bound = hidBind.bindings.filter((b) => b.target === t.id).map(hidInputName)
+          .concat((hidState?.menu?.bindings || []).filter((b) => b.target === t.id).map((b) => `Controller ${b.controller} (game menu)`));
         const boundText = bound.length ? `← ${bound.map((n) => hidShort(n, bound.length > 1 ? 18 : 38)).join(", ")}` : "not bound";
         const listening = hidListen?.target === t.id;
         const grp = sv("g", { class: `hid-callout${listening ? " listening" : ""}${bound.length ? " bound" : ""}`, tabindex: 0, role: "button",
@@ -497,6 +498,26 @@ function hidInputName(b) {
   return `${name}: ${what}`;
 }
 
+// HID axis usages (page << 16 | id) as the plugin reports them.
+const HID_USAGES = { 0x10030: "X axis", 0x10031: "Y axis", 0x10032: "Z axis", 0x10033: "X rotation", 0x10034: "Y rotation",
+  0x10035: "Z rotation", 0x10036: "Slider", 0x10037: "Dial", 0x10038: "Wheel", 0x200ba: "Rudder", 0x200bb: "Throttle",
+  0x200c4: "Accelerator", 0x200c5: "Brake", 0x200c6: "Clutch", 0x200c8: "Steering" };
+
+// The controller the plugin numbered `n` for the in-game menu in its last run.
+function hidMenuController(n) {
+  return hidState?.status?.devices.find((d) => d.controller === n) || null;
+}
+
+// "Controller 1 (Logitech G29…) · Axis 3 (Z axis)" for a binding saved in
+// Settings › Mods › HID Input.
+function hidMenuInputName(b) {
+  const d = hidMenuController(b.controller);
+  const i = b.input.index;
+  const usage = b.input.kind === "axis" ? HID_USAGES[d?.axes?.[i]] : null;
+  const what = b.input.kind === "axis" ? `Axis ${i + 1}${usage ? ` (${usage})` : ""}` : b.input.kind === "button" ? `Button ${i + 1}` : `Hat ${i + 1}`;
+  return `Controller ${b.controller}${d ? ` (${d.name || d.id})` : ""} · ${what}`;
+}
+
 // Long device names cut to fit a callout: "Logitech G29 Dr…: Z axis".
 function hidShort(text, max) {
   if (text.length <= max) return text;
@@ -539,26 +560,54 @@ function hidPluginRows() {
       st.missing.length ? el("div", { class: "small" }, el("span", { class: "badge warn" }, "not connected"), ` ${st.missing.join(", ")}`) : null,
       st.config_error ? el("div", { class: "small" }, el("span", { class: "badge bad" }, "bindings file"), ` ${st.config_error}`) : null,
       st.hook_errors.length ? el("div", { class: "small" }, el("span", { class: "badge bad" }, "hooks"), ` ${st.hook_errors.join("; ")}`) : null,
-      st.devices.length ? el("div", { class: "small muted" }, `Controllers the plugin read in the game: ${st.devices.map((x) => `${x.name || x.id} (${x.id})${x.bound ? " · bound" : ""}`).join(", ")}`) : null);
+      st.devices.length ? el("div", { class: "small" }, "Controllers the plugin read in the game:",
+        el("ul", { class: "hid-run-devices" }, st.devices.map((x) => el("li", {},
+          x.controller ? el("b", {}, `Controller ${x.controller}: `) : null,
+          `${x.name || x.id} `, el("span", { class: "mono muted" }, x.id),
+          x.xinput ? el("span", { class: "muted" }, " · XInput gamepad, read by the game itself") : null,
+          x.bound ? [" ", el("span", { class: "badge ok" }, "bound")] : null,
+          x.axes.length ? el("div", { class: "muted" }, x.axes.map((u, i) => `Axis ${i + 1}: ${HID_USAGES[u] || `usage ${u.toString(16)}`}`).join(" · "),
+            ` · ${x.buttons} button${x.buttons === 1 ? "" : "s"}${x.hats ? ` · ${x.hats} hat${x.hats === 1 ? "" : "s"}` : ""}`) : null)))) : null);
+  }
+  let menu;
+  if (!s.mod_settings) {
+    menu = [el("span", { class: "badge warn" }, "Mod Settings not installed"),
+      " Settings › Mods › HID Input in the game needs the Mod Settings mod (it uses RED4ext, redscript and ArchiveXL). ",
+      el("button", { class: "small", title: "Queue Mod Settings from Nexus Mods (mod 4885)",
+        onclick: (e) => busy(e.target, () => enqueue([{ kind: "nexus", name: "Mod Settings", modId: 4885 }])) }, "Get Mod Settings")];
+  } else if (s.menu_error) {
+    menu = [el("span", { class: "badge bad" }, "user.ini"), ` ${s.menu_error}`];
+  } else {
+    const m = s.menu;
+    menu = [el("span", { class: "badge ok" }, "Mod Settings installed"), s.redscript ? null : [" ", el("span", { class: "badge warn" }, "redscript missing")], " ",
+      m ? `${m.bindings.length} binding${m.bindings.length === 1 ? "" : "s"} saved in Settings › Mods › HID Input · bindings ${m.enabled ? "on" : "off"} · slot ${m.slot + 1} · gamepad ${m.emulate_pad ? "reported" : "not reported"} when none is connected`
+        : el("span", { class: "muted" }, "nothing saved there yet (read from red4ext/plugins/mod_settings/user.ini)")];
   }
   return el("table", { class: "req-table" }, el("tbody", {},
     el("tr", {}, el("td", {}, "Plugin"), el("td", {}, plugin)),
     el("tr", {}, el("td", {}, "RED4ext"), el("td", {}, s.red4ext ? el("span", { class: "badge ok" }, "installed")
       : [el("span", { class: "badge bad" }, "missing"), " The plugin loads through RED4ext: Game panel › Frameworks."])),
     el("tr", {}, el("td", {}, "Game input imports"), el("td", {}, imports)),
+    el("tr", {}, el("td", {}, "In-game menu"), el("td", {}, menu)),
     el("tr", {}, el("td", {}, "Last game run"), el("td", {}, run))));
 }
 
 function hidOptions() {
   const set = (k, v) => { hidBind[k] = v; hidDirty = true; renderHid(); };
+  // Once saved in the game menu, its general settings are the ones the plugin uses.
+  const menu = hidState.menu;
+  const off = menu ? "" : null;
+  const why = menu ? "Set in the game: Settings › Mods › HID Input" : null;
   return el("div", { class: "row hid-options" },
-    el("label", { class: "check", title: "Off: the plugin passes the gamepad through unchanged" },
-      el("input", { type: "checkbox", checked: hidBind.enabled ? "" : null, onchange: (e) => set("enabled", e.target.checked) }), " Bindings on"),
-    el("label", { class: "row small", title: "The XInput slot the bound inputs go to; 1 is the first gamepad" }, "Gamepad slot",
-      el("select", { class: "inline", onchange: (e) => set("slot", Number(e.target.value)) },
-        [0, 1, 2, 3].map((n) => el("option", { value: n, selected: hidBind.slot === n ? "" : null }, String(n + 1))))),
-    el("label", { class: "check", title: "With no gamepad on the slot, the plugin reports one there while a bound device is connected, so bound devices work next to mouse and keyboard" },
-      el("input", { type: "checkbox", checked: hidBind.emulate_pad ? "" : null, onchange: (e) => set("emulate_pad", e.target.checked) }), " Report a gamepad when none is connected"),
+    el("label", { class: "check", title: why || "Off: the plugin passes the gamepad through unchanged" },
+      el("input", { type: "checkbox", disabled: off, checked: (menu ? menu.enabled : hidBind.enabled) ? "" : null, onchange: (e) => set("enabled", e.target.checked) }), " Bindings on"),
+    el("label", { class: "row small", title: why || "The XInput slot the bound inputs go to; 1 is the first gamepad" }, "Gamepad slot",
+      el("select", { class: "inline", disabled: off, onchange: (e) => set("slot", Number(e.target.value)) },
+        [0, 1, 2, 3].map((n) => el("option", { value: n, selected: (menu ? menu.slot : hidBind.slot) === n ? "" : null }, String(n + 1))))),
+    el("label", { class: "check", title: why || "With no gamepad on the slot, the plugin reports one there while a bound device is connected, so bound devices work next to mouse and keyboard" },
+      el("input", { type: "checkbox", disabled: off, checked: (menu ? menu.emulate_pad : hidBind.emulate_pad) ? "" : null, onchange: (e) => set("emulate_pad", e.target.checked) }),
+      " Report a gamepad when none is connected"),
+    menu ? el("span", { class: "muted small" }, "set in the game menu") : null,
     el("span", { class: "spacer" }),
     hidDirty ? el("span", { class: "badge warn" }, "unsaved changes") : null,
     el("button", { class: hidDirty ? "primary" : null, disabled: hidDirty ? null : "",
@@ -596,6 +645,9 @@ function hidDeviceCard(d) {
   });
   return el("div", { class: "hid-device" },
     el("div", { class: "row" }, el("b", {}, d.name || "Unnamed device"), el("span", { class: "muted small mono" }, d.id),
+      hidState.status?.devices.find((x) => x.id === d.id && x.controller)
+        ? el("span", { class: "badge", title: "Its number in Settings › Mods › HID Input, from the plugin's last game run" },
+          `Controller ${hidState.status.devices.find((x) => x.id === d.id).controller}`) : null,
       el("span", { class: "spacer" }),
       el("select", { class: "inline small", "aria-label": "Drawing", title: "Which drawing to show for this device",
         onchange: (e) => { hidKinds[d.id] = e.target.value; savePref("hidKinds", hidKinds); renderHid(); } },
@@ -639,6 +691,29 @@ function hidBindingsTable() {
     })));
 }
 
+// Bindings saved in Settings › Mods › HID Input: shown, changed in the game.
+function hidMenuTable() {
+  const m = hidState.menu;
+  if (!m?.bindings.length) return null;
+  const pct = (v) => `${Math.round(v * 100)} %`;
+  const curve = (c) => HID_CURVES.find(([v]) => Math.abs(v - c) < 0.01)?.[1] || String(c);
+  return [el("h3", {}, "Set in the game menu"),
+    el("p", { class: "muted small" }, "Saved in Settings › Mods › HID Input (Mod Settings' user.ini) and used together with the bindings above. Change them in the game."),
+    el("table", { class: "hid-bindings" },
+      el("thead", {}, el("tr", {}, ["Input", "Gamepad", "Invert", "Deadzone", "Response", "Stick range"].map((h) => el("th", {}, h)))),
+      el("tbody", {}, m.bindings.map((b) => {
+        const t = HID_TARGET[b.target];
+        const analog = t.kind === "trigger" || t.kind === "stick";
+        return el("tr", {},
+          el("td", {}, hidMenuInputName(b), hidMenuController(b.controller) || !hidState.status ? null : [" ", el("span", { class: "badge warn" }, "not connected in the last game run")]),
+          el("td", {}, t.label),
+          el("td", {}, analog ? (b.invert ? "yes" : "no") : ""),
+          el("td", {}, analog ? pct(b.deadzone) : ""),
+          el("td", {}, analog ? curve(b.curve) : ""),
+          el("td", {}, t.kind === "stick" ? HID_HALVES.find(([v]) => v === b.half)?.[1] || b.half : ""));
+      })))];
+}
+
 function renderHid() {
   const box = $("#hid");
   if (!hidState || !hidBind) return;
@@ -657,7 +732,8 @@ function renderHid() {
   box.replaceChildren(...[
     el("p", { class: "muted" }, "CPMX2077 HID Input is a RED4ext plugin carried in CPMX2077. In the game it reads the controllers bound here ",
       "(pedals, wheels, flight sticks, button boxes) and adds them to the XInput gamepad Cyberpunk 2077 reads: triggers take the larger value, ",
-      "stick axes add up, buttons combine. Works next to a real gamepad, or alone."),
+      "stick axes add up, buttons combine. Works next to a real gamepad, or alone. Bindings can also be set in the game, ",
+      "under Settings › Mods › HID Input (needs the Mod Settings mod); both apply."),
     hidPluginRows(),
     el("div", { class: "row" }, installBtn,
       s.bundled ? null : el("span", { class: "muted small" }, "This CPMX2077 build carries no plugin DLL (built without CPMX_HID_PLUGIN_DLL)."),
@@ -668,6 +744,7 @@ function renderHid() {
     hidListen ? el("p", { class: "hid-listen", "aria-live": "polite" }, `Move or press the input for ${HID_TARGET[hidListen.target].label}. Esc cancels.`) : null,
     pad.svg,
     hidBindingsTable(),
+    ...(hidMenuTable() || []),
     el("h3", {}, "Controllers on this computer"),
     el("div", { class: "row" },
       el("span", { class: "muted small" }, navigator.userAgent.includes("Windows")

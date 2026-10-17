@@ -14,6 +14,7 @@
 //! position. [`resolve`] picks between the two.
 
 pub mod descriptor;
+pub mod menu;
 #[cfg(windows)]
 pub mod win;
 
@@ -22,7 +23,7 @@ use serde::{Deserialize, Serialize};
 pub const PLUGIN_NAME: &str = "CPMX2077 HID Input";
 /// The plugin's version, reported to RED4ext and in `status.json`; raise it
 /// with every change to the plugin so CPMX2077 offers the update.
-pub const PLUGIN_VERSION: &str = "0.1.0";
+pub const PLUGIN_VERSION: &str = "0.2.0";
 /// Plugin folder under the game root. RED4ext loads
 /// `red4ext/plugins/<folder>/<name>.dll`, one folder level deep.
 pub const PLUGIN_DIR: &str = "red4ext/plugins/cpmx_hid_input";
@@ -474,8 +475,13 @@ pub struct Status {
     pub config_error: Option<String>,
     #[serde(default)]
     pub enabled: bool,
+    /// Bindings from `bindings.json` and the in-game menu together.
     #[serde(default)]
     pub bindings: usize,
+    /// Bindings set in Settings › Mods › HID Input; `None` when Mod
+    /// Settings' `user.ini` has no HID Input values.
+    #[serde(default)]
+    pub menu_bindings: Option<usize>,
     /// Bindings whose device and input were found.
     #[serde(default)]
     pub active_bindings: usize,
@@ -494,9 +500,18 @@ pub struct StatusDevice {
     pub vid: u16,
     pub pid: u16,
     pub axes: Vec<u32>,
+    /// `Axis 1: X axis`, …: for players reading the file.
+    #[serde(default)]
+    pub axis_names: Vec<String>,
     pub buttons: usize,
     pub hats: usize,
     pub bound: bool,
+    /// Its number in the in-game menu (Controller 1 to 4).
+    #[serde(default)]
+    pub controller: Option<u32>,
+    /// An XInput gamepad, read by the game itself.
+    #[serde(default)]
+    pub xinput: bool,
 }
 
 #[cfg(test)]

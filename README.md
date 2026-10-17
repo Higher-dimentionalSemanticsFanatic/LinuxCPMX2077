@@ -172,6 +172,9 @@ Screenshots show sample data, with file locations blurred.
   next to a real gamepad or alone. Bindings are made on a gamepad drawing
   by moving the input; connected controllers show as drawings with live
   axis bars. Per binding: invert, deadzone, response curve, half axis.
+  With Mod Settings, bindings can also be set in the game (Settings ›
+  Mods › HID Input). Also released as a standalone mod archive for
+  players without CPMX2077.
 - **Enable/disable** without uninstalling: switching a mod off removes its files
   from the game (bringing back whatever they replaced) and keeps the checked
   copy stored at install (**Open stored copy** shows it), so switching it on again needs no re-download. Files the mod changed
