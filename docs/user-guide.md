@@ -314,12 +314,17 @@ Above the list:
   replaces the installed version and keeps its tags.
 - **Install from archive…** installs a `.zip`, `.7z` or `.rar` from disk.
 - **Game version and profiles**: one column per game version the app has
-  seen, oldest on the left, with that version's mod profiles (named lists
-  of enabled mods) as chips under it. Each profile chip shows its name, mod
-  count and what applying it would change; *active* (green dot) means the
-  enabled mods match it now. Click a chip to show its actions under the
+  seen, oldest on the left. Each column shows the game version on top
+  (*current* on the version installed now, with the number of mods
+  installed on it), then, on the current version, the solid **Stock** tag,
+  then a dropdown with that version's mod profiles (named lists of enabled
+  mods). The dropdown is closed by default and shows the active profile's
+  name, or **Profiles (N)**; click it to list the profile chips and
+  **+ Profile**. Each profile chip shows its name, mod count and what
+  applying it would change; *active* (green dot) means the enabled mods
+  match it now. Click a chip or **Stock** to show its actions under the
   ribbon.
-  - The current version's own chip (*stock · no mods*) is the stock game:
+  - **Stock** (*no mods*, or *active* when every mod is off) is the stock game:
     **Apply** disables every enabled mod (stored copies are kept; files not
     installed by CPMX2077 stay in the game folder) and removes a load order
     set in CPMX2077. When the enabled mods
@@ -944,7 +949,7 @@ Changing the order:
   verification). While the order is CPMX2077's, the *modlist.txt changes
   your archive load order* known-problem notice is not shown.
 - Saving a profile stores the order with it, and applying the profile
-  restores it (or the file-name order). The stock chip resets it. Profiles
+  restores it (or the file-name order). **Stock** resets it. Profiles
   saved before this leave the order as it is.
 
 ### Mod interaction
@@ -1332,7 +1337,7 @@ Every archive you downloaded, grouped by mod with each version under it.
   Frameworks list, the Linux setup items (not on Windows), the Nexus
   account box (API key, Free vs Premium downloads), Installed mods, the
   *Game version and profiles* ribbon (profiles under each game version,
-  **+ Profile**, **Apply**, the stock chip, load order saved with a
+  **+ Profile**, **Apply**, **Stock**, load order saved with a
   profile), the Netrunner panel, and last the First setup checklist. The outlined
   element stays clickable and can be scrolled (the outline and the step
   card follow it); everything else is dimmed. **Next** / **Back**

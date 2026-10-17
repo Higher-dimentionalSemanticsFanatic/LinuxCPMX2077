@@ -1,7 +1,7 @@
 // Mod profiles: named lists of enabled mods, filed under a game version.
-// The ribbon in Installed mods shows each game version with its profiles
-// as chips under it; the current version's chip is the stock game (every
-// mod disabled). Picking a chip shows its actions below the ribbon.
+// The ribbon in Installed mods shows each game version; under the current
+// one the stock game tag (every mod disabled), and under each version a
+// dropdown of its profiles. Picking a chip shows its actions below the ribbon.
 // Applying a profile enables its mods and disables every other installed
 // mod. Loaded after app.js and built from its helpers (el, $, busy, …).
 // Profile and mod names are inserted as text, never as HTML.
@@ -9,6 +9,7 @@
 let profiles = [];
 let profilePick = null; // id of the selected profile, "stock", "new" or null
 let profileRenaming = false;
+const profilesOpen = new Set(); // game version columns whose profile dropdown is open
 
 function currentVersionKey() {
   const v = gameVersions.find((x) => x.current);
@@ -70,23 +71,40 @@ function renderProfiles() {
     onclick: () => pick(p.id),
   }, el("b", {}, p.name), el("span", { class: "muted small" }, profileSummary(p)));
 
+  // Each column: the game version on top, the stock tag under it (current
+  // version only), then the version's profiles in a dropdown.
   const columns = cols.map((c, i) => {
     const mine = c.key === null ? orphans : profiles.filter((p) => p.game_version === c.key);
-    const head = c.current
-      ? el("button", {
-        class: `chip ver-chip current${profilePick === "stock" ? " active" : ""}${enabled === 0 ? " applied" : ""}`,
-        "aria-pressed": String(profilePick === "stock"),
-        title: "Stock game: every installed mod disabled",
-        onclick: () => pick("stock"),
-      }, el("b", {}, c.label), el("span", { class: "muted small" }, enabled === 0 ? "stock · active" : "stock · no mods"))
-      : el("div", { class: "ver-head" }, el("b", {}, c.label),
-        c.count != null ? el("span", { class: "muted small" }, `${c.count} installed`) : null);
+    const colKey = c.key ?? "~other";
+    const open = profilesOpen.has(colKey) || mine.some((p) => p.id === profilePick) || (c.current && profilePick === "new");
+    const applied = mine.find((p) => p.active);
+    const title = el("div", { class: "ver-title" },
+      el("b", {}, c.label), c.current ? el("span", { class: "ver-now" }, "current") : null,
+      c.count != null ? el("span", { class: "muted small" }, `${c.count} installed`) : null);
+    const stock = c.current ? el("button", {
+      class: `chip stock-chip${profilePick === "stock" ? " active" : ""}${enabled === 0 ? " applied" : ""}`,
+      "aria-pressed": String(profilePick === "stock"),
+      title: "Stock game: every installed mod disabled",
+      onclick: () => pick("stock"),
+    }, el("b", {}, "Stock"), el("span", { class: "small" }, enabled === 0 ? "active" : "no mods")) : null;
+    const toggle = (mine.length || c.current) ? el("button", {
+      class: `chip profiles-toggle${open ? " open" : ""}${applied ? " applied" : ""}`,
+      "aria-expanded": String(open),
+      title: open ? "Hide the profiles of this game version" : "Show the profiles of this game version",
+      onclick: () => {
+        if (open) { profilesOpen.delete(colKey); if (mine.some((p) => p.id === profilePick) || (c.current && profilePick === "new")) profilePick = null; }
+        else profilesOpen.add(colKey);
+        renderProfiles();
+      },
+    }, el("b", {}, applied ? applied.name : `Profiles (${mine.length})`),
+    el("span", { class: "muted small" }, applied ? `active profile · ${mine.length} saved` : mine.length ? "none active" : "none saved"),
+    el("span", { class: "caret", "aria-hidden": "true" }, open ? "▴" : "▾")) : null;
     return [i ? el("span", { class: "ribbon-arrow", "aria-hidden": "true" }, "→") : null,
-      el("div", { class: `ver-col${c.current ? " current" : ""}` }, head,
-        el("div", { class: "ver-chips" }, ...mine.map(profileChip),
+      el("div", { class: `ver-col${c.current ? " current" : ""}` }, title, stock, toggle,
+        open ? el("div", { class: "ver-chips" }, ...mine.map(profileChip),
           c.current ? el("button", { class: `chip new-chip${profilePick === "new" ? " active" : ""}`,
             title: "Store the mods enabled now as a profile under this game version", onclick: () => pick("new") },
-          el("b", {}, "+ Profile"), el("span", { class: "muted small" }, `save ${enabled} enabled`)) : null))];
+          el("b", {}, "+ Profile"), el("span", { class: "muted small" }, `save ${enabled} enabled`)) : null) : null)];
   }).flat().filter(Boolean);
   ribbon.classList.remove("hidden");
   ribbon.replaceChildren(el("span", { class: "muted small ribbon-label" }, "Game version", el("br"), "and profiles"), ...columns);

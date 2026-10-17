@@ -441,11 +441,21 @@ button.twisty { background: none; border: 0; padding: 0 6px 0 0; color: var(--mu
 #version-loadout details table { margin-top: 8px; }
 /* A column per game version: the version on top, its profiles under it. */
 .ribbon .ver-col { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-.ribbon .ver-head { display: flex; flex-direction: column; padding: 5px 12px; border: 1px dashed var(--border); white-space: nowrap; }
 .ribbon .ver-chips { display: flex; flex-direction: column; gap: 4px; }
 .ribbon .chip.applied b::after { content: " ●"; color: var(--green); font-size: 10px; }
-.ribbon .ver-chip.current b::after { content: " (current)"; color: var(--muted); font-size: 11px; font-weight: 400; }
-.ribbon .ver-chip.current.applied b::after { content: " (current) ●"; color: var(--green); }
+.ribbon .ver-title { display: flex; align-items: baseline; gap: 6px; padding: 2px 2px 0; white-space: nowrap; }
+.ribbon .ver-title b { font-size: 15px; color: var(--text); }
+.ribbon .ver-now { font-size: 11px; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; }
+/* The stock game tag: solid, so it never reads as one of the custom profiles. */
+.ribbon .stock-chip { flex-direction: row; align-items: baseline; gap: 8px; min-width: 150px; background: var(--cyan); border-color: var(--cyan); color: #061217; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+.ribbon .stock-chip b { letter-spacing: 2px; text-transform: uppercase; }
+.ribbon .stock-chip .small { color: #0b3640; }
+.ribbon .stock-chip.active { background: var(--yellow); border-color: var(--yellow); }
+.ribbon .stock-chip.applied b::after { color: #0b6b2e; }
+.ribbon .profiles-toggle { position: relative; min-width: 150px; padding-right: 26px; }
+.ribbon .profiles-toggle .caret { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: var(--cyan); }
+.ribbon .profiles-toggle.open { border-color: var(--cyan); }
+.ribbon .ver-chips { padding-left: 10px; border-left: 1px solid var(--border); margin-left: 6px; }
 .ribbon .new-chip { border-style: dashed; }
 #version-profiles .profile-actions { gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
 #version-profiles .profile-actions input { max-width: 260px; }

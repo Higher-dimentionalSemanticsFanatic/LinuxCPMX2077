@@ -100,11 +100,11 @@ function tourSteps() {
       tab: "mods",
       target: () => visible("#version-ribbon") ? "#version-ribbon" : "#tab-mods > header",
       body: [
-        "Game version and profiles: one column per game version seen, oldest on the left. A profile is a named list of enabled mods plus the archive load order, filed as a chip under the game version it was saved on.",
+        "Game version and profiles: one column per game version seen, oldest on the left. A profile is a named list of enabled mods plus the archive load order, filed under the game version it was saved on. The version is on top of each column; its profiles are in the dropdown under it.",
         el("ul", {},
           el("li", {}, el("b", {}, "+ Profile"), ": saves the enabled mods and the load order under the current game version."),
           el("li", {}, el("b", {}, "Profile chip"), ": Apply enables its mods, disables every other installed mod and restores its load order. Also Update from enabled mods, Rename, Delete. A green dot marks the profile that matches the enabled mods."),
-          el("li", {}, el("b", {}, "Stock chip"), " (current version, “stock · no mods”): Apply disables every mod and resets the load order. Enabled mods that match no profile are offered as a Before stock profile first.")),
+          el("li", {}, el("b", {}, "Stock"), " (solid tag under the current version): Apply disables every mod and resets the load order. Enabled mods that match no profile are offered as a Before stock profile first.")),
         "After a game update, profiles stay under the old version and can still be applied; the confirmation names both versions, since mods may need updates.",
       ],
     },
