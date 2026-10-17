@@ -22,11 +22,6 @@ cd src-tauri && cargo tauri dev
 cd src-tauri && cargo tauri build --bundles appimage   # Windows: --bundles nsis
 
 cargo run -p cp2077-modmanager -- --mcp                # read-only MCP server on stdio, no window
-
-# HID Input game mod DLL (Windows target; not part of the app)
-rustup target add x86_64-pc-windows-gnu                # plus the mingw-w64 gcc package
-CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc \
-  cargo build -p cpmx-hid-input --release --target x86_64-pc-windows-gnu
 ```
 
 Both checks must pass before pushing.
@@ -43,18 +38,6 @@ Both checks must pass before pushing.
   the `#[tauri::command]`s registered in `generate_handler!`; larger areas
   have their own `*_cmd.rs`. Commands that touch disk or network run on a
   blocking thread. The same binary serves `--mcp` (see `core::mcp`).
-- `crates/hid-plugin` (`cpmx-hid-input`) and `crates/hidmap`
-  (`cp2077mm-hidmap`): CPMX2077 HID Input, a standalone game mod, not part
-  of the app (maintainer's decision: no app integration). The plugin is a RED4ext
-  DLL that hooks XInput in the game and merges HID controllers into the
-  gamepad; it builds only for Windows targets (empty elsewhere). `hidmap`
-  holds what tests run on any platform: bindings, merge rules, `status.json`
-  and the in-game menu (`menu`: generates `reds/HIDInput.reds` for the Mod
-  Settings mod and reads its `user.ini`; after changing the menu run
-  `UPDATE_REDS=1 cargo test -p cp2077mm-hidmap menu::`), plus the Windows
-  `hid.dll` reader. CI's `hid-input` job zips the DLL, the script and
-  `crates/hid-plugin/README.md` (the mod's user docs) as a CI artifact;
-  app releases don't carry it (it is to get its own repo and releases).
 - `ui/`: no build step, no framework. `index.html` loads `app.js` plus one
   script per tab (`graph.js`, `modpacks.js`, `netrunner.js`, ...), all
   calling the backend via `window.__TAURI__` `invoke(...)`. `debug.html` is

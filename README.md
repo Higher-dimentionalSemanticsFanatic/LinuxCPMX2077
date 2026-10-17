@@ -28,6 +28,10 @@ checksum of every file. A Windows installer
 - **Reference:** the [user guide](docs/user-guide.md) explains how the app
   works and what every tab and button does, plus troubleshooting.
 
+Pedals, a wheel or a flight stick the game doesn't read? That is a separate
+game mod, [CyberHID](https://github.com/Higher-dimentionalSemanticsFanatic/CyberHID),
+installed like any other mod.
+
 ## Highlights
 
 - **Installs mods properly**: FOMOD installers as an in-app wizard, REDmod,
@@ -392,9 +396,6 @@ and the Windows installer as a release with a SHA256SUMS file.
   client, secrets); no GUI dependency, fully unit-tested.
 - `src-tauri` – Tauri 2 shell exposing core functions as commands.
 - `ui` – plain HTML/CSS/JS frontend (no build step).
-- `crates/hid-plugin`, `crates/hidmap` – the HID Input game mod (RED4ext
-  plugin and its in-game menu), separate from the app and not released with
-  it; see [its README](crates/hid-plugin/README.md).
 
 ## Roadmap
 

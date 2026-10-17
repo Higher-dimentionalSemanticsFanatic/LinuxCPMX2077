@@ -74,39 +74,6 @@ jobs:
           name: windows
           path: target/release/bundle/nsis/*-setup.exe
 
-  # CPMX2077 HID Input, the standalone game mod in crates/hid-plugin (not
-  # part of the app): a Windows DLL, cross-built here since the game runs
-  # under Proton on Linux, plus its in-game menu script, zipped as laid out
-  # in the game folder. A CI artifact only: app releases don't carry it.
-  hid-input:
-    needs: test
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: System dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-mingw-w64-x86-64
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-gnu
-      - uses: Swatinem/rust-cache@v2
-      - name: Plugin DLL
-        run: cargo build -p cpmx-hid-input --release --target x86_64-pc-windows-gnu
-        env:
-          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
-      - name: Mod archive
-        run: |
-          ver=$(sed -n 's/^pub const PLUGIN_VERSION: &str = "\(.*\)";/\1/p' crates/hidmap/src/lib.rs)
-          mkdir -p pkg/red4ext/plugins/cpmx_hid_input pkg/r6/scripts/cpmx_hid_input
-          cp target/x86_64-pc-windows-gnu/release/cpmx_hid_input.dll crates/hid-plugin/README.md pkg/red4ext/plugins/cpmx_hid_input/
-          cp crates/hidmap/reds/HIDInput.reds pkg/r6/scripts/cpmx_hid_input/
-          (cd pkg && zip -r "../CPMX2077-HID-Input-$ver.zip" .)
-      - uses: actions/upload-artifact@v4
-        with:
-          name: hid-input
-          path: CPMX2077-HID-Input-*.zip
-
   # Pushing a tag like v0.2.0, or running the workflow by hand with "release"
   # ticked, publishes the AppImage and the Windows installer as a GitHub
   # release (versions below 1.0 as pre-releases).
