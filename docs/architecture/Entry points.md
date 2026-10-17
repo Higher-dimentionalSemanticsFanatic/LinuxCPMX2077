@@ -31,8 +31,8 @@ flowchart LR
 | Entry | Command | Source recorded | Replaces | Notes |
 |---|---|---|---|---|
 | **Install from archive…** | `install_archive` | `manual` | auto ([[Versions and replacing]]) | Name from FOMOD `moduleName`, else file name |
-| Downloads **Install** / **Switch to this** | `install_download` | from the download row (`nexus`, `github`, …) | `replaces` = the other version of the same mod | |
-| **Download & install** (Nexus, Premium) | `nexus_download` (`run_download`) | `nexus` + mod/file id | `replaces` from the update check | Already-downloaded files skip the download |
+| Downloads **Install** / **Switch to this** | `install_download` | from the download row (`nexus`, `github`, …) | `replaces` = the other version of the same item (UI `sameMod`: same Downloads group) | Name from `download_meta`: the item name `downloads::item_name` gives (file title for a separate file of a Nexus page) |
+| **Download & install** (Nexus, Premium) | `nexus_download` (`run_download`) | `nexus` + mod/file id; download row gets `file_line` / `file_title` from `downloads::file_line` (page files and update chain via `files_with_updates`) | `replaces` from the update check | Already-downloaded files skip the download. Name = file title when the file isn't the page's only main file line, else the mod name |
 | **Get from Nexus** (free account) | Nexus window → `nxm://` → queue → `nexus_download` → `install_download` | `nexus` | as queued | One click per mod; no automated clicking (product rule) |
 | GitHub **Download & install** | `source_download` | `github` + repo | same repo | SHA-256 checked against GitHub's digest |
 | Frameworks **Install**, Modpacks **Install all** | `enqueue(...)` → queue | per item | | Queue downloads one at a time, then installs one at a time; a FOMOD pauses the queue for the wizard |

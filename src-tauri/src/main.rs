@@ -480,16 +480,20 @@ async fn install_download(app: AppHandle, download_id: i64, game_id: i64, overwr
             let db = state.db.lock().unwrap();
             db.download(download_id)?
         };
-        begin_install(&app, game_id, &PathBuf::from(&d.path), download_meta(&d), overwrite, replaces)
+        begin_install(&app, game_id, &PathBuf::from(&d.path), download_meta(&app, &d), overwrite, replaces)
     })
     .await
 }
 
 /// What an install from a saved download records about the mod.
-fn download_meta(d: &DownloadRow) -> NewMod {
+fn download_meta(app: &AppHandle, d: &DownloadRow) -> NewMod {
+    // The name the Downloads tab shows: a separate file of a Nexus page goes
+    // by its file title.
+    let rows = app.state::<AppState>().db.lock().unwrap().downloads().unwrap_or_default();
+    let title = dl_store::item_name(rows, d.id);
     let source = if d.source.is_empty() { "nexus".to_string() } else { d.source.clone() };
     NewMod {
-        name: d.mod_name.clone().unwrap_or_else(|| d.file_name.clone()),
+        name: title.or_else(|| d.file_title.clone()).or_else(|| d.mod_name.clone()).unwrap_or_else(|| d.file_name.clone()),
         version: d.version.clone(),
         source: if source == "nexus" && d.nexus_mod_id.is_none() { "manual".into() } else { source },
         nexus_mod_id: d.nexus_mod_id,
@@ -1403,7 +1407,7 @@ fn run_download(
     let _busy = state.in_flight.begin(file_key.clone())?;
     if let Some(d) = existing_download(app, &file_key)? {
         let install = match install_to {
-            Some(game_id) => Some(begin_install(app, game_id, &PathBuf::from(&d.path), download_meta(&d), overwrite, replaces)?),
+            Some(game_id) => Some(begin_install(app, game_id, &PathBuf::from(&d.path), download_meta(app, &d), overwrite, replaces)?),
             None => None,
         };
         let download = nexus::Downloaded {
@@ -1421,7 +1425,14 @@ fn run_download(
     // For the Downloads tab and the mod's folder. Best effort: the download
     // doesn't depend on them.
     let info = c.mod_info(mod_id).ok();
-    let file = c.file_info(mod_id, file_id).ok();
+    // The page's files and update chains tell separate files (add-on packs,
+    // optional files) apart from versions of this one.
+    let listing = c.files_with_updates(mod_id).ok();
+    let file = listing
+        .as_ref()
+        .and_then(|(files, _)| files.iter().find(|f| f.file_id == file_id).cloned())
+        .or_else(|| c.file_info(mod_id, file_id).ok());
+    let line = listing.as_ref().map(|(files, updates)| dl_store::file_line(file_id, files, updates));
     let name = info.as_ref().and_then(|i| i.name.clone());
     let dest = download_dir(app, &DownloadRow { nexus_mod_id: Some(mod_id), mod_name: name.clone(), ..Default::default() })?;
     let file_name = file.as_ref().map(|f| f.file_name.as_str());
@@ -1465,13 +1476,15 @@ fn run_download(
             game_version: game_version(&db, install_to),
             checked: Some(if dl.verified { "MD5 matches Nexus" } else { "unverified: Nexus checksum lookup failed" }.into()),
             channel: Some(channel.as_str().into()),
+            file_line: line.as_ref().map(|l| l.root),
+            file_title: line.as_ref().and_then(|l| l.title.clone()),
             ..Default::default()
         })?
     };
     let install = match install_to {
         Some(game_id) => {
             let meta = NewMod {
-                name: name.unwrap_or_else(|| dl.file_name.clone()),
+                name: line.and_then(|l| l.title).or(name).unwrap_or_else(|| dl.file_name.clone()),
                 version,
                 source: "nexus".into(),
                 nexus_mod_id: Some(mod_id),
@@ -1585,7 +1598,7 @@ async fn source_download(
         let _busy = state.in_flight.begin(file_key.clone())?;
         if let Some(d) = existing_download(&app, &file_key)? {
             let install = match install_to {
-                Some(game_id) => Some(begin_install(&app, game_id, &PathBuf::from(&d.path), download_meta(&d), overwrite.unwrap_or(false), replaces)?),
+                Some(game_id) => Some(begin_install(&app, game_id, &PathBuf::from(&d.path), download_meta(&app, &d), overwrite.unwrap_or(false), replaces)?),
                 None => None,
             };
             let download = sources::Downloaded {

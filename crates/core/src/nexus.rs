@@ -70,7 +70,7 @@ fn yes() -> bool {
     true
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct FileInfo {
     pub file_id: i64,
     pub name: Option<String>,

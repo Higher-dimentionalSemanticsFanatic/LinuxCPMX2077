@@ -234,6 +234,11 @@ const MIGRATIONS: &[(&str, &str, &str)] = &[
     ("downloads", "category", "TEXT"),
     // Release channel: 'stable' | 'beta' | 'nightly' (see downloads.rs).
     ("downloads", "channel", "TEXT"),
+    // Nexus files: the first file of the file's update chain (separate
+    // files of one mod page, such as add-on packs, have separate chains),
+    // and the file's own title when it isn't the page's main file.
+    ("downloads", "file_line", "INTEGER"),
+    ("downloads", "file_title", "TEXT"),
     // Archive load order saved with a profile: a JSON list of file names,
     // '' for the game's default order, NULL for profiles saved before load
     // order could be changed (applying them leaves the order alone).
@@ -335,6 +340,8 @@ pub struct DownloadRow {
     pub checked: Option<String>,
     pub category: Option<String>,
     pub channel: Option<String>,
+    pub file_line: Option<i64>,
+    pub file_title: Option<String>,
 }
 
 /// One game version in the history (see [`Db::game_versions`]).
@@ -718,8 +725,9 @@ impl Db {
     pub fn insert_download(&self, d: &DownloadRow) -> Result<i64> {
         self.conn.execute(
             "INSERT INTO downloads (nexus_mod_id, nexus_file_id, file_name, path, sha256, md5, size, verified,
-               source, source_ref, source_file, mod_name, version, game_version, checked, category, channel)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
+               source, source_ref, source_file, mod_name, version, game_version, checked, category, channel,
+               file_line, file_title)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
             params![
                 d.nexus_mod_id,
                 d.nexus_file_id,
@@ -738,6 +746,8 @@ impl Db {
                 d.checked,
                 d.category,
                 d.channel,
+                d.file_line,
+                d.file_title,
             ],
         )?;
         Ok(self.conn.last_insert_rowid())
@@ -746,7 +756,8 @@ impl Db {
     pub fn downloads(&self) -> Result<Vec<DownloadRow>> {
         let mut st = self.conn.prepare(
             "SELECT id, nexus_mod_id, nexus_file_id, file_name, path, sha256, md5, size, verified, downloaded_at,
-                    source, source_ref, source_file, mod_name, version, game_version, checked, category, channel
+                    source, source_ref, source_file, mod_name, version, game_version, checked, category, channel,
+                    file_line, file_title
              FROM downloads ORDER BY id DESC",
         )?;
         let rows = st.query_map([], |r| {
@@ -770,6 +781,8 @@ impl Db {
                 checked: r.get(16)?,
                 category: r.get(17)?,
                 channel: r.get(18)?,
+                file_line: r.get(19)?,
+                file_title: r.get(20)?,
             })
         })?;
         Ok(rows.collect::<std::result::Result<_, _>>()?)

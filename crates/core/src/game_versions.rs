@@ -142,10 +142,13 @@ pub fn compare(version: Option<String>, left_at: Option<String>, then: Vec<Snaps
     let mut used = vec![false; now.len()];
     let mut mods = Vec::new();
     for s in then {
-        // An exact version match first, so two files of one Nexus mod pair up.
+        // An exact version match first, so two files of one Nexus mod pair up;
+        // then the same name (separate files of one page, such as add-on
+        // packs, are named by their file title).
         let pick = (0..now.len())
             .find(|&i| !used[i] && same_mod(&s, &now[i]) && now[i].version == s.version && now[i].archive_name == s.archive_name)
             .or_else(|| (0..now.len()).find(|&i| !used[i] && same_mod(&s, &now[i]) && now[i].version == s.version))
+            .or_else(|| (0..now.len()).find(|&i| !used[i] && same_mod(&s, &now[i]) && now[i].name.eq_ignore_ascii_case(&s.name)))
             .or_else(|| (0..now.len()).find(|&i| !used[i] && same_mod(&s, &now[i])));
         let (change, now_id, now_version) = match pick {
             None => (Change::Removed, None, None),
@@ -238,6 +241,24 @@ mod tests {
         assert_eq!(change("ArchiveXL"), Change::Removed);
         assert_eq!(change("Lights"), Change::Disabled);
         assert_eq!(l.added, vec![new]);
+    }
+
+    #[test]
+    fn add_on_packs_of_one_page_pair_by_name() {
+        let db = Db::open_in_memory().unwrap();
+        let gid = db.upsert_game(&install("3.0.76", "100")).unwrap();
+        let nova = add(&db, gid, "LUT Pack - Nova LUT", Some(16310), "1.4.0n");
+        let _misc = add(&db, gid, "LUT Pack - Misc", Some(16310), "1.2.1m");
+        db.upsert_game(&install("3.0.78", "200")).unwrap();
+        let old = db.game_versions(gid).unwrap()[0].id;
+        // Nova updated after the game update; Misc unchanged.
+        db.delete_mod(nova).unwrap();
+        let nova2 = add(&db, gid, "LUT Pack - Nova LUT", Some(16310), "1.4.1n");
+        let l = loadout(&db, gid, old).unwrap();
+        let then = |n: &str| l.mods.iter().find(|m| m.then.name == n).unwrap();
+        assert_eq!(then("LUT Pack - Nova LUT").now_id, Some(nova2));
+        assert_eq!(then("LUT Pack - Nova LUT").change, Change::Updated);
+        assert_eq!(then("LUT Pack - Misc").change, Change::Same);
     }
 
     #[test]
