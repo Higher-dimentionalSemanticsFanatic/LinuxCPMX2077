@@ -32,6 +32,7 @@ mod patch_notes_cmd;
 mod radio_cmd;
 mod reshade_cmd;
 mod ultraplus_cmd;
+mod figure_cmd;
 mod wolvenkit_cmd;
 
 struct AppState {
@@ -1909,6 +1910,8 @@ fn main() {
             wolvenkit_cmd::wolvenkit_open_editor,
             wolvenkit_cmd::wolvenkit_open_folder,
             wolvenkit_cmd::wolvenkit_list_archive,
+            figure_cmd::figure_hints,
+            figure_cmd::figure_read_archives,
             optiscaler_cmd::optiscaler_status,
             optiscaler_cmd::optiscaler_latest,
             optiscaler_cmd::optiscaler_install,

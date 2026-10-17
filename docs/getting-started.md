@@ -221,4 +221,8 @@ sidebar. **Pop out** moves it to its own window.
   Its command-line build needs the .NET 10 runtime (on Linux, your
   distribution's `dotnet-runtime-10.0` package). See
   [WolvenKit](user-guide.md#wolvenkit).
+- Character and clothing mods: switch **Installed mods** to **Canvas** and
+  click **Figure** in a Body, Face & hair or Outfits column to see which
+  mod changes which body part or clothing slot. See
+  [Figure](user-guide.md#figure).
 - Read the [user guide](user-guide.md) for everything else.

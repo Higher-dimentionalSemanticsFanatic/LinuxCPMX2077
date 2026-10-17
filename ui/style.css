@@ -624,6 +624,90 @@ button.canvas-tile.off { opacity: .5; border-style: dashed; border-left-style: d
 .canvas-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
 .canvas-up { flex: none; color: var(--yellow); font-size: 10px; }
 .canvas-files { flex: none; margin-left: auto; padding-left: 6px; color: var(--muted); font-size: 11px; }
+button.canvas-tile .mod-thumb { flex: none; width: 30px; height: 30px; margin: -2px 3px -2px -5px; }
+button.canvas-tile.off .mod-thumb { opacity: .6; }
+#mods-canvas .canvas-col h4 button.canvas-fig { margin-left: auto; padding: 1px 8px; font-size: 11px; letter-spacing: 1px; color: var(--yellow); --cut: 6px; }
+#mods-canvas .canvas-col h4 button.canvas-fig + .canvas-count { margin-left: 0; }
+
+/* Canvas › Figure (mods_figure.js): slots left and right of a drawn body. */
+#mods-canvas:has(.fig) { display: block; }
+.fig { flex: 1 1 100%; min-width: 0; }
+.fig { --holo: #ff6a4d; --holo-hi: #ffb27a; }
+.fig-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 6px; }
+.fig-title { font-family: var(--label, inherit); font-weight: 700; font-size: 22px; letter-spacing: 4px; color: var(--holo-hi); text-transform: uppercase; }
+.fig-wk { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
+.fig-via { font-family: var(--label, inherit); font-weight: 700; font-size: 9px; letter-spacing: 1px; color: var(--muted); border: 1px solid var(--border); padding: 0 3px; background: rgba(10, 12, 14, .85); }
+.fig-via.tag { border-style: dashed; }
+.fig-body { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 380px) minmax(0, 1fr); column-gap: 18px; }
+.fig-side { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 6px; min-width: 0; }
+.fig-slot { position: relative; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 10px; }
+.fig-side.L .fig-slot { justify-content: flex-end; }
+.fig-slot.open { z-index: 6; }
+.fig-lab { display: flex; flex-direction: column; min-width: 0; padding-top: 2px; }
+.fig-side.L .fig-lab { text-align: right; align-items: flex-end; }
+.fig-name { font-family: var(--label, inherit); font-weight: 600; font-size: 21px; line-height: 1; letter-spacing: 1px; text-transform: uppercase; color: var(--holo); }
+.fig-sub { display: flex; gap: 6px; align-items: center; margin-top: 5px; font-family: var(--label, inherit); font-weight: 600; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--cyan); }
+.fig-n { background: rgba(79, 227, 208, .25); color: var(--text); padding: 0 5px; font-variant-numeric: tabular-nums; }
+.fig-slot.empty .fig-name { color: rgba(255, 106, 77, .45); }
+.fig-slot.empty .fig-sub { color: var(--muted); }
+.fig-slot.hot .fig-name { color: var(--yellow); }
+.fig-thumbs { display: flex; gap: 6px; flex: none; max-width: 100%; }
+.fig-side.L .fig-thumbs { order: 2; }
+button.fig-thumb { display: flex; flex-direction: column; gap: 3px; width: 70px; margin: 0; padding: 0; clip-path: none; background: none; border: 0; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text); }
+.fig-img { position: relative; display: grid; place-items: center; width: 70px; height: 70px; overflow: hidden; border: 1px solid rgba(79, 227, 208, .45); border-left: 3px solid var(--cyan); background: rgba(79, 227, 208, .05);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%); }
+.fig-img::after { content: ""; position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; background: linear-gradient(135deg, transparent 50%, var(--cyan) 50%); }
+.fig-img .mod-thumb { width: 100%; height: 100%; object-fit: cover; border: 0; }
+.fig-badges { position: absolute; top: 3px; left: 4px; display: flex; gap: 3px; }
+.fig-cap { font-size: 10.5px; line-height: 1.2; min-height: 25px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fig-side.L .fig-cap { text-align: right; }
+button.fig-thumb.off .fig-img { opacity: .45; border-style: dashed; }
+button.fig-thumb.off .fig-cap { color: var(--muted); }
+button.fig-thumb:hover .fig-img, button.fig-thumb.hot .fig-img, button.fig-thumb.np-sel .fig-img { border-color: var(--yellow); box-shadow: inset 0 0 0 1px var(--yellow); }
+button.fig-thumb.np-sel .fig-cap { color: var(--yellow); }
+.fig-add .fig-img { border: 1px dashed rgba(255, 106, 77, .5); background: rgba(255, 90, 106, .05); color: rgba(255, 106, 77, .85); font-size: 30px; font-weight: 300; }
+.fig-add .fig-img::after { background: linear-gradient(135deg, transparent 50%, rgba(255, 106, 77, .6) 50%); }
+.fig-add .fig-cap { color: var(--muted); }
+.fig-more .fig-img { font-family: var(--label, inherit); font-weight: 700; font-size: 20px; color: var(--cyan); }
+.fig-more[aria-expanded="true"] .fig-img { border-color: var(--yellow); color: var(--yellow); }
+.fig-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 6; display: flex; flex-direction: column; max-height: 340px; background: var(--panel-solid, #15171b); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, .6); }
+.fig-slot.up .fig-list { top: auto; bottom: calc(100% + 4px); }
+.fig-lhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.fig-lt { font-family: var(--label, inherit); font-weight: 700; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--holo); }
+.fig-lhead input { flex: 1 1 120px; min-width: 0; }
+.fig-lhead button { padding: 3px 10px; font-size: 11px; --cut: 6px; }
+.fig-rows { overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+button.fig-row { display: flex; align-items: center; gap: 7px; width: 100%; margin: 0; padding: 3px 8px 3px 4px; clip-path: none; background: none; border: 0; border-bottom: 1px solid rgba(79, 227, 208, .08); text-align: left; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 12px; color: var(--text); }
+button.fig-row:hover, button.fig-row.hot, button.fig-row.np-sel { background: rgba(246, 207, 60, .1); }
+button.fig-row.off { opacity: .5; }
+button.fig-row .mod-thumb { flex: none; width: 28px; height: 28px; }
+.fig-rname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fig-none { padding: 8px; }
+.fig-draw svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.fig-wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.fig-wires path { fill: none; stroke: rgba(255, 106, 77, .55); stroke-width: 1; }
+.fig-wires circle { fill: var(--holo); }
+.fig-wires .hot { stroke: var(--yellow); stroke-width: 1.8; }
+.fig-wires circle.hot { fill: var(--yellow); }
+.fig-ring { fill: none; stroke: var(--yellow); stroke-width: 1.5; opacity: 0; }
+.fig-ring.hot { opacity: 1; }
+@keyframes fig-spin { to { transform: rotate(360deg); } }
+.fig-spin { transform-box: fill-box; transform-origin: center; animation: fig-spin 40s linear infinite; }
+.fig-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px 18px; margin-top: 18px; padding-top: 10px; border-top: 1px solid rgba(255, 106, 77, .3); }
+.fig-strip-h { grid-column: 1 / -1; font-family: var(--label, inherit); font-weight: 700; font-size: 12px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
+.fig-strip .fig-name { font-size: 17px; }
+@media (max-width: 1000px) {
+  .fig-body { grid-template-columns: minmax(0, 1fr); }
+  .fig-draw { order: -1; width: 100%; max-width: 280px; margin: 0 auto; }
+  .fig-side.L .fig-slot { justify-content: flex-start; }
+  .fig-side.L .fig-thumbs { order: 0; }
+  .fig-side.L .fig-lab { text-align: left; align-items: flex-start; }
+  .fig-side.L .fig-cap { text-align: left; }
+  .fig-wires { display: none; }
+  .fig-side { gap: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .fig-spin { animation: none; } }
+
 #tab-mods #mods-filter { min-width: 180px; }
 
 /* Netrunner panel, docked under Installed mods › Overview. The page area

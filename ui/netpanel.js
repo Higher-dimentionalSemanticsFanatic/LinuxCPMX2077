@@ -157,7 +157,7 @@
   window.netDecorate = () => {
     const ids = new Set(scopeIds());
     document.querySelectorAll("#mods-body tr[data-mod-id]").forEach((tr) => tr.classList.toggle("np-sel", ids.has(Number(tr.dataset.modId))));
-    document.querySelectorAll("#mods-canvas .canvas-tile[data-mod-id]").forEach((t) => t.classList.toggle("np-sel", ids.has(Number(t.dataset.modId))));
+    document.querySelectorAll("#mods-canvas [data-mod-id]").forEach((t) => t.classList.toggle("np-sel", ids.has(Number(t.dataset.modId))));
     if (shown) ensureChecked();
   };
 

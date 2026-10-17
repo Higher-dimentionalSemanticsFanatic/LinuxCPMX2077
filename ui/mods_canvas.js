@@ -1,7 +1,8 @@
 // Installed mods › Overview: the List view (table, in app.js) or the Canvas
 // view, which lays the same filtered mods out as tiles, one column per tag,
 // Nexus category, source or state. A mod with several tags shows in each of
-// its tag columns, with dots in its other tags' colors.
+// its tag columns, with dots in its other tags' colors. Characters and
+// Clothing columns open the Figure (mods_figure.js).
 
 const CANVAS_PALETTE = ["#4fe3d0", "#f6cf3c", "#b48cff", "#3ddc84", "#ff9f43", "#4da3ff", "#ff6bcb", "#e8e8f0", "#9be15d", "#ff4d5e"];
 const CANVAS_NONE = "#8fb0ab";
@@ -100,6 +101,7 @@ function canvasTile(m, col) {
     title: `${what}\nClick: select (Netrunner panel shows this mod). Double-click: show in the List view`,
     onclick: () => window.netSelectMod(m.id, "canvas"),
   },
+  modThumb(m),
   el("span", { class: "canvas-name" }, m.name),
   ...others.map((n) => el("span", { class: "canvas-dot", style: `background:${canvasTagColor(n)}`, "aria-label": `also ${n}` })),
   up ? el("span", { class: "canvas-up", "aria-label": "update available" }, "▲") : null,
@@ -108,10 +110,25 @@ function canvasTile(m, col) {
   return tile;
 }
 
+// The Figure button of a Characters or Clothing column: a predefined tag
+// with a slot on the figure, or the whole Characters / Clothing group.
+function figureButton(c) {
+  let slot;
+  if (c.key.startsWith("tag:")) {
+    const t = modTags.tags.find((x) => x.name === c.label);
+    if (!["characters", "clothing"].includes(t?.group)) return null;
+    slot = window.figureTagSlot?.(c.label);
+    if (!slot) return null;
+  } else if (c.key !== "grp:characters" && c.key !== "grp:clothing") return null;
+  return el("button", { class: "canvas-fig", title: `Open the Character figure${slot ? ` with ${c.label} lit` : ""}: mods placed on body and clothing slots`,
+    onclick: () => window.figureOpen(slot) }, "Figure");
+}
+
 function renderModsCanvas(shown) {
   $("#tab-mods").dataset.view = modsView;
   if (modsView !== "canvas") return;
   const list = canvasDisabled ? shown : shown.filter((m) => m.status === "installed");
+  if (window.figureIsOpen?.()) return window.renderModsFigure(list);
   const cols = canvasColumns(list);
   const several = list.filter((m) => (modTags.mods[m.id] || []).length > 1).length;
   $("#canvas-summary").textContent = `${list.length} mod${list.length === 1 ? "" : "s"} · ${cols.length} column${cols.length === 1 ? "" : "s"}`
@@ -126,6 +143,7 @@ function renderModsCanvas(shown) {
         setModsView("list");
         renderMods();
       } }, c.label) : el("span", {}, c.label),
+      figureButton(c),
       el("span", { class: "canvas-count" }, c.mods.length)),
     ...c.mods.map((m) => canvasTile(m, c)))));
 }
@@ -134,5 +152,5 @@ setModsView(modsView);
 $("#canvas-group").value = canvasGroup;
 $("#canvas-disabled").checked = canvasDisabled;
 document.querySelectorAll("#mods-view button").forEach((b) => b.addEventListener("click", () => { setModsView(b.dataset.view); renderMods(); }));
-$("#canvas-group").addEventListener("change", (e) => { canvasGroup = e.target.value; savePref("canvasGroup", canvasGroup); renderMods(); });
+$("#canvas-group").addEventListener("change", (e) => { window.figureClose?.(); canvasGroup = e.target.value; savePref("canvasGroup", canvasGroup); renderMods(); });
 $("#canvas-disabled").addEventListener("change", (e) => { canvasDisabled = e.target.checked; savePref("canvasDisabled", canvasDisabled); renderMods(); });

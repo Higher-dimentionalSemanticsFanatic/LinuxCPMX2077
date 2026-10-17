@@ -279,6 +279,53 @@ see at a glance which mods carry which tag.
   set to it). Click a tag or category heading to show that group in
   **List**.
 - Hover a tile for its state, file count, tags and Nexus category.
+- Tiles show the mod's Nexus picture on the left (a dark square for mods
+  without a Nexus page or picture).
+
+#### Figure
+
+Columns of the **Characters** and **Clothing** tag groups (Body, Face &
+hair, Skin & tattoos, Makeup, Character preset, NPC appearance, Outfits,
+Accessories, Wardrobe & transmog, Atelier shop, Armor stats, or the whole
+group under **Group by: Tag group**) have a **Figure** button in their
+heading. It opens the Character figure: a drawn body with a slot for each
+body part on the left (Hair, Eyes, Face, Makeup, Skin, Tattoos & scars,
+Body) and each clothing slot on the right (Head, Face wear, Outer torso,
+Inner torso, Accessories, Legs, Feet). Tags without a body part (Full
+outfits, Character preset, NPC appearance, Wardrobe & transmog, Atelier
+shop, Armor stats) sit in a row under the figure. The slot of the column you
+came from is lit. **‹ Board** goes back to the columns.
+
+- Each slot shows its name, mod count, **▲** count of available updates
+  and the mods' pictures with their names. A line runs from the slot to its
+  point on the body. Hover a slot or a picture to light its lines; a mod in
+  several slots lights all of them.
+- The badge on a picture says where the slot came from: **FILES** (the mod's
+  TweakXL item types such as `Items.GenericOuterChestClothing`, or game
+  paths in its tweak, ArchiveXL or archive files, such as garment meshes
+  `t2_…` for outer torso or `base\characters\common\hair\`), **NAME**
+  (words in the mod name, such as *jacket*, *boots*, *ponytail*) or **TAG**
+  (only the tag: Face & hair goes to Face, Skin & tattoos to Skin, Outfits
+  to Full outfits, Accessories to Accessories). An Outfits mod in three or
+  more clothing slots also shows under Full outfits.
+- A slot shows as many pictures as fit the window (one to three). With more
+  mods, **+N List all** opens a list of every mod in the slot inside the
+  figure, scrolling on its own, with **Filter by name** (from nine mods),
+  **Open in List** (the List view filtered to that tag) and **✕**. Click
+  outside it or press **Esc** to close it.
+- **+ Get mods** opens Get mods searching Nexus for the slot's name.
+- Click a picture to select the mod for the [Netrunner panel](#netrunner);
+  double-click to open it in **List**, as on the board.
+- **Read archive paths** (shown when mods have `.archive` files) lists those
+  archives with the WolvenKit CLI from [Netrunner › WolvenKit](#netrunner),
+  so their game paths set the slots. The listing is saved per archive file
+  (by SHA-256) in the app data folder (`figure-archives`), so each archive is
+  read once. Next to it: how many mods with archives have been read. Without
+  the WolvenKit CLI and .NET the button is greyed out. Without WolvenKit,
+  slots come from tweak and ArchiveXL files, names and tags.
+- Filters above (name, tag, game version, **Show disabled**) apply to the
+  figure too. Mods without a Characters or Clothing tag stay on the board;
+  the line under the figure counts them.
 
 ### Selecting several mods
 

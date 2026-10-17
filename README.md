@@ -134,9 +134,13 @@ Screenshots show sample data, with file locations blurred.
   note marks optional, in a different row colour; both can be on together. "Missing on top" lists
   each missing item once, ranked by how many installed mods list it. A mod's
   page in Get mods marks its requirements the same way.
-- **Canvas view** in Installed mods: the installed mods as tiles, one
-  column per tag, Nexus category, source or enabled state, next to the
-  usual list.
+- **Canvas view** in Installed mods: the installed mods as tiles with
+  their Nexus pictures, one column per tag, Nexus category, source or
+  enabled state, next to the usual list. Characters and Clothing columns
+  open the **Figure**: a drawn body with a slot per body part and clothing
+  slot (Hair, Eyes, Face, Skin, Outer torso, Legs, Feet, ...), each mod
+  placed by its TweakXL item types and game paths (archive paths read with
+  WolvenKit), its name or its tag.
 - **Mod page** button in Installed mods opens a mod's Nexus or GitHub page
   in Get mods.
 - **Ultra+ recommendations**: with the Ultra+ path tracing mod installed, a
