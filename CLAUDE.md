@@ -53,7 +53,8 @@ Both checks must pass before pushing.
   Settings mod and reads its `user.ini`; after changing the menu run
   `UPDATE_REDS=1 cargo test -p cp2077mm-hidmap menu::`), plus the Windows
   `hid.dll` reader. CI's `hid-input` job zips the DLL, the script and
-  `crates/hid-plugin/README.md` (the mod's user docs) for each release.
+  `crates/hid-plugin/README.md` (the mod's user docs) as a CI artifact;
+  app releases don't carry it (it is to get its own repo and releases).
 - `ui/`: no build step, no framework. `index.html` loads `app.js` plus one
   script per tab (`graph.js`, `modpacks.js`, `netrunner.js`, ...), all
   calling the backend via `window.__TAURI__` `invoke(...)`. `debug.html` is

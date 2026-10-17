@@ -28,12 +28,6 @@ check the download against. A Windows installer
 - **Reference:** the [user guide](docs/user-guide.md) explains how the app
   works and what every tab and button does, plus troubleshooting.
 
-The release page also carries `CPMX2077-HID-Input-<version>.zip`, a separate
-game mod built from this repository and not used by the app: **CPMX2077 HID
-Input** adds pedals, wheels, flight sticks and button boxes to the gamepad
-Cyberpunk 2077 reads, set up in the game under Settings › Mods › HID Input.
-Install it like any mod; see [its README](crates/hid-plugin/README.md).
-
 ## Highlights
 
 - **Installs mods properly**: FOMOD installers as an in-app wizard, REDmod,
@@ -387,9 +381,8 @@ On Windows (with the WebView2 runtime, which Windows 10 and 11 include), run
 The AppImage lands in `target/release/bundle/appimage/`. CI builds it on every
 push (see `.github/workflows/build.yml`). Pushing a version tag that matches
 the version in `src-tauri/tauri.conf.json` (e.g. `v0.1.0`), or running the
-workflow from the Actions tab with "release" ticked, publishes the AppImage,
-the Windows installer and the HID Input mod archive as a release with a
-SHA256SUMS file.
+workflow from the Actions tab with "release" ticked, publishes the AppImage
+and the Windows installer as a release with a SHA256SUMS file.
 
 ## Layout
 
@@ -398,7 +391,8 @@ SHA256SUMS file.
 - `src-tauri` – Tauri 2 shell exposing core functions as commands.
 - `ui` – plain HTML/CSS/JS frontend (no build step).
 - `crates/hid-plugin`, `crates/hidmap` – the HID Input game mod (RED4ext
-  plugin and its in-game menu), separate from the app.
+  plugin and its in-game menu), separate from the app and not released with
+  it; see [its README](crates/hid-plugin/README.md).
 
 ## Roadmap
 

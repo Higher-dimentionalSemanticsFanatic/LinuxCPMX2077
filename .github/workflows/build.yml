@@ -77,7 +77,7 @@ jobs:
   # CPMX2077 HID Input, the standalone game mod in crates/hid-plugin (not
   # part of the app): a Windows DLL, cross-built here since the game runs
   # under Proton on Linux, plus its in-game menu script, zipped as laid out
-  # in the game folder.
+  # in the game folder. A CI artifact only: app releases don't carry it.
   hid-input:
     needs: test
     runs-on: ubuntu-22.04
@@ -108,10 +108,10 @@ jobs:
           path: CPMX2077-HID-Input-*.zip
 
   # Pushing a tag like v0.2.0, or running the workflow by hand with "release"
-  # ticked, publishes the AppImage, the Windows installer and the HID Input
-  # mod archive as a GitHub release (versions below 1.0 as pre-releases).
+  # ticked, publishes the AppImage and the Windows installer as a GitHub
+  # release (versions below 1.0 as pre-releases).
   release:
-    needs: [appimage, windows, hid-input]
+    needs: [appimage, windows]
     if: startsWith(github.ref, 'refs/tags/v') || inputs.release
     runs-on: ubuntu-22.04
     permissions:
@@ -124,7 +124,7 @@ jobs:
           merge-multiple: true
       - name: Checksums
         working-directory: dist
-        run: sha256sum *.AppImage *.exe *.zip > SHA256SUMS && cat SHA256SUMS
+        run: sha256sum *.AppImage *.exe > SHA256SUMS && cat SHA256SUMS
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -139,7 +139,7 @@ jobs:
           case "$tag" in v0.*) pre="--prerelease" ;; esac
           notes="docs/releases/$tag.md"
           [ -f "$notes" ] || notes=/dev/null
-          { cat "$notes"; echo; echo "### Install"; echo "Linux: download the AppImage, make it executable (\`chmod +x\`) and run it. Windows (early preview): run the -setup.exe installer; it isn't code-signed yet, so SmartScreen asks once (More info, Run anyway). CPMX2077-HID-Input-*.zip is a separate game mod, CPMX2077 HID Input: pedals, wheels and flight sticks added to the gamepad, set up in the game under Settings > Mods > HID Input (unpack it into the game folder or install it like any mod; its README lists the requirements). SHA256SUMS lists every file's checksum."; } > release-notes.md
+          { cat "$notes"; echo; echo "### Install"; echo "Linux: download the AppImage, make it executable (\`chmod +x\`) and run it. Windows (early preview): run the -setup.exe installer; it isn't code-signed yet, so SmartScreen asks once (More info, Run anyway). SHA256SUMS lists every file's checksum."; } > release-notes.md
           gh release create "$tag" $pre --target "$GITHUB_SHA" --title "$tag" --generate-notes \
             --notes-file release-notes.md \
-            dist/*.AppImage dist/*.exe dist/*.zip dist/SHA256SUMS
+            dist/*.AppImage dist/*.exe dist/SHA256SUMS
