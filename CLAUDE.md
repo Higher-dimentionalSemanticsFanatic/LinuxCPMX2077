@@ -153,7 +153,8 @@ labels ("loading not confirmed", "manual download required").
 
 Version lives in `Cargo.toml` (workspace), `crates/core/Cargo.toml`,
 `src-tauri/tauri.conf.json` and the two workspace entries in `Cargo.lock`;
-bump all of them together. Write `docs/releases/v<version>.md` first; the
+bump all of them together, plus the version in the README's Download
+section. Write `docs/releases/v<version>.md` first; the
 release job puts it above the install notes and generated changelog.
 Pushing a `vX.Y.Z` tag that matches `tauri.conf.json`, or running the
 `build` workflow with "release" ticked, publishes the AppImage, the NSIS

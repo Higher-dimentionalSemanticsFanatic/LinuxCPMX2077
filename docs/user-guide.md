@@ -296,6 +296,8 @@ outfits, Character preset, NPC appearance, Wardrobe & transmog, Atelier
 shop, Armor stats) sit in a row under the figure. The slot of the column you
 came from is lit. **‹ Board** goes back to the columns.
 
+![The Character figure with mods in the Hair, Face wear, Outer torso and Skin slots](images/figure.png)
+
 - Each slot shows its name, mod count, **▲** count of available updates
   and the mods' pictures with their names. A line runs from the slot to its
   point on the body. Hover a slot or a picture to light its lines; a mod in

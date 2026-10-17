@@ -14,8 +14,9 @@ For what every button does, see the [user guide](user-guide.md).
 
 ## 1. Run the app
 
-1. Download `CPMX2077_<version>_amd64.AppImage` and `SHA256SUMS` from
-   [Releases](https://github.com/EkranoplanCC/LinuxCPMX2077/releases).
+1. Download `CPMX2077_<version>_amd64.AppImage` and `SHA256SUMS` from the
+   current release linked at the top of the
+   [README](https://github.com/Higher-dimentionalSemanticsFanatic/LinuxCPMX2077#download).
 2. Optionally check the download: `sha256sum -c SHA256SUMS --ignore-missing`.
 3. Make it executable and start it:
 

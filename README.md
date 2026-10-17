@@ -5,19 +5,19 @@ Proton (Steam) or Heroic (GOG). It finds your game, installs mods the way
 each one expects, keeps track of every file, and tells you which mod broke
 your game when something goes wrong.
 
-[![build](https://github.com/EkranoplanCC/LinuxCPMX2077/actions/workflows/build.yml/badge.svg)](https://github.com/EkranoplanCC/LinuxCPMX2077/actions/workflows/build.yml)
-[![latest release](https://img.shields.io/github/v/release/EkranoplanCC/LinuxCPMX2077?include_prereleases&label=release)](https://github.com/EkranoplanCC/LinuxCPMX2077/releases)
+[![build](https://github.com/Higher-dimentionalSemanticsFanatic/LinuxCPMX2077/actions/workflows/build.yml/badge.svg)](https://github.com/Higher-dimentionalSemanticsFanatic/LinuxCPMX2077/actions/workflows/build.yml)
+[![latest release](https://img.shields.io/github/v/release/Higher-dimentionalSemanticsFanatic/LinuxCPMX2077?include_prereleases&label=release)](https://github.com/Higher-dimentionalSemanticsFanatic/LinuxCPMX2077/releases)
 [![license: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
-![Installed mods: every mod with its category, version, source and the game version it was installed on](docs/images/installed-mods.png)
+![Installed mods: the mod list with game version and profiles above it, and the Netrunner panel below showing conflicts for the selected mod](docs/images/installed-mods.png)
 
 ## Download
 
-Get the AppImage (`CPMX2077_<version>_amd64.AppImage`) from
-[Releases](https://github.com/EkranoplanCC/LinuxCPMX2077/releases), make it
-executable (`chmod +x`) and run it. Each release has a `SHA256SUMS` file to
-check the download against. A Windows installer
-(`CPMX2077_<version>_x64-setup.exe`) is built too; see
+**Current version: [v0.9.0](https://github.com/Higher-dimentionalSemanticsFanatic/LinuxCPMX2077/releases/tag/v0.9.0)** (pre-release).
+Get the AppImage (`CPMX2077_0.9.0_amd64.AppImage`) from that page, make it
+executable (`chmod +x`) and run it. `SHA256SUMS` on the same page lists the
+checksum of every file. A Windows installer
+(`CPMX2077_0.9.0_x64-setup.exe`) is built too; see
 [Windows](#windows-preview).
 
 - **New here?** Follow [Getting started](docs/getting-started.md): install,
@@ -49,10 +49,12 @@ check the download against. A Windows installer
 
 | | |
 |---|---|
-| ![Netrunner: a summary of crashes, log errors and compatibility problems](docs/images/netrunner.png) | ![File map: every file mods installed, by game folder, with the mod it came from and its status](docs/images/file-map.png) |
-| **Netrunner** sums up what needs attention. | **File map** shows which mod owns each file. |
+| ![Netrunner panel: conflicts for the selected mod](docs/images/netrunner.png) | ![File map: every file mods installed, by game folder, with the mod it came from and its status](docs/images/file-map.png) |
+| **Netrunner** follows the selected mod and lists what needs attention. | **File map** shows which mod owns each file. |
 | ![Graph: mods, the frameworks they need and what they touch, as a flowchart with clashes in red](docs/images/graph.png) | ![Crashes and logs: the last game start step by step, with the first step that failed marked](docs/images/crashes.png) |
 | **Mod interaction** shows how mods connect and where they clash. | **Crashes & logs** walks through the last start and marks where it broke. |
+| ![Canvas: installed mods as tiles, one column per tag, with Figure buttons on the character and clothing columns](docs/images/installed-mods-canvas.png) | ![Figure: a drawn body with a slot per body part and clothing slot, each holding the mods placed there](docs/images/figure.png) |
+| **Canvas** sorts mods into columns by tag, category or source. | **Figure** places character and clothing mods on a body by the files they change. |
 
 Screenshots show sample data, with file locations blurred.
 
