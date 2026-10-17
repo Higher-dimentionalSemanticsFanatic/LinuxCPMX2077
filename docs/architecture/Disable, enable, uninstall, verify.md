@@ -70,3 +70,13 @@ the wins/loses counts.
 overwrite) on every disabled mod in it. Failures are collected per mod and
 the rest go ahead. Profiles live in `profiles` / `profile_mods`, keyed by
 game version string and `modpacks::mod_key` plus archive name.
+
+Modpack installs (`ui/modpacks.js`, **Separate profile** ticked) call
+`profiles::switch_to_pack` (command `switch_to_modpack_profile`; dry run
+`pack_plan` / `modpack_profile_plan`) before queueing: it saves the enabled
+mods as *Before* followed by the collection name when no profile is active, creates or reuses
+the profile whose `collection_slug` is the collection, writes the
+collection's mods (`nexus:<id>` + file name, merged with what the profile
+already lists) plus enabled frameworks (`dependencies::framework_of`), sets
+`load_order` to `''` and applies it. Queued mods are `missing` until they
+install, then count as part of the profile.

@@ -65,7 +65,7 @@ function renderProfiles() {
   const profileChip = (p) => el("button", {
     class: `chip${p.id === profilePick ? " active" : ""}${p.active ? " applied" : ""}`,
     "aria-pressed": String(p.id === profilePick),
-    title: [`Saved ${p.updated_at.slice(0, 16)}`, p.game_version && p.game_version !== cur.key ? `Saved under game version ${p.game_version}` : null,
+    title: [`Saved ${p.updated_at.slice(0, 16)}`, p.collection ? `Modpack profile: Nexus collection ${p.collection}` : null, p.game_version && p.game_version !== cur.key ? `Saved under game version ${p.game_version}` : null,
       p.missing.length ? `Not installed: ${p.missing.join(", ")}` : null].filter(Boolean).join("\n"),
     onclick: () => pick(p.id),
   }, el("b", {}, p.name), el("span", { class: "muted small" }, profileSummary(p)));

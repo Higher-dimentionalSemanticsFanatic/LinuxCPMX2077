@@ -6,11 +6,14 @@
 //! was updated. Where one mod has several files installed (a Nexus main file
 //! plus an optional file), the archive name picks out the ones in the
 //! profile.
+//!
+//! Installing a modpack (Nexus collection) can switch to a profile of its
+//! own, made from the collection's mod list: see [`switch_to_pack`].
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use rusqlite::{OptionalExtension, params};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::db::{Db, ModRow};
 use crate::install::Installer;
@@ -35,6 +38,8 @@ pub struct Profile {
     pub to_disable: usize,
     /// Mods in the profile that are no longer installed.
     pub missing: Vec<String>,
+    /// Slug of the Nexus collection the profile was made for.
+    pub collection: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -119,14 +124,15 @@ fn plan_for(list: &[Entry], mods: &[ModRow]) -> Plan {
 pub fn list(db: &Db, game_id: i64) -> Result<Vec<Profile>> {
     let mods = db.mods(game_id)?;
     let mut st = db.conn.prepare(
-        "SELECT id, game_version, name, created_at, updated_at FROM profiles
+        "SELECT id, game_version, name, created_at, updated_at, collection_slug FROM profiles
          WHERE game_id = ?1 ORDER BY game_version, name COLLATE NOCASE",
     )?;
-    let rows: Vec<(i64, String, String, String, String)> = st
-        .query_map([game_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))?
+    type Row = (i64, String, String, String, String, Option<String>);
+    let rows: Vec<Row> = st
+        .query_map([game_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
         .collect::<std::result::Result<_, _>>()?;
     let mut out = Vec::new();
-    for (id, game_version, name, created_at, updated_at) in rows {
+    for (id, game_version, name, created_at, updated_at, collection) in rows {
         let list = entries(db, id)?;
         let plan = plan_for(&list, &mods);
         out.push(Profile {
@@ -140,6 +146,7 @@ pub fn list(db: &Db, game_id: i64) -> Result<Vec<Profile>> {
             to_enable: plan.enable.len(),
             to_disable: plan.disable.len(),
             missing: plan.missing,
+            collection,
         });
     }
     Ok(out)
@@ -275,6 +282,152 @@ pub fn apply_stock(inst: &Installer, game_id: i64) -> Result<ApplyReport> {
     let game = inst.db.game(game_id)?;
     crate::load_order::reset(inst.db, &game, &inst.backups_root)?;
     Ok(r)
+}
+
+// ---------------------------------------------------------------------------
+// Modpack profiles
+
+/// One mod of a modpack, as the Modpacks tab sends it.
+#[derive(Debug, Clone, Deserialize)]
+pub struct PackMod {
+    pub mod_id: i64,
+    #[serde(default)]
+    pub file_name: Option<String>,
+    pub mod_name: String,
+}
+
+/// What switching to a modpack's profile would change.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct PackPlan {
+    #[serde(flatten)]
+    pub plan: Plan,
+    /// The modpack's profile when it already has one.
+    pub profile: Option<String>,
+    /// The name the mods enabled now are saved under first, when no
+    /// profile holds them.
+    pub save_before: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PackSwitch {
+    pub profile_id: i64,
+    pub profile: String,
+    pub saved_before: Option<String>,
+    #[serde(flatten)]
+    pub report: ApplyReport,
+}
+
+fn pack_profile(db: &Db, game_id: i64, slug: &str) -> Result<Option<(i64, String)>> {
+    Ok(db
+        .conn
+        .query_row(
+            "SELECT id, name FROM profiles WHERE game_id = ?1 AND collection_slug = ?2 ORDER BY id DESC LIMIT 1",
+            params![game_id, slug],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?)
+}
+
+/// `base`, or `base 2`, `base 3`, ... when a profile under `game_version`
+/// already has the name; cut to [`MAX_NAME`].
+fn unique_name(db: &Db, game_id: i64, game_version: &str, base: &str) -> Result<String> {
+    let base = clean_name(&base.chars().take(MAX_NAME - 4).collect::<String>())?;
+    let taken = |n: &str| -> Result<bool> {
+        Ok(db
+            .conn
+            .query_row(
+                "SELECT 1 FROM profiles WHERE game_id = ?1 AND game_version = ?2 AND name = ?3 COLLATE NOCASE",
+                params![game_id, game_version, n],
+                |_| Ok(()),
+            )
+            .optional()?
+            .is_some())
+    };
+    let mut name = base.clone();
+    let mut i = 2;
+    while taken(&name)? {
+        name = format!("{base} {i}");
+        i += 1;
+    }
+    Ok(name)
+}
+
+/// The modpack's mods, the ones its profile already lists, and the
+/// frameworks enabled now (CET, RED4ext, ... installed from GitHub have no
+/// Nexus id, so the collection's entries would not keep them on).
+fn pack_entries(db: &Db, game_id: i64, existing: Option<i64>, wanted: &[PackMod]) -> Result<Vec<Entry>> {
+    let mut out: BTreeSet<Entry> = wanted
+        .iter()
+        .map(|w| Entry { key: format!("nexus:{}", w.mod_id), archive: w.file_name.clone().unwrap_or_default(), name: w.mod_name.clone() })
+        .collect();
+    if let Some(id) = existing {
+        out.extend(entries(db, id)?);
+    }
+    for m in db.mods(game_id)?.iter().filter(|m| m.enabled() && crate::dependencies::framework_of(m).is_some()) {
+        out.insert(Entry { key: mod_key(m), archive: m.archive_name.clone(), name: m.name.clone() });
+    }
+    Ok(out.into_iter().collect())
+}
+
+/// The name to save the enabled mods under before switching, when they
+/// match no profile.
+fn before_name(db: &Db, game_id: i64, game_version: &str, pack: &str) -> Result<Option<String>> {
+    let any_enabled = db.mods(game_id)?.iter().any(ModRow::enabled);
+    if !any_enabled || list(db, game_id)?.iter().any(|p| p.active) {
+        return Ok(None);
+    }
+    Ok(Some(unique_name(db, game_id, game_version.trim(), &format!("Before {pack}"))?))
+}
+
+/// What [`switch_to_pack`] would do, without changing anything.
+pub fn pack_plan(db: &Db, game_id: i64, game_version: &str, slug: &str, pack: &str, wanted: &[PackMod]) -> Result<PackPlan> {
+    let existing = pack_profile(db, game_id, slug)?;
+    let list = pack_entries(db, game_id, existing.as_ref().map(|e| e.0), wanted)?;
+    Ok(PackPlan {
+        plan: plan_for(&list, &db.mods(game_id)?),
+        profile: existing.map(|e| e.1),
+        save_before: before_name(db, game_id, game_version, pack)?,
+    })
+}
+
+/// Switch to the modpack's own profile before its mods are installed: save
+/// the mods enabled now as a profile when none holds them, create the
+/// modpack's profile (or add `wanted` to the one it has), and apply it.
+/// Mods still to be installed are listed as missing; once installed they
+/// count as part of the profile.
+pub fn switch_to_pack(inst: &Installer, game_id: i64, game_version: &str, slug: &str, pack: &str, wanted: &[PackMod]) -> Result<PackSwitch> {
+    let db = inst.db;
+    let saved_before = before_name(db, game_id, game_version, pack)?;
+    if let Some(name) = &saved_before {
+        create(db, game_id, game_version, name)?;
+    }
+    let existing = pack_profile(db, game_id, slug)?;
+    let list = pack_entries(db, game_id, existing.as_ref().map(|e| e.0), wanted)?;
+    let (id, profile) = match existing {
+        Some(e) => e,
+        None => {
+            let name = unique_name(db, game_id, game_version.trim(), pack)?;
+            // The game's default archive order: the collection's own order
+            // is not installed here.
+            db.conn.execute(
+                "INSERT INTO profiles (game_id, game_version, name, load_order, collection_slug) VALUES (?1, ?2, ?3, '', ?4)",
+                params![game_id, game_version.trim(), name, slug],
+            )?;
+            (db.conn.last_insert_rowid(), name)
+        }
+    };
+    let tx = db.conn.unchecked_transaction()?;
+    tx.execute("DELETE FROM profile_mods WHERE profile_id = ?1", [id])?;
+    for e in &list {
+        tx.execute(
+            "INSERT OR IGNORE INTO profile_mods (profile_id, mod_key, archive_name, name) VALUES (?1, ?2, ?3, ?4)",
+            params![id, e.key, e.archive, e.name],
+        )?;
+    }
+    tx.execute("UPDATE profiles SET updated_at = datetime('now') WHERE id = ?1", [id])?;
+    tx.commit()?;
+    let report = apply(inst, id)?;
+    Ok(PackSwitch { profile_id: id, profile, saved_before, report })
 }
 
 #[cfg(test)]
@@ -451,5 +604,52 @@ mod tests {
         assert_eq!(ml, vec!["B-x.archive".to_string(), "A-x.archive".to_string()]);
         apply_stock(&inst, g.id).unwrap();
         assert!(!crate::load_order::managed(&db, &g).unwrap());
+    }
+
+    #[test]
+    fn modpack_gets_its_own_profile() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        let db = Db::open_in_memory().unwrap();
+        let g = game(&db, root.join("game"));
+        let inst = Installer { db: &db, staging_root: root.join("staging"), backups_root: root.join("backups"), limits: Limits::default() };
+        let own = install(&inst, &g, root, "Own", Some(1), "x");
+        let shared = install(&inst, &g, root, "Shared", Some(2), "x");
+        let off = install(&inst, &g, root, "Off", Some(3), "x");
+        inst.disable(off).unwrap();
+        // A framework from GitHub: no Nexus id, stays on.
+        let a = root.join("cet.zip");
+        zip_with(&a, &[("bin/x64/plugins/cyber_engine_tweaks.asi", b"cet")]);
+        let meta = NewMod { name: "Cyber Engine Tweaks".into(), source: "github".into(), source_ref: Some("maximegmd/CyberEngineTweaks".into()), ..Default::default() };
+        let cet = inst.install(&g, &a, InstallOptions { meta, ..Default::default() }).unwrap().mod_id;
+
+        let pm = |id: i64, name: &str| PackMod { mod_id: id, file_name: None, mod_name: name.into() };
+        let wanted = vec![pm(2, "Shared"), pm(3, "Off"), pm(9, "New")];
+        let p = pack_plan(&db, g.id, "2.3", "abc123", "Pack", &wanted).unwrap();
+        assert_eq!((p.plan.enable, p.plan.disable, p.plan.missing.clone()), (vec![off], vec![own], vec!["New".to_string()]));
+        assert_eq!((p.profile, p.save_before.as_deref()), (None, Some("Before Pack")));
+
+        let s = switch_to_pack(&inst, g.id, "2.3", "abc123", "Pack", &wanted).unwrap();
+        assert_eq!((s.profile.as_str(), s.saved_before.as_deref()), ("Pack", Some("Before Pack")));
+        assert!(s.report.failed.is_empty(), "{:?}", s.report.failed);
+        let on = |id| db.get_mod(id).unwrap().enabled();
+        assert!(!on(own) && on(shared) && on(off) && on(cet));
+
+        // The new mod lands: the pack's profile is active.
+        install(&inst, &g, root, "New", Some(9), "x");
+        let ps = list(&db, g.id).unwrap();
+        let pack = ps.iter().find(|p| p.id == s.profile_id).unwrap();
+        assert!(pack.active && pack.missing.is_empty());
+        assert_eq!(pack.collection.as_deref(), Some("abc123"));
+
+        // Back to the saved set, then a second install reuses the profile
+        // and keeps what it listed.
+        let before = ps.iter().find(|p| p.name == "Before Pack").unwrap();
+        apply(&inst, before.id).unwrap();
+        assert!(on(own) && on(shared) && !on(off));
+        let s2 = switch_to_pack(&inst, g.id, "2.3", "abc123", "Pack", &[pm(4, "Extra")]).unwrap();
+        assert_eq!((s2.profile_id, s2.saved_before), (s.profile_id, None));
+        assert!(!on(own) && on(off) && on(cet));
+        assert_eq!(s2.report.missing, vec!["Extra".to_string()]);
     }
 }

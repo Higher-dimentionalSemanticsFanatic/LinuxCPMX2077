@@ -418,6 +418,38 @@ async fn apply_profile(app: AppHandle, id: i64) -> Result<profiles::ApplyReport>
     .await
 }
 
+/// What switching to a modpack's own profile would change.
+#[tauri::command]
+fn modpack_profile_plan(
+    state: State<'_, AppState>,
+    game_id: i64,
+    game_version: String,
+    slug: String,
+    name: String,
+    mods: Vec<profiles::PackMod>,
+) -> Result<profiles::PackPlan> {
+    profiles::pack_plan(&state.db.lock().unwrap(), game_id, &game_version, &slug, &name, &mods)
+}
+
+/// Save the enabled mods if no profile holds them, then switch to the
+/// modpack's own profile before its mods are queued.
+#[tauri::command]
+async fn switch_to_modpack_profile(
+    app: AppHandle,
+    game_id: i64,
+    game_version: String,
+    slug: String,
+    name: String,
+    mods: Vec<profiles::PackMod>,
+) -> Result<profiles::PackSwitch> {
+    blocking(move || {
+        let state = app.state::<AppState>();
+        let db = state.db.lock().unwrap();
+        with_installer(&db, |i| profiles::switch_to_pack(i, game_id, &game_version, &slug, &name, &mods))
+    })
+    .await
+}
+
 /// The stock game: disable every installed mod.
 #[tauri::command]
 async fn apply_stock_profile(app: AppHandle, game_id: i64) -> Result<profiles::ApplyReport> {
@@ -1762,6 +1794,8 @@ fn main() {
             delete_profile,
             profile_plan,
             apply_profile,
+            modpack_profile_plan,
+            switch_to_modpack_profile,
             install_archive,
             install_download,
             fomod_evaluate,

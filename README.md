@@ -110,7 +110,9 @@ Screenshots show sample data, with file locations blurred.
   with the main one is installed next to it.
 - **Modpacks tab**: browse and search Nexus collections, open one to see
   which of its mods you have, which are missing, turned off or on another
-  version, and install the missing ones through the download queue.
+  version, and install the missing ones through the download queue, by
+  default into a mod profile of the collection's own (your current mods are
+  saved as a profile first).
   Installing from a collection follows it: "Check for updates" asks Nexus
   for new revisions, and opening one shows what the new revision adds,
   changes and drops, with one button to update. Your own tags (with colors,
