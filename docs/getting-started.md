@@ -151,6 +151,10 @@ file when several download at once. For a quick install from the list, click the
 picture and pick one of its main files. Click an author's name to see all
 their mods.
 
+Add-on files from the same mod page (for example LUT packs for LUT Switcher 3)
+show in **Downloads** and **Installed mods** under their own file title, not as
+versions of the main mod.
+
 If the mod ships a FOMOD installer, a wizard opens and asks which options you
 want, the same way it would on Windows.
 

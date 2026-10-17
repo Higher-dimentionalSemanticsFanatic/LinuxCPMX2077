@@ -3201,7 +3201,7 @@ const dateCell = (s) => el("td", { class: "date", title: s ? `${s} UTC` : "" }, 
 // version, by the latest date, or by their total size.
 let dlSort = loadPref("downloadsSort", { key: "downloaded", dir: -1 });
 const DL_SORT = {
-  name: (d) => d.mod_name || d.file_name,
+  name: (d) => d.title || d.mod_name || d.file_name,
   version: (d) => d.version || "",
   game_version: (d) => d.game_version || "",
   source: (d) => sourceLabel({ ...d, source: d.source || "nexus" }),
@@ -3221,7 +3221,7 @@ function groupSortValue(g, entries) {
 }
 
 function downloadMatches(d, q) {
-  return [d.mod_name, d.file_name, d.version, d.game_version, d.channel, sourceLabel({ ...d, source: d.source || "nexus" })]
+  return [d.title, d.mod_name, d.file_name, d.version, d.game_version, d.channel, sourceLabel({ ...d, source: d.source || "nexus" })]
     .filter(Boolean).join(" ").toLowerCase().includes(q);
 }
 
@@ -3246,7 +3246,7 @@ function renderDownloads() {
   const shown = [];
   for (const g of downloadGroups) {
     let entries = g.entries.filter((e) => channelShown(e.channel));
-    if (q && !g.name.toLowerCase().includes(q)) entries = entries.filter((e) => downloadMatches(e, q));
+    if (q && !`${g.name} ${g.mod_name || ""}`.toLowerCase().includes(q)) entries = entries.filter((e) => downloadMatches(e, q));
     if (entries.length) shown.push({ g, entries, v: groupSortValue(g, entries) });
   }
   const cmp = (a, b) => typeof a === "number" ? a - b : a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
@@ -3278,6 +3278,7 @@ function renderDownloads() {
         el("button", { class: "twisty", "aria-expanded": String(open), title: open ? "Hide versions" : "Show versions" }, open ? "▾" : "▸"),
         el("span", { class: "folder-icon", "aria-hidden": "true" }, "📁"),
         el("b", {}, g.name),
+        g.mod_name ? el("span", { class: "muted small" }, ` from ${g.mod_name}`) : null,
         el("span", { class: "muted small" }, ` · ${entries.length} versions`),
         installedEntry ? el("span", { class: "badge ok" }, `${installedEntry.version || "one"} ${installedFor(installedEntry).status === "installed" ? "installed" : "installed, off"}`) : null),
       el("td", {}, newest.version || "—", " ", newest.channel === "stable" ? null : channelBadge(newest.channel),
@@ -3321,7 +3322,8 @@ function downloadRow(d, depth) {
   return el("tr", { class: depth ? "child" : "", "data-key": `d:${d.id}` },
     el("td", {}, dlSel.box([d.id], d.file_name)),
     el("td", {}, el("div", { class: depth ? "indent" : "" },
-      depth ? null : el("b", {}, d.mod_name || d.file_name),
+      depth ? null : el("b", {}, d.title || d.mod_name || d.file_name),
+      depth || !d.title || d.title === d.mod_name || !d.mod_name ? null : el("span", { class: "muted small" }, ` from ${d.mod_name} `),
       m ? el("span", { class: "badge ok" }, m.status === "installed" ? "installed" : "installed, off")
         : d.on_disk ? el("span", { class: "badge", title: "Not installed in the selected game. Install puts it in." }, "not installed") : null,
       d.on_disk ? null : el("span", { class: "badge bad", title: d.path }, "file missing"),
@@ -3367,10 +3369,19 @@ function downloadRow(d, depth) {
       }, "Delete")));
 }
 
-// The installed mod a download is another version of.
+// The installed mod a download is another version of. Separate files of one
+// Nexus page (add-on packs, optional files) are separate items in Downloads;
+// only files of the same item count.
 function sameMod(m, d) {
   if (m.archive_sha256 === d.sha256) return false;
-  if (d.nexus_mod_id) return m.nexus_mod_id === d.nexus_mod_id;
+  if (d.nexus_mod_id) {
+    if (m.nexus_mod_id !== d.nexus_mod_id) return false;
+    const groupOf = (pred) => downloadGroups.find((g) => g.entries.some(pred));
+    const mine = groupOf((e) => e.id === d.id);
+    const theirs = groupOf((e) => e.sha256 === m.archive_sha256 || (m.nexus_file_id && e.nexus_file_id === m.nexus_file_id));
+    if (mine && theirs) return mine === theirs;
+    return !mine || m.name === mine.name;
+  }
   if (d.source_ref) return m.source === d.source && m.source_ref === d.source_ref;
   return false;
 }

@@ -4,7 +4,9 @@
 //! [`paths::downloads_dir`]) inside one folder per mod, so every version of a
 //! mod sits together: `<location>/<Mod name>/<file>`. The Downloads tab shows
 //! the same thing as a tree, one mod with its versions under it, each marked
-//! stable, beta or nightly.
+//! stable, beta or nightly. Separate files of one Nexus page (add-on packs,
+//! optional files) are separate items, named by their file title; only
+//! files in one update chain are versions of each other (see [`file_line`]).
 
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
@@ -12,6 +14,8 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::db::{Db, DownloadRow};
+use crate::nexus::FileInfo;
+use crate::nexus_browse::FileUpdate;
 use crate::{Error, Result, paths};
 
 /// `settings` key holding the chosen download location.
@@ -343,6 +347,75 @@ impl Drop for InFlightGuard<'_> {
 
 // ---- grouping --------------------------------------------------------------
 
+/// Where a Nexus file sits among its page's files.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct FileLine {
+    /// The first file of its update chain: every version of the file shares it.
+    pub root: i64,
+    /// The newest title in the chain when the file isn't the page's only main
+    /// file line (e.g. "LUT Pack - Nova LUT"); `None` for the main file,
+    /// which goes by the mod's name.
+    pub title: Option<String>,
+}
+
+/// The update chain `file_id` belongs to, from the author's file updates on
+/// Nexus. Files without a chain are a line of their own.
+pub fn file_line(file_id: i64, files: &[FileInfo], updates: &[FileUpdate]) -> FileLine {
+    let members = |id: i64| {
+        let mut root = id;
+        let mut seen = vec![id];
+        while let Some(u) = updates.iter().find(|u| u.new_file_id == root) {
+            if seen.contains(&u.old_file_id) {
+                break;
+            }
+            root = u.old_file_id;
+            seen.push(root);
+        }
+        let mut line = vec![root];
+        let mut cur = root;
+        while let Some(u) = updates.iter().find(|u| u.old_file_id == cur) {
+            if line.contains(&u.new_file_id) {
+                break;
+            }
+            cur = u.new_file_id;
+            line.push(cur);
+        }
+        if !line.contains(&id) {
+            line.push(id);
+        }
+        (root, line)
+    };
+    let (root, line) = members(file_id);
+    let is_main = |ids: &[i64]| files.iter().any(|f| ids.contains(&f.file_id) && f.category_name.as_deref() == Some("MAIN"));
+    let main_roots: std::collections::HashSet<i64> = files
+        .iter()
+        .filter(|f| f.category_name.as_deref() == Some("MAIN"))
+        .map(|f| members(f.file_id).0)
+        .collect();
+    let title = if is_main(&line) && main_roots.len() == 1 {
+        None
+    } else {
+        files
+            .iter()
+            .filter(|f| line.contains(&f.file_id))
+            .max_by_key(|f| (f.uploaded_timestamp.unwrap_or(0), f.file_id))
+            .and_then(|f| f.name.clone())
+            .map(|n| n.trim().to_string())
+            .filter(|n| !n.is_empty())
+    };
+    FileLine { root, title }
+}
+
+/// A Nexus archive's file title, read from the name Nexus gives it:
+/// `<title>-<mod id>-<version>-<time>.zip` or `<title> <mod id> <version> <time> <code>.zip`.
+pub fn title_from_archive(file_name: &str, mod_id: i64) -> Option<String> {
+    let stem = file_name.rsplit_once('.').map_or(file_name, |(s, _)| s);
+    let id = mod_id.to_string();
+    let cut = [format!("-{id}-"), format!(" {id} ")].iter().filter_map(|t| stem.find(t.as_str())).min()?;
+    let title = stem[..cut].trim();
+    (!title.is_empty()).then(|| title.to_string())
+}
+
 /// One version of a mod in the Downloads tab.
 #[derive(Debug, Clone, Serialize)]
 pub struct DownloadEntry {
@@ -350,20 +423,26 @@ pub struct DownloadEntry {
     pub row: DownloadRow,
     pub channel: Channel,
     pub on_disk: bool,
+    /// The item's name: the mod's name, or the file's title for a separate
+    /// file of a Nexus page.
+    pub title: String,
 }
 
-/// A mod with all its downloaded versions, newest first.
+/// A mod (or one file line of a Nexus page) with all its downloaded
+/// versions, newest first.
 #[derive(Debug, Clone, Serialize)]
 pub struct DownloadGroup {
     /// Stable key for remembering which folders are open.
     pub key: String,
     pub name: String,
+    /// The Nexus page's name when `name` is a file title.
+    pub mod_name: Option<String>,
     pub folder: String,
     pub entries: Vec<DownloadEntry>,
     pub total_size: i64,
 }
 
-/// What makes downloads "the same mod".
+/// What makes downloads "the same mod" before Nexus file lines are split.
 fn group_key(d: &DownloadRow) -> String {
     match (d.nexus_mod_id, d.source_ref.as_deref()) {
         (Some(id), _) => format!("nexus:{id}"),
@@ -372,32 +451,122 @@ fn group_key(d: &DownloadRow) -> String {
     }
 }
 
-/// Group downloads by mod. `rows` come newest first (as [`Db::downloads`]
-/// returns them); several rows for the same file on disk (a file downloaded
-/// twice) show once, as the newest.
+/// Split one Nexus page's downloads into file lines. Rows with a stored
+/// line join by it (a row whose file is another row's line root too);
+/// rows from before lines were stored join others by the file title in the
+/// archive name. Returns the clusters in first-seen order, as indices.
+fn split_lines(rows: &[DownloadRow]) -> Vec<Vec<usize>> {
+    let mut parent: Vec<usize> = (0..rows.len()).collect();
+    fn find(p: &mut [usize], i: usize) -> usize {
+        let mut i = i;
+        while p[i] != i {
+            p[i] = p[p[i]];
+            i = p[i];
+        }
+        i
+    }
+    let stem = |d: &DownloadRow| {
+        d.nexus_mod_id
+            .and_then(|m| title_from_archive(&d.file_name, m))
+            .map(|t| t.to_lowercase())
+    };
+    for i in 0..rows.len() {
+        for j in 0..i {
+            let (a, b) = (&rows[i], &rows[j]);
+            let same_line = match (a.file_line, b.file_line) {
+                (Some(x), Some(y)) => x == y,
+                (Some(x), None) => b.nexus_file_id == Some(x),
+                (None, Some(y)) => a.nexus_file_id == Some(y),
+                (None, None) => false,
+            };
+            let old_row = a.file_line.is_none() || b.file_line.is_none();
+            let (sa, sb) = (stem(a), stem(b));
+            // Archive names without a readable title keep the old rule: one
+            // item per page.
+            let unreadable = a.file_line.is_none() && b.file_line.is_none() && sa.is_none() && sb.is_none();
+            let same_title = unreadable || (old_row && sa.is_some() && sa == sb);
+            if same_line || same_title {
+                let (ra, rb) = (find(&mut parent, i), find(&mut parent, j));
+                parent[ra.max(rb)] = ra.min(rb);
+            }
+        }
+    }
+    let mut order: Vec<usize> = Vec::new();
+    let mut out: HashMap<usize, Vec<usize>> = HashMap::new();
+    for i in 0..rows.len() {
+        let r = find(&mut parent, i);
+        if !out.contains_key(&r) {
+            order.push(r);
+        }
+        out.entry(r).or_default().push(i);
+    }
+    order.into_iter().filter_map(|r| out.remove(&r)).collect()
+}
+
+/// Group downloads by mod, and a Nexus page's files by file line. `rows`
+/// come newest first (as [`Db::downloads`] returns them); several rows for
+/// the same file on disk (a file downloaded twice) show once, as the newest.
 pub fn group(rows: Vec<DownloadRow>) -> Vec<DownloadGroup> {
     let mut order: Vec<String> = Vec::new();
-    let mut groups: HashMap<String, DownloadGroup> = HashMap::new();
+    let mut by_mod: HashMap<String, Vec<DownloadRow>> = HashMap::new();
     let mut seen_paths = std::collections::HashSet::new();
     for d in rows {
         if !seen_paths.insert(d.path.clone()) {
             continue;
         }
         let key = group_key(&d);
-        let g = groups.entry(key.clone()).or_insert_with(|| {
+        if !by_mod.contains_key(&key) {
             order.push(key.clone());
-            DownloadGroup {
-                key: key.clone(),
-                name: d.mod_name.clone().filter(|n| !n.trim().is_empty()).unwrap_or_else(|| d.file_name.clone()),
-                folder: folder_name(d.mod_name.as_deref(), &d),
+        }
+        by_mod.entry(key).or_default().push(d);
+    }
+    let mut out = Vec::new();
+    for key in order {
+        let rows = by_mod.remove(&key).unwrap_or_default();
+        let lines = if rows[0].nexus_mod_id.is_some() { split_lines(&rows) } else { vec![(0..rows.len()).collect()] };
+        let several = lines.len() > 1;
+        for idx in lines {
+            let members: Vec<&DownloadRow> = idx.iter().map(|&i| &rows[i]).collect();
+            let newest = members[0];
+            let mod_name = newest.mod_name.clone().filter(|n| !n.trim().is_empty());
+            // A stored title wins; older rows of a page with several file
+            // lines use the title in the archive name.
+            let file_title = members.iter().find_map(|d| d.file_title.clone()).or_else(|| {
+                let lined = members.iter().any(|d| d.file_line.is_some());
+                (several && !lined).then(|| newest.nexus_mod_id.and_then(|m| title_from_archive(&newest.file_name, m))).flatten()
+            });
+            let name = file_title.clone().or_else(|| mod_name.clone()).unwrap_or_else(|| newest.file_name.clone());
+            let line = members.iter().filter_map(|d| d.file_line).min().or(newest.nexus_file_id.filter(|_| several));
+            let gkey = match (newest.nexus_mod_id, line) {
+                (Some(_), Some(l)) if several || file_title.is_some() => format!("{key}:{l}"),
+                _ => key.clone(),
+            };
+            let mut g = DownloadGroup {
+                key: gkey,
+                name: name.clone(),
+                mod_name: if file_title.is_some() { mod_name } else { None },
+                folder: folder_name(newest.mod_name.as_deref(), newest),
                 entries: Vec::new(),
                 total_size: 0,
+            };
+            for d in members {
+                g.total_size += d.size;
+                g.entries.push(DownloadEntry {
+                    channel: row_channel(d),
+                    on_disk: Path::new(&d.path).exists(),
+                    title: name.clone(),
+                    row: d.clone(),
+                });
             }
-        });
-        g.total_size += d.size;
-        g.entries.push(DownloadEntry { channel: row_channel(&d), on_disk: Path::new(&d.path).exists(), row: d });
+            out.push(g);
+        }
     }
-    order.into_iter().filter_map(|k| groups.remove(&k)).collect()
+    out
+}
+
+/// The name download `id` goes by in the Downloads tab.
+pub fn item_name(rows: Vec<DownloadRow>, id: i64) -> Option<String> {
+    group(rows).into_iter().flat_map(|g| g.entries).find(|e| e.row.id == id).map(|e| e.title)
 }
 
 #[cfg(test)]
@@ -521,6 +690,88 @@ mod tests {
         assert_eq!(g[1].key, "nexus:4198");
         assert_eq!(g[2].name, "manual.zip");
         assert_eq!(g[2].folder, "Other files");
+    }
+
+    // LUT Switcher 3 (Nexus 16310): a core mod and add-on LUT packs, each
+    // with its own update chain; the core's title changed between versions.
+    fn lut_files() -> (Vec<FileInfo>, Vec<FileUpdate>) {
+        let f = |id: i64, name: &str, cat: &str, at: i64| FileInfo {
+            file_id: id,
+            name: Some(name.into()),
+            category_name: Some(cat.into()),
+            uploaded_timestamp: Some(at),
+            ..Default::default()
+        };
+        let files = vec![
+            f(154975, "LUT Switcher - Core", "OLD_VERSION", 1),
+            f(156071, "LUTSwitcher 3.1.0", "OLD_VERSION", 5),
+            f(164842, "LUTSwitcher", "MAIN", 9),
+            f(154980, "LUT Pack - Misc", "OLD_VERSION", 2),
+            f(156583, "LUT Pack - Misc", "OPTIONAL", 6),
+            f(154976, "LUT Pack - Nova LUT", "OPTIONAL", 2),
+            f(146114, "LUT Switcher 2 - Core", "OLD_VERSION", 0),
+        ];
+        let u = |old: i64, new: i64| FileUpdate { old_file_id: old, new_file_id: new, uploaded_timestamp: None };
+        (files, vec![u(154975, 156071), u(156071, 164842), u(154980, 156583)])
+    }
+
+    #[test]
+    fn file_lines_follow_update_chains() {
+        let (files, updates) = lut_files();
+        let line = |id| file_line(id, &files, &updates);
+        assert_eq!(line(154975), FileLine { root: 154975, title: None }, "main file goes by the mod name");
+        assert_eq!(line(164842), line(154975), "a renamed file in the same chain is the same line");
+        assert_eq!(line(156583), FileLine { root: 154980, title: Some("LUT Pack - Misc".into()) });
+        assert_eq!(line(154976), FileLine { root: 154976, title: Some("LUT Pack - Nova LUT".into()) });
+        assert_eq!(line(146114).title.as_deref(), Some("LUT Switcher 2 - Core"), "an old line without a main file");
+        // Two main files without a chain between them: both go by their title.
+        let mut two = files.clone();
+        two.push(FileInfo { file_id: 1, name: Some("4K".into()), category_name: Some("MAIN".into()), ..Default::default() });
+        assert_eq!(file_line(164842, &two, &updates).title.as_deref(), Some("LUTSwitcher"));
+    }
+
+    #[test]
+    fn titles_from_nexus_archive_names() {
+        assert_eq!(title_from_archive("LUT Pack - Nova LUT 16310 1.4.1n 2026-08-06T04-27Z 4rpqrKLtt.zip", 16310).as_deref(), Some("LUT Pack - Nova LUT"));
+        assert_eq!(title_from_archive("LUT Switcher - Vanilla LUT Pack-16310-1-1-1x-1724726638.zip", 16310).as_deref(), Some("LUT Switcher - Vanilla LUT Pack"));
+        assert_eq!(title_from_archive("cet.zip", 107), None);
+        assert_eq!(title_from_archive("16310-1-0.zip", 16310), None);
+    }
+
+    #[test]
+    fn separate_files_of_one_page_are_separate_items() {
+        let lut = |id: i64, file: i64, line: Option<i64>, title: Option<&str>, archive: &str| DownloadRow {
+            id,
+            nexus_mod_id: Some(16310),
+            nexus_file_id: Some(file),
+            file_name: archive.into(),
+            path: format!("/d/LUT/{archive}"),
+            mod_name: Some("LUT Switcher 3".into()),
+            source: "nexus".into(),
+            file_line: line,
+            file_title: title.map(str::to_string),
+            ..Default::default()
+        };
+        let rows = vec![
+            lut(6, 164842, Some(154975), None, "LUTSwitcher 16310 3.4.0 x.zip"),
+            lut(5, 156583, Some(154980), Some("LUT Pack - Misc"), "LUT Pack - Misc 16310 1.2.1m x.zip"),
+            lut(4, 154976, Some(154976), Some("LUT Pack - Nova LUT"), "LUT Pack - Nova LUT 16310 1.4.1n x.zip"),
+            // Saved before file lines were stored.
+            lut(3, 154975, None, None, "LUT Switcher - Core 16310 3.0.0 x.zip"),
+            lut(2, 154980, None, None, "LUT Pack - Misc 16310 1.1.1m x.zip"),
+            lut(1, 87511, None, None, "LUT Switcher - Misc LUT Pack-16310-1-1-0m-1726960233.zip"),
+        ];
+        let g = group(rows);
+        let names: Vec<&str> = g.iter().map(|g| g.name.as_str()).collect();
+        assert_eq!(names, ["LUT Switcher 3", "LUT Pack - Misc", "LUT Pack - Nova LUT", "LUT Switcher - Misc LUT Pack"]);
+        assert_eq!(g[0].entries.iter().map(|e| e.row.id).collect::<Vec<_>>(), [6, 3], "core 3.0.0 is the line's root");
+        assert_eq!(g[1].entries.iter().map(|e| e.row.id).collect::<Vec<_>>(), [5, 2]);
+        assert_eq!(g[1].mod_name.as_deref(), Some("LUT Switcher 3"));
+        assert_eq!(g[1].entries[0].title, "LUT Pack - Misc");
+        assert_eq!(g[0].mod_name, None);
+        assert!(g.iter().all(|g| g.folder == "LUT Switcher 3"), "files stay in the mod's folder");
+        let keys: std::collections::HashSet<&str> = g.iter().map(|g| g.key.as_str()).collect();
+        assert_eq!(keys.len(), 4);
     }
 
     #[test]

@@ -3,7 +3,7 @@
 		{
 			"id": "entry",
 			"type": "text",
-			"text": "## Entry points\n**Install from archive…**, Downloads **Install**, **Download & install**, **Get from Nexus** → queue, GitHub, Frameworks **Install**, Modpacks **Install all**, ReShade card, OptiScaler page, RadioEXT **Create/Save station** (+ PNG icon archive)\n\n[[Entry points]]",
+			"text": "## Entry points\n**Install from archive…**, Downloads **Install**, **Download & install**, **Get from Nexus** → queue, GitHub, Frameworks **Install**, Modpacks **Install all**, ReShade card, OptiScaler page, RadioEXT **Create/Save station** (+ PNG icon archive)\n\nNexus mod name: file title for add-on/optional files (`downloads::file_line`)\n\n[[Entry points]]",
 			"x": 0,
 			"y": 0,
 			"width": 440,

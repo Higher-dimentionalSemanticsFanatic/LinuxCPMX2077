@@ -64,8 +64,8 @@ Mods players reported as not installing or not working, traced through this
 map. Add: mod name + Nexus link, the toast's layout, and which gap (or new
 row) explains it.
 
-- *(none recorded yet)*
+- LUT Switcher 3 ([Nexus 16310](https://www.nexusmods.com/cyberpunk2077/mods/16310)), 2026-10-17: installs fine (each LUT pack has its own `archive/pc/mod/LUTSwitcher-Addon-*.archive` and `r6/tweaks/LUTSwitcher/*.yaml`), but every pack showed in Downloads as a version of the mod and installed under the mod's name. Fixed, see below.
 
 ## Fixed
 
-- *(none yet)*
+- Separate files of one Nexus page (add-on packs, optional files) were grouped as versions of one mod in Downloads, named by the mod, and offered **Switch to this** over each other. Now `downloads::file_line` (update chain from `files_with_updates`) splits them, they are named by file title, and `game_versions::compare` pairs them by name.

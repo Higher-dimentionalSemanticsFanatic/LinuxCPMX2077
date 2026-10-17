@@ -1306,6 +1306,14 @@ window's *Download queue* menu.
 
 Every archive you downloaded, grouped by mod with each version under it.
 
+- **Separate files of one Nexus page** (add-on packs, optional files, such as
+  the LUT packs of LUT Switcher 3) are separate items, named by their file
+  title on Nexus with *from <mod name>* after it. Only files the author linked
+  as updates of each other on Nexus (the page's file update chain) are listed
+  as versions of one item; the main file keeps the mod's name. Installed
+  mods get the same name. Archives downloaded before this was recorded are
+  told apart by the file title in the archive name.
+
 - Columns: version, the game version it was downloaded on, source, size,
   **Downloaded** (date and time the archive was downloaded), **Installed**
   (when that archive was installed into the selected game; *—* when it isn't
@@ -1326,7 +1334,8 @@ Every archive you downloaded, grouped by mod with each version under it.
   nightly only. The channel comes from the version and file name and from
   GitHub's pre-release flag.
 - **Install** or **Switch to this** installs that file, replacing the version
-  you have. **Delete** removes the file from disk. An installed mod stays
+  you have. **Switch to this** shows only when another version of the same
+  item is installed; another file of the same Nexus page installs next to it. **Delete** removes the file from disk. An installed mod stays
   installed; only the archive goes.
 - *installed* / *installed, off* / *not installed*: whether that archive is
   installed in the selected game. Uninstalling a mod keeps its download, so
