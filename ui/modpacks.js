@@ -627,6 +627,39 @@ window.collectionQueueTick = () => {
   }), 600);
 };
 
+const OWN_PROFILE_PREF = "modpackOwnProfile";
+
+// Before a modpack install: save the enabled mods as a profile when none
+// holds them, then switch to the modpack's own profile (profiles.rs).
+// False when the user cancelled.
+async function switchToPackProfile(c, members) {
+  const args = {
+    gameId: currentGame.id, gameVersion: currentVersionKey().key, slug: c.slug, name: c.name,
+    mods: members.map((m) => ({ mod_id: m.mod_id, file_name: m.file_name ?? null, mod_name: m.mod_name })),
+  };
+  const p = await invoke("modpack_profile_plan", args);
+  const byId = new Map(mods.map((m) => [m.id, m.name]));
+  const names = (ids) => nameList(ids.map((id) => byId.get(id) || `#${id}`), 8);
+  if (p.disable.length || p.enable.length || p.save_before) {
+    const lines = [p.profile ? `Switch to profile ${p.profile} and install into it?` : `Install ${c.name} into a new profile?`];
+    if (p.save_before) lines.push(`Enabled mods saved first as profile “${p.save_before}”.`);
+    if (p.disable.length) lines.push(`Disable, not in the modpack (${p.disable.length}):`, names(p.disable));
+    if (p.enable.length) lines.push(`Enable (${p.enable.length}):`, names(p.enable));
+    lines.push("Switch back in Installed mods > Game version and profiles.");
+    if (!(await dialog.ask(lines.join("\n"), { title: "Modpack profile", kind: "info", okLabel: "Switch and install", cancelLabel: "Cancel" }))) return false;
+  }
+  try {
+    const r = await invoke("switch_to_modpack_profile", args);
+    const extra = [];
+    if (r.saved_before) extra.push(`Previous mods saved as profile ${r.saved_before}.`);
+    if (r.kept_files) extra.push(`${r.kept_files} file${r.kept_files === 1 ? "" : "s"} changed after install left in the game folder.`);
+    bulkReport(`Profile ${r.profile}: enabled ${r.enabled.length}, disabled ${r.disabled.length}`, r.failed.map(([n, e]) => `${n}: ${e}`), extra);
+  } finally {
+    await loadMods();
+  }
+  return true;
+}
+
 function renderCollection(v) {
   const c = v.collection;
   openCollection = { slug: c.slug, revision: c.revision };
@@ -640,9 +673,14 @@ function renderCollection(v) {
   const required = v.mods.filter((m) => !m.optional);
   const optional = v.mods.filter((m) => m.optional);
   const following = v.tracked_revision !== null && v.tracked_revision !== undefined;
+  // Required mods and the optional ones already here.
+  const kept = v.mods.filter((m) => !m.optional || m.state !== "missing");
   const reopen = () => showCollection(c.slug, c.revision);
-  // Queue mods and follow the collection at this revision.
-  const install = async (seeds) => {
+  // Queue mods and follow the collection at this revision. With
+  // `members` (the collection mods the profile lists) and the box ticked,
+  // switch to the modpack's own profile first.
+  const install = async (seeds, members = null) => {
+    if (members && loadPref(OWN_PROFILE_PREF, true) && !(await switchToPackProfile(c, members))) return;
     await invoke("track_collection", { gameId, slug: c.slug, revision: c.revision });
     if (seeds.length) enqueue(seeds);
     await reopen();
@@ -682,7 +720,7 @@ function renderCollection(v) {
       })) : null,
     el("div", { class: "row" },
       action(`Update to revision ${c.revision}`, [...missingRequired, ...other],
-        () => install([...missingRequired.map(seed), ...other.map(replaceSeed)]), "primary"),
+        () => install([...missingRequired.map(seed), ...other.map(replaceSeed)], kept), "primary"),
       missingRequired.length + other.length ? null : el("button", { onclick: (e) => busy(e.target, () => install([])) },
         `Mark revision ${c.revision} as followed`))) : null;
 
@@ -709,11 +747,11 @@ function renderCollection(v) {
         c.summary ? el("p", {}, c.summary) : null)),
     update,
     el("div", { class: "row" },
-      action("Install required mods", missingRequired, () => install(missingRequired.map(seed)), "primary"),
-      optional.length ? action("Install all, with optional", missing, () => install(missing.map(seed))) : null,
+      action("Install required mods", missingRequired, () => install(missingRequired.map(seed), kept), "primary"),
+      optional.length ? action("Install all, with optional", missing, () => install(missing.map(seed), v.mods)) : null,
       other.length ? el("button", {
         title: "Replaces the version you have with the file the collection lists",
-        onclick: (e) => busy(e.target, () => install(other.map(replaceSeed))),
+        onclick: (e) => busy(e.target, () => install(other.map(replaceSeed), kept)),
       }, `Use the collection's versions (${other.length})`) : null,
       disabled.length ? el("button", { onclick: (e) => busy(e.target, async () => {
         for (const m of disabled) {
@@ -722,7 +760,10 @@ function renderCollection(v) {
         }
         await loadMods();
         await reopen();
-      }) }, `Turn on the ${plural(disabled.length, "mod")} you turned off`) : null),
+      }) }, `Turn on the ${plural(disabled.length, "mod")} you turned off`) : null,
+      el("label", { class: "check", title: "Install into a profile of its own: mods not in the modpack are disabled first, the enabled mods are saved as a profile when none holds them" },
+        el("input", { type: "checkbox", checked: loadPref(OWN_PROFILE_PREF, true) ? "" : null, onchange: (e) => savePref(OWN_PROFILE_PREF, e.target.checked) }),
+        " Separate profile")),
     nexusUser.is_premium ? null : el("p", { class: "muted" },
       "Free account: the Nexus window opens each mod's file in turn. Click “Slow download” once per mod and the queue does the rest."),
     c.external.length ? el("div", { class: "card notice" }, "Hosted outside Nexus; manual download required: ", c.external.join(", ")) : null,

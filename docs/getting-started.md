@@ -170,7 +170,10 @@ progress and has **Skip this mod** and **Cancel**.
 
 Prefer a ready-made setup? **Modpacks** (under **Get mods** in the menu) lists Nexus collections. Open
 one to see which of its mods you already have, then **Install required
-mods** to queue the rest.
+mods** to queue the rest. With **Separate profile** ticked (the default),
+your current mods are saved as a profile and disabled first, and the
+collection gets a profile of its own; switch between them under
+**Installed mods** › **Game version and profiles**.
 
 ## 8. Start the game and check
 

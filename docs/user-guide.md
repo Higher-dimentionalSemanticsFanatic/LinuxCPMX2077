@@ -341,6 +341,9 @@ Above the list:
     name, so a mod updated after the profile was saved still counts. Where a
     mod has several files installed (main plus optional file), only the
     files in the profile are enabled.
+  - Modpack profiles: installing from a collection with **Separate profile**
+    ticked (see [Modpacks](#modpacks)) creates a profile named after the
+    collection; its chip tooltip names the collection.
 - **Filter by name**: shows mods whose name or archive name contains the
   text.
 - **Tag and category filter**: one of your tags (or *No tags*), or a Nexus
@@ -882,6 +885,21 @@ connected Nexus account for collections.
     collection lists;
   - **Follow** tracks the collection without installing anything;
     **Open on nexusmods.com** opens its page.
+  - **Separate profile** (ticked by default, the choice is kept): the
+    install buttons above (and **Update to revision N**) first switch to a
+    [mod profile](#installed-mods) of the collection's own, named after it
+    and filed under the current game version. One confirmation lists the
+    mods to disable (enabled, not in the collection) and to enable (in the
+    collection, turned off). When the enabled mods match no profile, they
+    are saved first as profile *Before* followed by the collection name. The profile lists the
+    required mods, the optional ones already installed (all optional ones
+    with **Install all, with optional**) and the frameworks enabled now
+    (CET, RED4ext, redscript, ArchiveXL, TweakXL, Codeware), and uses the
+    game's default archive load order. Mods still in the download queue
+    count once installed. Installing from the same collection again adds to
+    its profile. Switch back with **Apply** on the other profile under
+    **Installed mods** › **Game version and profiles**. Untick it to install
+    on top of the mods enabled now.
   While queued mods download and install, each missing mod's row shows its
   queue state (*downloading*, *waiting for FOMOD selections*, *failed: …*)
   and the list updates as each one finishes.

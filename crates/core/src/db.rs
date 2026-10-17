@@ -238,6 +238,8 @@ const MIGRATIONS: &[(&str, &str, &str)] = &[
     // '' for the game's default order, NULL for profiles saved before load
     // order could be changed (applying them leaves the order alone).
     ("profiles", "load_order", "TEXT"),
+    // Nexus collection slug of a profile made by a modpack install.
+    ("profiles", "collection_slug", "TEXT"),
     // Predefined tag set group (tag_set) a tag was added with.
     ("tags", "grp", "TEXT"),
 ];
