@@ -117,9 +117,9 @@ pub const FEATURED: &[Featured] = &[
     Featured {
         repo: "Higher-dimentionalSemanticsFanatic/CyberHID",
         name: "CyberHID",
-        what: "Adds pedals, wheels, flight sticks and button boxes to the game's gamepad input. Bindings are set in Mod Settings (Nexus).",
+        what: "Adds pedals, wheels, flight sticks and button boxes to the game's gamepad input. Bindings are set in its window in the Cyber Engine Tweaks overlay.",
         key: "cyberhid",
-        requires: &["red4ext", "redscript"],
+        requires: &["red4ext", "cet"],
         category: "Mod",
     },
 ];
@@ -973,7 +973,7 @@ mod tests {
         assert_eq!(keys(&["archivexl", "tweakxl"], &[]), ["red4ext", "archivexl", "tweakxl"]);
         assert_eq!(keys(&["psiberx/CP2077-Archive-XL"], &["red4ext"]), ["archivexl"], "by repo, any case");
         assert_eq!(keys(&["red4ext"], &["red4ext"]), ["red4ext"], "asked for explicitly: reinstall");
-        assert_eq!(keys(&["cyberhid"], &["red4ext"]), ["redscript", "cyberhid"]);
+        assert_eq!(keys(&["cyberhid"], &["red4ext"]), ["cet", "cyberhid"]);
         assert!(install_plan(&["nope".into()], &[]).is_err());
     }
 

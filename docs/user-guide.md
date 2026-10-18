@@ -1283,7 +1283,8 @@ The core frameworks and many mods ship as GitHub releases.
 - With an empty search, the featured list shows CET, RED4ext, redscript,
   ArchiveXL, TweakXL and Codeware (badge *Framework*), and CyberHID (badge
   *Mod*: pedals, wheels, flight sticks and button boxes as gamepad input;
-  bindings are set in game through Mod Settings, which comes from Nexus).
+  bindings are set in its window in the Cyber Engine Tweaks overlay, so it
+  needs RED4ext and CET).
   **Install missing frameworks** installs every framework the game lacks,
   each after what it needs; CyberHID only installs when you pick it. On
   Linux, installing CyberHID adds the *CyberHID controllers* item to the
