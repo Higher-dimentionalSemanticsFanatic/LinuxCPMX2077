@@ -6,7 +6,9 @@
 //! folders that exist twice with different capitalisation, what HDR
 //! needs (see [`crate::hdr`]), OptiScaler's DLL override and the
 //! `VKD3D_SHADER_OVERRIDE` launch option for FSR 4.1.1 shader overrides (see
-//! [`crate::optiscaler`]).
+//! [`crate::optiscaler`]), and with CyberHID installed the
+//! `PROTON_ENABLE_HIDRAW` launch option and hidraw access for game
+//! controllers (see [`crate::hidraw`]).
 //!
 //! Every fix is offered, never applied on its own: the user confirms it, a
 //! record of what changed is kept under the app's data dir, and Undo puts
@@ -24,6 +26,7 @@ use crate::activity::{self, Kind};
 use crate::desktop::user_command;
 use crate::game::{self, GameInstall, Store};
 use crate::hdr;
+use crate::hidraw::{self, Controller};
 use crate::install::{KNOWN_ROOTS, resolve_ci};
 use crate::{Error, Result, STEAM_APP_ID, vdf};
 
@@ -48,6 +51,11 @@ pub const FIX_HDR: &str = "hdr";
 pub const FIX_HDR_GAMESCOPE: &str = "hdr-gamescope";
 pub const FIX_HDR_WAYLAND: &str = "hdr-wayland";
 pub const FIX_FSR4: &str = "fsr4-overrides";
+pub const FIX_HIDRAW: &str = "cyberhid-hidraw";
+pub const FIX_HIDRAW_ACCESS: &str = "cyberhid-hidraw-access";
+
+/// CyberHID's plugin, which reads game controllers through Wine's hid.dll.
+const CYBERHID_DLL: &str = "red4ext/plugins/cyberhid/cyberhid.dll";
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -76,6 +84,8 @@ pub struct Check {
     pub undo: Option<Action>,
     /// Text the user can copy and set by hand instead (launch options).
     pub copy: Option<String>,
+    /// What to do with `copy` when it isn't a launch option.
+    pub copy_note: Option<String>,
     /// A second way to fix it (HDR through gamescope instead of Wayland),
     /// applied with `alt_id` in place of `id`.
     pub alt: Option<Action>,
@@ -99,6 +109,8 @@ pub struct Probe {
     pub winetricks: Option<PathBuf>,
     pub cabextract: bool,
     pub hdr: hdr::Probe,
+    /// Joystick-class HID devices (wheels, pedals, sticks) and their hidraw nodes.
+    pub controllers: Vec<Controller>,
 }
 
 impl Probe {
@@ -120,6 +132,7 @@ impl Probe {
             winetricks: which("winetricks"),
             cabextract: which("cabextract").is_some(),
             hdr: hdr::Probe::system(),
+            controllers: hidraw::scan(),
         }
     }
 }
@@ -749,6 +762,7 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
                 detail: "Proton hasn't created this game's prefix yet. Start the game once from Steam, quit, then rescan.".into(),
                 fix: None,
                 undo: None,
+                copy_note: None,
                 copy: None,
             }),
             None => {}
@@ -793,6 +807,7 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
                     detail,
                     fix,
                     undo: undo_action(ctx, FIX_VC, "the prefix's runtime files and registry", running),
+                    copy_note: None,
                     copy: None,
                 });
             }
@@ -835,6 +850,7 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
             },
             fix,
             undo: undo_action(ctx, FIX_D3DCOMPILER, "the prefix's compiler files and registry", running),
+            copy_note: None,
             copy: None,
         });
     }
@@ -881,6 +897,7 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
                 )
             },
             undo: undo_action(ctx, FIX_LAUNCH, "the previous launch options", steam_block),
+            copy_note: None,
             copy: (!ok).then_some(want),
         });
     } else if let Some(prefix) = &g.proton_prefix {
@@ -914,6 +931,7 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
                     )
                 },
                 undo: undo_action(ctx, FIX_OVERRIDES, "the previous DLL overrides", running),
+                copy_note: None,
                 copy: None,
             });
         }
@@ -992,6 +1010,7 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
                 _ => None,
             },
             undo: undo_action(ctx, FIX_HDR, "the launch options without the HDR settings", steam_block),
+            copy_note: None,
             copy: match (&st.plan, want) {
                 (Some(_), Some(w)) if steam && !set => Some(w),
                 (Some(p), _) if !set => Some(p.env.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(" ")),
@@ -1005,6 +1024,9 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
     if let Some(c) = fsr4_check(ctx) {
         out.push(c);
     }
+
+    // CyberHID: game controllers passed to Proton as raw HID devices.
+    out.extend(hidraw_checks(ctx));
 
     // Folders that exist under two spellings.
     let dups = case_duplicates(&g.path);
@@ -1034,6 +1056,7 @@ pub fn checks(ctx: &Ctx) -> Vec<Check> {
                 blocked: running.map(String::from),
             }),
             undo: undo_action(ctx, FIX_CASE, "the moved files", running),
+            copy_note: None,
             copy: None,
         });
     }
@@ -1148,6 +1171,7 @@ fn fsr4_check(ctx: &Ctx) -> Option<Check> {
         detail: String::new(),
         fix: None,
         undo: undo_action(ctx, FIX_FSR4, "the launch options without the shader overrides", steam_block),
+        copy_note: None,
         copy: None,
         alt: None,
         alt_id: None,
@@ -1205,6 +1229,138 @@ fn fsr4_check(ctx: &Ctx) -> Option<Check> {
 }
 
 const UPSCALER: &str = crate::optiscaler::UPSCALER_DLL;
+
+/// The game's Steam launch options, or the variables set in Heroic.
+fn launch_env(ctx: &Ctx) -> String {
+    let g = ctx.game;
+    if g.store == Store::Steam {
+        g.launch_options.clone().unwrap_or_default()
+    } else {
+        let env = game::heroic_game(ctx.home, &g.path).map(|h| h.env).unwrap_or_default();
+        env.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(" ")
+    }
+}
+
+/// With CyberHID installed: the controllers `PROTON_ENABLE_HIDRAW` should
+/// name, and whether their hidraw nodes are readable. Without both, Proton
+/// passes them through SDL (see [`crate::hidraw`]).
+fn hidraw_checks(ctx: &Ctx) -> Vec<Check> {
+    let g = ctx.game;
+    if !game::exists_ci(&g.path, CYBERHID_DLL) && load_record(ctx, FIX_HIDRAW).is_none() {
+        return Vec::new();
+    }
+    const VAR: &str = hidraw::PROTON_VAR;
+    let steam = g.store == Store::Steam;
+    let cur = launch_env(ctx);
+    let now = find_env(&cur, VAR).map(|(v, ..)| v);
+    let all = &ctx.probe.controllers;
+    let names = |list: &[&Controller]| list.iter().map(|c| c.label()).collect::<Vec<_>>().join(", ");
+    let unlisted: Vec<&Controller> = all.iter().filter(|c| !now.as_deref().is_some_and(|v| hidraw::listed(v, c))).collect();
+    let steam_block = if ctx.probe.steam_running { Some(CLOSE_STEAM) } else { None };
+    let no_config = localconfigs(ctx.home).is_empty().then_some("Steam has no settings for this game yet. Start it once from Steam, then try again.");
+    let mut check = Check {
+        id: FIX_HIDRAW.into(),
+        title: "CyberHID controllers".into(),
+        state: State::Ok,
+        detail: String::new(),
+        fix: None,
+        undo: undo_action(ctx, FIX_HIDRAW, "the launch options without the controller list", steam_block),
+        copy: None,
+        copy_note: None,
+        alt: None,
+        alt_id: None,
+    };
+    if all.is_empty() {
+        check.detail = "No joystick, wheel or pedal HID devices connected (read from /sys/class/hidraw). Connect them, then Rescan.".into();
+        if let Some(v) = &now {
+            check.detail.push_str(&format!(" Launch options set {VAR}={v}."));
+        }
+        return vec![check];
+    }
+    if unlisted.is_empty() {
+        check.detail = format!(
+            "{VAR} makes Proton pass {} to the game as raw HID devices, with their own axes and names.",
+            names(&all.iter().collect::<Vec<_>>())
+        );
+    } else {
+        let want = hidraw::with_listed(now.as_deref(), &unlisted);
+        check.state = State::Problem;
+        check.detail = format!(
+            "Proton passes {} through SDL: at most 6 axes per device, generic axis names, and a device with 6 axes \
+             and 14 or more buttons becomes an XInput pad, which CyberHID skips. {VAR} passes them as raw HID devices.",
+            names(&unlisted)
+        );
+        if steam {
+            let line = merge_env(&cur, VAR, Some(&want));
+            check.detail.push_str(&format!(" Launch options lack {VAR}='{want}'."));
+            check.fix = action(
+                "Set launch option",
+                format!(
+                    "Set Cyberpunk 2077's Steam launch options to:\n\n{line}\n\nNow: {}\n\nUndo puts back the previous {VAR}.",
+                    if cur.trim().is_empty() { "(empty)" } else { cur.trim() }
+                ),
+                steam_block.or(no_config),
+            );
+            check.copy = Some(line);
+        } else {
+            check.detail.push_str(&format!(" The launcher's environment variables for the game lack {VAR}={want}."));
+            check.copy = Some(format!("{VAR}={want}"));
+        }
+    }
+    let mut out = vec![check];
+    // Proton opens the nodes read/write; without access it stays on SDL.
+    let locked: Vec<&Controller> = all.iter().filter(|c| !c.access).collect();
+    if !locked.is_empty() {
+        let nodes: Vec<String> = locked.iter().flat_map(|c| c.nodes.iter().map(|n| n.display().to_string())).collect();
+        out.push(Check {
+            id: FIX_HIDRAW_ACCESS.into(),
+            title: "CyberHID controller access".into(),
+            state: State::Problem,
+            detail: format!(
+                "No read/write access to {} ({}), so Proton keeps these controllers on SDL. A udev rule gives the \
+                 logged-in user access; it needs root: run the copied command in a terminal, then Rescan.",
+                nodes.join(", "),
+                names(&locked)
+            ),
+            fix: None,
+            undo: None,
+            copy: Some(hidraw::udev_command(&locked)),
+            copy_note: Some("Copied. Run it in a terminal (sudo asks for your password), then Rescan.".into()),
+            alt: None,
+            alt_id: None,
+        });
+    }
+    out
+}
+
+/// Add the connected controllers to `PROTON_ENABLE_HIDRAW` in every Steam
+/// account's launch options, keeping the entries already there.
+fn write_hidraw(ctx: &Ctx) -> Result<String> {
+    const VAR: &str = hidraw::PROTON_VAR;
+    let mut rec = load_record(ctx, FIX_HIDRAW).unwrap_or_default();
+    let mut set = String::new();
+    for cfg in localconfigs(ctx.home) {
+        let src = std::fs::read_to_string(&cfg)?;
+        let before = launch_in(&src);
+        let old = before.as_deref().unwrap_or("");
+        let now = find_env(old, VAR).map(|(v, ..)| v);
+        let add: Vec<&Controller> =
+            ctx.probe.controllers.iter().filter(|c| !now.as_deref().is_some_and(|v| hidraw::listed(v, c))).collect();
+        if add.is_empty() {
+            continue;
+        }
+        let line = merge_env(old, VAR, Some(&hidraw::with_listed(now.as_deref(), &add)));
+        let new = vdf::set_value(&src, LAUNCH_PATH, &line, 2).ok_or_else(|| Error::Other(format!("could not edit {}", cfg.display())))?;
+        if !rec.launch.iter().any(|(p, _)| p == &cfg) {
+            rec.launch.push((cfg.clone(), before));
+        }
+        write_atomic(&cfg, &new)?;
+        set = line;
+    }
+    rec.applied_at = now();
+    save_record(ctx, FIX_HIDRAW, &rec)?;
+    Ok(format!("Launch options set: {set}"))
+}
 
 /// Write the shader-override launch option the FSR 4 check asks for.
 fn write_fsr4(ctx: &Ctx) -> Result<String> {
@@ -1399,6 +1555,7 @@ pub fn apply(ctx: &Ctx, id: &str) -> Result<String> {
     match id {
         FIX_VC | FIX_D3DCOMPILER => apply_tricks(ctx, id),
         FIX_FSR4 => write_fsr4(ctx),
+        FIX_HIDRAW => write_hidraw(ctx),
         FIX_LAUNCH => {
             let dlls = override_dlls(g);
             let redmods = game::has_redmods(&g.path) && redmod_wanted(ctx);
@@ -1657,6 +1814,22 @@ pub fn undo(ctx: &Ctx, id: &str) -> Result<String> {
             }
             "Shader overrides removed from the launch options.".into()
         }
+        FIX_HIDRAW => {
+            // Back to the value from before the fix (or none); the rest of
+            // the launch options may have changed since and stays.
+            for (cfg, before) in &rec.launch {
+                let Ok(src) = std::fs::read_to_string(cfg) else { continue };
+                let Some(cur) = launch_in(&src) else { continue };
+                let old = before.as_deref().and_then(|b| find_env(b, hidraw::PROTON_VAR)).map(|(v, ..)| v);
+                let want = merge_env(&cur, hidraw::PROTON_VAR, old.as_deref());
+                if want != cur
+                    && let Some(new) = vdf::set_value(&src, LAUNCH_PATH, &want, 2)
+                {
+                    write_atomic(cfg, &new)?;
+                }
+            }
+            format!("{} is back to its previous value.", hidraw::PROTON_VAR)
+        }
         FIX_OVERRIDES => {
             let prefix = g.proton_prefix.as_ref().ok_or_else(|| Error::Other("no prefix".into()))?;
             let reg_path = prefix.join("user.reg");
@@ -1794,6 +1967,67 @@ mod tests {
         let c = checks(&ctx2).into_iter().find(|c| c.id == FIX_FSR4).unwrap();
         assert_eq!(c.state, State::Problem);
         assert_eq!(c.fix.unwrap().label, "Remove launch option");
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn cyberhid_controllers_get_hidraw() {
+        let home = tempfile::tempdir().unwrap();
+        let root = home.path().join(".local/share/Steam");
+        std::fs::create_dir_all(root.join("steamapps")).unwrap();
+        let cfg = root.join("userdata/123/config/localconfig.vdf");
+        let vdf_with = |opts: &str| {
+            format!(
+                "\"UserLocalConfigStore\"\n{{\n\t\"Software\"\n\t{{\n\t\t\"Valve\"\n\t\t{{\n\t\t\t\"Steam\"\n\t\t\t{{\n\t\t\t\t\"apps\"\n\t\t\t\t{{\n\t\t\t\t\t\"1091500\"\n\t\t\t\t\t{{\n\t\t\t\t\t\t\"LaunchOptions\"\t\t\"{opts}\"\n\t\t\t\t\t}}\n\t\t\t\t}}\n\t\t\t}}\n\t\t}}\n\t}}\n}}\n"
+            )
+        };
+        let opts = "PROTON_ENABLE_HIDRAW=0x3344/0x0001 %command% --launcher-skip";
+        touch(&cfg, vdf_with(opts).as_bytes());
+        let gdir = tempfile::tempdir().unwrap();
+        let state = tempfile::tempdir().unwrap();
+        let g = install(gdir.path(), Store::Steam, None, Some(opts));
+        let wheel = Controller { vid: 0x046d, pid: 0xc24f, name: "G29".into(), nodes: vec!["/dev/hidraw3".into()], access: true };
+        let rudder = Controller { vid: 0x044f, pid: 0xb679, name: "T-Rudder".into(), nodes: vec!["/dev/hidraw7".into()], access: false };
+        let probe = Probe { controllers: vec![wheel.clone(), rudder.clone()], ..Default::default() };
+        let ctx = Ctx { home: home.path(), game: &g, state_dir: state.path().to_path_buf(), probe: probe.clone() };
+        assert!(checks(&ctx).iter().all(|c| !c.id.starts_with("cyberhid")), "no CyberHID, no check");
+
+        touch(&gdir.path().join("red4ext/plugins/CyberHID/cyberhid.dll"), b"MZ");
+        let all = checks(&ctx);
+        let c = all.iter().find(|c| c.id == FIX_HIDRAW).unwrap();
+        assert_eq!(c.state, State::Problem);
+        assert!(c.detail.contains("G29 (046d:c24f), T-Rudder (044f:b679) through SDL"), "{}", c.detail);
+        let line = "PROTON_ENABLE_HIDRAW='0x3344/0x0001,0x046d/0xc24f,0x044f/0xb679' %command% --launcher-skip";
+        assert_eq!(c.copy.as_deref(), Some(line), "existing entries stay");
+        assert_eq!(c.fix.as_ref().unwrap().label, "Set launch option");
+        let access = all.iter().find(|c| c.id == FIX_HIDRAW_ACCESS).unwrap();
+        assert!(access.fix.is_none() && access.detail.contains("/dev/hidraw7 (T-Rudder (044f:b679))"), "{}", access.detail);
+        assert!(access.copy.as_deref().unwrap().contains("KERNELS==\"*:044F:B679.*\"") && access.copy_note.is_some());
+
+        apply(&ctx, FIX_HIDRAW).unwrap();
+        assert_eq!(launch_in(&std::fs::read_to_string(&cfg).unwrap()).as_deref(), Some(line));
+        let g2 = GameInstall { launch_options: Some(line.into()), ..g.clone() };
+        let ctx2 = Ctx { home: home.path(), game: &g2, state_dir: state.path().to_path_buf(), probe: probe.clone() };
+        let c = checks(&ctx2).into_iter().find(|c| c.id == FIX_HIDRAW).unwrap();
+        assert_eq!(c.state, State::Ok);
+        assert!(c.fix.is_none() && c.undo.is_some());
+
+        // Undo restores the earlier value and keeps later edits.
+        let edited = format!("{line} -skipStartScreen");
+        std::fs::write(&cfg, vdf_with(&edited)).unwrap();
+        let g3 = GameInstall { launch_options: Some(edited), ..g.clone() };
+        let ctx3 = Ctx { home: home.path(), game: &g3, state_dir: state.path().to_path_buf(), probe };
+        undo(&ctx3, FIX_HIDRAW).unwrap();
+        assert_eq!(
+            launch_in(&std::fs::read_to_string(&cfg).unwrap()).as_deref(),
+            Some("PROTON_ENABLE_HIDRAW='0x3344/0x0001' %command% --launcher-skip -skipStartScreen")
+        );
+
+        // Nothing connected: nothing to set.
+        let ctx4 = Ctx { home: home.path(), game: &g, state_dir: state.path().to_path_buf(), probe: Probe::default() };
+        let c = checks(&ctx4).into_iter().find(|c| c.id == FIX_HIDRAW).unwrap();
+        assert_eq!(c.state, State::Ok);
+        assert!(c.detail.starts_with("No joystick, wheel or pedal HID devices connected"), "{}", c.detail);
     }
 
     #[test]

@@ -42,7 +42,11 @@ const RAW_BASE: &str = "https://raw.githubusercontent.com";
 /// Largest source archive of a commit the app downloads.
 const MAX_ZIPBALL: u64 = 256 << 20;
 
-/// A well-known framework hosted on GitHub, shown before the user searches.
+/// [`Featured::category`] of the core frameworks.
+pub const FRAMEWORK: &str = "Framework";
+
+/// A well-known framework or mod hosted on GitHub, shown before the user
+/// searches.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Featured {
     /// `owner/repo`.
@@ -54,10 +58,13 @@ pub struct Featured {
     pub key: &'static str,
     /// Keys of the frameworks it needs to load.
     pub requires: &'static [&'static str],
+    /// [`FRAMEWORK`] for the core frameworks **Install missing frameworks**
+    /// installs; anything else is a mod installed only when picked.
+    pub category: &'static str,
 }
 
-/// Well-known mod frameworks hosted on GitHub, in the order they install
-/// (each after what it needs).
+/// Well-known frameworks and mods hosted on GitHub, in the order they
+/// install (each after what it needs).
 pub const FEATURED: &[Featured] = &[
     Featured {
         repo: "maximegmd/CyberEngineTweaks",
@@ -65,15 +72,31 @@ pub const FEATURED: &[Featured] = &[
         what: "Scripting framework and in-game console; many mods need it.",
         key: "cet",
         requires: &[],
+        category: FRAMEWORK,
     },
-    Featured { repo: "wopss/RED4ext", name: "RED4ext", what: "Script extender that loads native plugins.", key: "red4ext", requires: &[] },
-    Featured { repo: "jac3km4/redscript", name: "redscript", what: "Compiler for .reds script mods.", key: "redscript", requires: &[] },
+    Featured {
+        repo: "wopss/RED4ext",
+        name: "RED4ext",
+        what: "Script extender that loads native plugins.",
+        key: "red4ext",
+        requires: &[],
+        category: FRAMEWORK,
+    },
+    Featured {
+        repo: "jac3km4/redscript",
+        name: "redscript",
+        what: "Compiler for .reds script mods.",
+        key: "redscript",
+        requires: &[],
+        category: FRAMEWORK,
+    },
     Featured {
         repo: "psiberx/cp2077-archive-xl",
         name: "ArchiveXL",
         what: "Loads custom resources and appearances without replacing game files.",
         key: "archivexl",
         requires: &["red4ext"],
+        category: FRAMEWORK,
     },
     Featured {
         repo: "psiberx/cp2077-tweak-xl",
@@ -81,6 +104,7 @@ pub const FEATURED: &[Featured] = &[
         what: "Loads tweak (.yaml/.tweak) files that change game records.",
         key: "tweakxl",
         requires: &["red4ext"],
+        category: FRAMEWORK,
     },
     Featured {
         repo: "psiberx/cp2077-codeware",
@@ -88,6 +112,15 @@ pub const FEATURED: &[Featured] = &[
         what: "Library that extends what redscript and CET mods can do.",
         key: "codeware",
         requires: &["red4ext", "redscript"],
+        category: FRAMEWORK,
+    },
+    Featured {
+        repo: "Higher-dimentionalSemanticsFanatic/CyberHID",
+        name: "CyberHID",
+        what: "Adds pedals, wheels, flight sticks and button boxes to the game's gamepad input. Bindings are set in Mod Settings (Nexus).",
+        key: "cyberhid",
+        requires: &["red4ext", "redscript"],
+        category: "Mod",
     },
 ];
 
@@ -785,7 +818,7 @@ impl ModSource for GitHubSource {
                     popularity: None,
                     downloads: None,
                     updated: None,
-                    category: Some("Framework".into()),
+                    category: Some(f.category.into()),
                     tags: vec![],
                     requires: requires_names(f),
                     url: format!("https://github.com/{owner}/{repo_name}"),
@@ -815,7 +848,7 @@ impl ModSource for GitHubSource {
         let card = self.client.repo(&owner, &repo)?;
         let releases = self.client.releases(&owner, &repo)?;
         let featured = featured_by_repo(&card.repo);
-        let mut listing = Self::listing(&card, featured.map(|_| "Framework"));
+        let mut listing = Self::listing(&card, featured.map(|f| f.category));
         if let Some(f) = featured {
             listing.name = f.name.into();
             listing.requires = requires_names(f);
@@ -940,6 +973,7 @@ mod tests {
         assert_eq!(keys(&["archivexl", "tweakxl"], &[]), ["red4ext", "archivexl", "tweakxl"]);
         assert_eq!(keys(&["psiberx/CP2077-Archive-XL"], &["red4ext"]), ["archivexl"], "by repo, any case");
         assert_eq!(keys(&["red4ext"], &["red4ext"]), ["red4ext"], "asked for explicitly: reinstall");
+        assert_eq!(keys(&["cyberhid"], &["red4ext"]), ["redscript", "cyberhid"]);
         assert!(install_plan(&["nope".into()], &[]).is_err());
     }
 
@@ -950,7 +984,9 @@ mod tests {
                 let at = FEATURED.iter().position(|d| d.key == *r).expect("requirement is featured");
                 assert!(at < i, "{} must come after {r}", f.key);
             }
-            assert!(crate::game::detect_frameworks(std::path::Path::new("/nonexistent")).iter().any(|d| d.id == f.key));
+            if f.category == FRAMEWORK {
+                assert!(crate::game::detect_frameworks(std::path::Path::new("/nonexistent")).iter().any(|d| d.id == f.key));
+            }
         }
     }
 

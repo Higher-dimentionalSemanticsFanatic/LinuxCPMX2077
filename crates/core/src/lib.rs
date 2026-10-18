@@ -19,6 +19,7 @@ pub mod game;
 pub mod game_versions;
 pub mod hash;
 pub mod hdr;
+pub mod hidraw;
 pub mod inkicon;
 pub mod install;
 pub mod known_issues;

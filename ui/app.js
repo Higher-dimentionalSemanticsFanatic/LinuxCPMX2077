@@ -215,15 +215,16 @@ async function refreshGame() {
   await loadSetup(true);
 }
 
-function copyLaunchOption(line) {
+// `note`: what to do with text that isn't a launch option (a shell command).
+function copyLaunchOption(line, note = null) {
   return el("button", {
-    title: "Paste it in Steam: Cyberpunk 2077 › Properties › General › Launch options",
+    title: note ? line : "Paste it in Steam: Cyberpunk 2077 › Properties › General › Launch options",
     onclick: async () => {
       try {
         await navigator.clipboard.writeText(line);
-        toast("Copied. In Steam, open Cyberpunk 2077 › Properties › Launch options and paste it.");
+        toast(note || "Copied. In Steam, open Cyberpunk 2077 › Properties › Launch options and paste it.");
       } catch {
-        toast(`Copy this into Steam's launch options for Cyberpunk 2077:\n${line}`, true);
+        toast(note ? `Copy this:\n${line}` : `Copy this into Steam's launch options for Cyberpunk 2077:\n${line}`, true);
       }
     },
   }, "Copy");
@@ -311,7 +312,7 @@ function setupItem(c) {
   const buttons = [];
   if (c.fix) buttons.push(el("button", { class: "primary", title: c.fix.blocked || "", onclick: (e) => runSetup(e.target, c, c.fix, "setup_fix") }, c.fix.label));
   if (c.alt) buttons.push(el("button", { title: c.alt.blocked || "", onclick: (e) => runSetup(e.target, c, c.alt, "setup_fix", c.alt_id) }, c.alt.label));
-  if (c.copy) buttons.push(copyLaunchOption(c.copy));
+  if (c.copy) buttons.push(copyLaunchOption(c.copy, c.copy_note));
   if (c.undo) buttons.push(el("button", { onclick: (e) => runSetup(e.target, c, c.undo, "setup_undo") }, c.undo.label));
   return el("li", { class: ok ? "ok" : "" },
     el("b", {}, ok ? `✓ ${c.title}` : c.title), " ",
@@ -2727,9 +2728,12 @@ function pickNexusFile(files) {
   const main = files.filter((f) => f.category_name === "MAIN");
   return main.find((f) => f.is_primary) || (main.length === 1 ? main[0] : null);
 }
+// A repository with pre-releases only (CyberHID 0.x): its newest pre-release.
 function pickSourceFile(files) {
-  const stable = files.filter((f) => f.installable && !f.prerelease);
-  const newest = stable.filter((f) => f.group === stable[0]?.group);
+  const installable = files.filter((f) => f.installable);
+  const stable = installable.filter((f) => !f.prerelease);
+  const pool = stable.length ? stable : installable;
+  const newest = pool.filter((f) => f.group === pool[0]?.group);
   return newest.length === 1 ? newest[0] : null;
 }
 

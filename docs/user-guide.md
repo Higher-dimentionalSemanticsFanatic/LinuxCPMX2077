@@ -131,6 +131,24 @@ it), the left and right arrow keys also resize it.
     set, **Remove launch option** takes it out. Steam closed only; on Heroic,
     **Copy** gives the variable to add under the game's environment
     variables.
+  - *CyberHID controllers* (only with
+    [CyberHID](https://github.com/Higher-dimentionalSemanticsFanatic/CyberHID)
+    installed) → **Set launch option** adds every connected joystick, wheel,
+    pedal set or throttle (read from `/sys/class/hidraw`; gamepads are left
+    out) to `PROTON_ENABLE_HIDRAW='0x046d/0xc24f,…'`, keeping entries already
+    there. Without it Proton passes these controllers through SDL: at most 6
+    axes per device, generic axis names, and a device with 6 axes and 14 or
+    more buttons turns into an XInput pad, which CyberHID skips. Proton 9 or
+    newer. Connect the controllers before Rescan; with none connected the
+    item shows as fine. **Undo** puts back the earlier value. Steam closed
+    only; on Heroic, **Copy** gives the variable to add under the game's
+    environment variables.
+  - *CyberHID controller access* (only when a controller's `/dev/hidraw` node
+    can't be opened for reading and writing; Proton then keeps it on SDL) →
+    **Copy** copies a command that installs a udev rule
+    (`/etc/udev/rules.d/70-cyberhid.rules`, `TAG+="uaccess"` for those
+    vendor and product ids) and reloads udev. It needs root, so run it in a
+    terminal yourself, then Rescan.
   - *Folder names* → **Merge folders** joins mod folders that exist under two
     spellings.
   - *HDR* (only when a connected display lists HDR10/PQ in its EDID) →
@@ -1134,9 +1152,11 @@ Click a part (or use the left and right arrow keys) to show a box with:
   (*native, then builtin*) and the mod it is for (`version` = CET, `winmm` =
   RED4ext, ReShade's and OptiScaler's DLL names as found in `bin/x64`,
   `d3dcompiler_47` = ReShade's shader compiler), or each `gamescope` option;
+- the entries inside it: each controller in `PROTON_ENABLE_HIDRAW` as its
+  USB vendor and product id;
 - **Added by**: the Game panel item that writes it (*Steam launch options*,
-  *HDR*, *FSR 4 shader overrides* or the *REDmod switch*), or *Not added by
-  CPMX2077*;
+  *HDR*, *FSR 4 shader overrides*, *CyberHID controllers* or the *REDmod
+  switch*), or *Not added by CPMX2077*;
 - warnings, labelled red with `!`: a variable after `%command%` or in a line
   without `%command%` (Steam passes it to the game as an argument and does not
   set it), a `gamescope` wrapper without `--`, or a shader-override path that
@@ -1261,8 +1281,15 @@ Browse and download mods. The switch at the top right picks the source:
 The core frameworks and many mods ship as GitHub releases.
 
 - With an empty search, the featured list shows CET, RED4ext, redscript,
-  ArchiveXL, TweakXL and Codeware. **Install missing frameworks** installs
-  every one the game lacks, each after what it needs.
+  ArchiveXL, TweakXL and Codeware (badge *Framework*), and CyberHID (badge
+  *Mod*: pedals, wheels, flight sticks and button boxes as gamepad input;
+  bindings are set in game through Mod Settings, which comes from Nexus).
+  **Install missing frameworks** installs every framework the game lacks,
+  each after what it needs; CyberHID only installs when you pick it. On
+  Linux, installing CyberHID adds the *CyberHID controllers* item to the
+  Linux setup fixes.
+- A repository with pre-releases only (CyberHID 0.x) installs its newest
+  pre-release; otherwise the newest full release is used.
 - Search by name, or paste `owner/repo` or a repository URL, to see its
   releases and assets. **Install with what it needs** installs a framework
   together with its dependencies.

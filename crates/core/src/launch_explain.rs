@@ -74,6 +74,7 @@ impl Owners {
 const SET_LAUNCH: &str = "Game panel › Steam launch options › Set launch options";
 const SET_HDR: &str = "Game panel › HDR › Set HDR launch options";
 const SET_FSR4: &str = "Game panel › FSR 4 shader overrides › Set launch option";
+const SET_HIDRAW: &str = "Game panel › CyberHID controllers › Set launch option";
 const REDMOD_SWITCH: &str = "Game panel › Frameworks › REDmod switch";
 const NO_EFFECT_WINDOWS: &str = "Wine/Proton setting: no effect on Windows.";
 
@@ -215,6 +216,32 @@ fn env_part(lead: String, text: String, key: &str, value: &str, owners: &Owners)
         "ENABLE_HDR_WSI" => {
             let mut p = part(lead, text, Kind::Env, "HDR layer", "Turns on vk_hdr_layer, the Vulkan layer that adds HDR swapchains on Wayland for drivers older than Mesa 25.1 or NVIDIA 595.");
             p.added_by = Some(SET_HDR.into());
+            p
+        }
+        crate::hidraw::PROTON_VAR => {
+            let mut p = part(
+                lead,
+                text,
+                Kind::Env,
+                "Raw HID controllers",
+                "Proton passes the listed controllers (0xVENDOR/0xPRODUCT, USB ids) to the game as raw HID devices with their own \
+                 axes and names, instead of through SDL. CyberHID reads wheels, pedals and sticks this way. Proton 9 and newer; \
+                 needs read/write access to their /dev/hidraw nodes.",
+            );
+            p.added_by = Some(SET_HIDRAW.into());
+            p.items = value
+                .split(',')
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+                .map(|v| Item {
+                    name: v.to_string(),
+                    detail: match v.split_once('/') {
+                        _ if v == "1" => "Every HID device (Proton 10 only; Proton 9 reads vendor/product pairs).".to_string(),
+                        Some((vid, pid)) => format!("USB vendor {}, product {}.", vid.trim_start_matches("0x"), pid.trim_start_matches("0x")),
+                        None => "Not a 0xVENDOR/0xPRODUCT pair; Proton ignores it.".to_string(),
+                    },
+                })
+                .collect();
             p
         }
         "PROTON_ENABLE_HDR" => part(lead, text, Kind::Env, "HDR (GE-Proton)", "GE-Proton shorthand that sets DXVK_HDR=1. Not added by CPMX2077, which sets DXVK_HDR directly."),
@@ -441,6 +468,15 @@ mod tests {
         assert_eq!(parts[3].added_by.as_deref(), Some(SET_FSR4));
         assert!(parts[3].warnings.is_empty());
         assert!(parts[4].added_by.is_none());
+    }
+
+    #[test]
+    fn explains_the_hidraw_list() {
+        let parts = explain("PROTON_ENABLE_HIDRAW='0x046d/0xc24f,0x044f/0xb679' %command%", &linux());
+        assert_eq!(parts[0].label, "Raw HID controllers");
+        assert_eq!(parts[0].added_by.as_deref(), Some(SET_HIDRAW));
+        let items: Vec<(&str, &str)> = parts[0].items.iter().map(|i| (i.name.as_str(), i.detail.as_str())).collect();
+        assert_eq!(items, [("0x046d/0xc24f", "USB vendor 046d, product c24f."), ("0x044f/0xb679", "USB vendor 044f, product b679.")]);
     }
 
     #[test]

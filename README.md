@@ -29,8 +29,9 @@ checksum of every file. A Windows installer
   works and what every tab and button does, plus troubleshooting.
 
 Pedals, a wheel or a flight stick the game doesn't read? That is a separate
-game mod, [CyberHID](https://github.com/Higher-dimentionalSemanticsFanatic/CyberHID),
-installed like any other mod.
+game mod, [CyberHID](https://github.com/Higher-dimentionalSemanticsFanatic/CyberHID):
+Get mods › GitHub lists it, and on Linux the Game panel sets the
+`PROTON_ENABLE_HIDRAW` launch option it needs for the connected controllers.
 
 ## Highlights
 
@@ -78,7 +79,9 @@ Screenshots show sample data, with file locations blurred.
   With an HDR10 display it checks what the game needs to offer HDR under
   Proton (Wayland session, desktop HDR, driver version, a Proton build with
   the Wine Wayland driver or gamescope) and adds the HDR variables to the
-  launch options.
+  launch options. With CyberHID installed it lists the connected wheels,
+  pedals and sticks in `PROTON_ENABLE_HIDRAW` and checks their
+  `/dev/hidraw` access.
   Installing a mod that needs one of these asks to set it up straight away.
 - **Tracks everything** in a SQLite library (`~/.local/share/cp2077-modmanager/`):
   each mod, its source, the game build it was installed on, the archive's

@@ -1536,8 +1536,8 @@ struct PlannedFramework {
 }
 
 /// GitHub frameworks to queue for `wanted`, each after what it needs; skips
-/// requirements the game already has. An empty `wanted` means every featured
-/// framework the game doesn't have yet.
+/// requirements the game already has. An empty `wanted` means every core
+/// framework the game doesn't have yet (featured mods only when named).
 #[tauri::command]
 async fn framework_plan(app: AppHandle, game_id: i64, wanted: Vec<String>) -> Result<Vec<PlannedFramework>> {
     blocking(move || {
@@ -1549,7 +1549,9 @@ async fn framework_plan(app: AppHandle, game_id: i64, wanted: Vec<String>) -> Re
             .map(|f| f.id)
             .collect();
         let wanted = if wanted.is_empty() {
-            let missing = sources::github::FEATURED.iter().filter(|f| !present.iter().any(|p| p == f.key));
+            let missing = sources::github::FEATURED
+                .iter()
+                .filter(|f| f.category == sources::github::FRAMEWORK && !present.iter().any(|p| p == f.key));
             missing.map(|f| f.key.to_string()).collect()
         } else {
             wanted
